@@ -139,11 +139,15 @@ def find_agent_directories() -> List[Tuple[Path, str]]:
             agent_dirs.append((standard_user_agents, "user"))
     
     # Project-level agents (in .claude/agents relative to current/project directory)
+    # But NOT the user-level ~/.claude/agents directory
+    user_agents_path = Path.home() / ".claude" / "agents"
     current_dir = Path.cwd()
     for _ in range(5):  # Check up to 5 levels up
         project_agents_dir = current_dir / ".claude" / "agents"
+        # Skip if this is the user-level agents directory
         if project_agents_dir.exists() and project_agents_dir.is_dir():
-            agent_dirs.append((project_agents_dir, "project"))
+            if project_agents_dir.resolve() != user_agents_path.resolve():
+                agent_dirs.append((project_agents_dir, "project"))
             break
         current_dir = current_dir.parent
         if current_dir == current_dir.parent:  # Reached root

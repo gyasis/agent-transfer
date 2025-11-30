@@ -78,10 +78,14 @@ def export_agents(
                 shutil.copy2(agent_path, user_agents_dir / agent_path.name)
             else:
                 # Preserve relative path structure for project agents
-                rel_path = agent_path.relative_to(Path.cwd())
-                target_dir = project_agents_dir / rel_path.parent
-                target_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(agent_path, target_dir / agent_path.name)
+                try:
+                    rel_path = agent_path.relative_to(Path.cwd())
+                    target_dir = project_agents_dir / rel_path.parent
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(agent_path, target_dir / agent_path.name)
+                except ValueError:
+                    # Agent not under cwd, just copy the file directly
+                    shutil.copy2(agent_path, project_agents_dir / agent_path.name)
         
         # Create metadata
         metadata = temp_path / "metadata.txt"
