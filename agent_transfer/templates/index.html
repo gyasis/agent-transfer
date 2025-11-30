@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Transfer Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for markdown content */
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden bg-gray-50">
+    <!-- Sidebar -->
+    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto p-5 border-r border-gray-700">
+        <h1 class="text-xl font-bold mb-5 text-white border-b-2 border-gray-700 pb-3">
+            🤖 Agent Transfer
+        </h1>
+        
+        {% if user_agents %}
+        <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide">
+            User Agents ({{ user_agents|length }})
+        </h2>
+        <ul class="space-y-1">
+            {% for agent in user_agents %}
+            <li>
+                <a href="/agent/{{ agent.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
+                    <span class="font-semibold block">{{ agent.name }}</span>
+                    <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ agent.description|replace('\\n', ' ') if agent.description else '' }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if project_agents %}
+        <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide">
+            Project Agents ({{ project_agents|length }})
+        </h2>
+        <ul class="space-y-1">
+            {% for agent in project_agents %}
+            <li>
+                <a href="/agent/{{ agent.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
+                    <span class="font-semibold block">{{ agent.name }}</span>
+                    <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ agent.description|replace('\\n', ' ') if agent.description else '' }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    
+    <!-- Main Content -->
+    <div class="flex-1 overflow-y-auto p-10 bg-white">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl font-bold mb-4 text-gray-900">Welcome to Agent Transfer Viewer</h1>
+            <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+                Browse and view your Claude Code agents with a beautiful interface. Select an agent from the sidebar to view its details.
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                    <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ total_agents }}</h3>
+                    <p class="text-sm text-gray-600">Total Agents</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                    <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ user_agents|length }}</h3>
+                    <p class="text-sm text-gray-600">User Agents</p>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
+                    <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ project_agents|length }}</h3>
+                    <p class="text-sm text-gray-600">Project Agents</p>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-5 mt-8">
+                <h3 class="text-lg font-semibold text-yellow-800 mb-3">📖 How to Use</h3>
+                <ul class="list-disc list-inside space-y-2 text-yellow-800">
+                    <li>Click on any agent in the sidebar to view its details</li>
+                    <li>Agent markdown files are rendered as beautiful HTML</li>
+                    <li>Navigate between agents using the sidebar</li>
+                    <li>All agent content is syntax-highlighted</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

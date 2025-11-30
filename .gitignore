@@ -1,0 +1,61 @@
+# macOS
+.DS_Store
+
+# Security - DO NOT TRACK (sensitive/personal data)
+.specstory/
+memory-bank/
+CLAUDE.md
+.claude/
+
+# Temp files - DO NOT TRACK
+CLAUDE_SKILLS_CHEATSHEET.md
+DOCUMENTATION_REVIEW_SUMMARY.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# uv
+.uvrc
+uv.lock
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
+*.log
+*.tar.gz
