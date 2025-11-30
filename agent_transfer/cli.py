@@ -32,24 +32,33 @@ def cli():
 @click.argument('output_file', required=False)
 @click.option('--all', 'export_all', is_flag=True, help='Export all agents without interactive selection')
 @click.option('--interactive/--no-interactive', default=True, help='Use interactive selection (default: True)')
+@click.option('--type', 'agent_type', type=click.Choice(['user', 'project', 'all']), default='all',
+              help='Filter by agent type: user, project, or all (default: all)')
 @click.option('--discover', is_flag=True, help='Show Claude Code installation info before export')
-def export(output_file, export_all, interactive, discover):
+def export(output_file, export_all, interactive, agent_type, discover):
     """Export agents to a tar.gz archive.
-    
+
     If OUTPUT_FILE is not provided, a timestamped filename will be used.
+
+    Use --type to filter by agent type (user agents are in ~/.claude/agents,
+    project agents are in .claude/agents within project directories).
     """
     try:
         if discover:
             info = discover_claude_code_info()
             display_discovery_info(info)
             console.print()
-        
+
         if export_all:
             interactive = False
-        
+
+        # Convert 'all' to None for the function
+        type_filter = None if agent_type == 'all' else agent_type
+
         result_file = export_agents(
             output_file=output_file,
-            interactive=interactive
+            interactive=interactive,
+            agent_type_filter=type_filter
         )
         console.print(f"\n[green]✓ Successfully exported to: {result_file}[/green]")
     except KeyboardInterrupt:

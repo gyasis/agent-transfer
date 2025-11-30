@@ -28,18 +28,34 @@ def check_claude_code_installed() -> bool:
 def export_agents(
     output_file: Optional[str] = None,
     selected_agents: Optional[List[Agent]] = None,
-    interactive: bool = True
+    interactive: bool = True,
+    agent_type_filter: Optional[str] = None
 ) -> str:
-    """Export agents to a tar.gz archive."""
+    """Export agents to a tar.gz archive.
+
+    Args:
+        output_file: Output filename (auto-generated if None)
+        selected_agents: Pre-selected agents (if None, will find/select)
+        interactive: Use interactive selection UI
+        agent_type_filter: Filter by type: 'user', 'project', or None for all
+    """
     from .selector import interactive_select_agents
-    
+
     if output_file is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = f"claude-agents-backup_{timestamp}.tar.gz"
-    
+
     # Find or select agents
     if selected_agents is None:
         all_agents = find_all_agents()
+
+        # Apply type filter if specified
+        if agent_type_filter:
+            all_agents = [a for a in all_agents if a.agent_type == agent_type_filter]
+            if not all_agents:
+                console.print(f"[yellow]No {agent_type_filter} agents found![/yellow]")
+                raise SystemExit(1)
+            console.print(f"[dim]Filtering by type: {agent_type_filter} ({len(all_agents)} agents)[/dim]")
         
         if not all_agents:
             console.print("[red]No agents found![/red]")
