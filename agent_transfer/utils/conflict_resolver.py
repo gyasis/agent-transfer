@@ -15,6 +15,8 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich import box
 
+from ..models import AgentComparison
+
 console = Console()
 
 
@@ -105,6 +107,81 @@ def show_side_by_side(existing: str, incoming: str, filename: str) -> None:
         )
 
     console.print(table)
+
+
+def show_comparison_diff(comparison: AgentComparison) -> None:
+    """Show unified diff for an AgentComparison.
+
+    Args:
+        comparison: AgentComparison object with agent metadata and content
+    """
+    # Display header panel
+    console.print(Panel(
+        f"[bold]{comparison.agent.name}[/bold] ({comparison.status})\n"
+        f"Local: {comparison.local_path or 'N/A'}\n"
+        f"Archive: {comparison.agent.name}.md\n"
+        f"Changes: {comparison.diff_summary or 'N/A'}",
+        title="Agent Comparison",
+        border_style="cyan"
+    ))
+
+    # Show unified diff
+    if comparison.local_content and comparison.archive_content:
+        show_unified_diff(
+            existing=comparison.local_content,
+            incoming=comparison.archive_content,
+            filename=f"{comparison.agent.name}.md"
+        )
+    elif comparison.status == "IDENTICAL":
+        console.print("[green]Files are identical[/green]")
+    else:
+        console.print("[yellow]No diff available (NEW agent)[/yellow]")
+
+
+def show_comparison_side_by_side(comparison: AgentComparison) -> None:
+    """Show side-by-side diff for an AgentComparison.
+
+    Args:
+        comparison: AgentComparison object with agent metadata and content
+    """
+    # Display header panel
+    console.print(Panel(
+        f"[bold]{comparison.agent.name}[/bold] ({comparison.status})\n"
+        f"Local: {comparison.local_path or 'N/A'}\n"
+        f"Archive: {comparison.agent.name}.md\n"
+        f"Changes: {comparison.diff_summary or 'N/A'}",
+        title="Agent Comparison",
+        border_style="cyan"
+    ))
+
+    # Show side-by-side diff
+    if comparison.local_content and comparison.archive_content:
+        show_side_by_side(
+            existing=comparison.local_content,
+            incoming=comparison.archive_content,
+            filename=f"{comparison.agent.name}.md"
+        )
+    elif comparison.status == "IDENTICAL":
+        console.print("[green]Files are identical[/green]")
+    else:
+        console.print("[yellow]No diff available (NEW agent)[/yellow]")
+
+
+def show_diff_summary(comparison: AgentComparison) -> None:
+    """Show quick diff summary for an AgentComparison.
+
+    Args:
+        comparison: AgentComparison object with agent metadata and content
+    """
+    console.print(Panel(
+        f"[bold cyan]{comparison.agent.name}[/bold cyan]\n"
+        f"Status: {comparison.status}\n"
+        f"Type: {comparison.agent.agent_type}\n"
+        f"Local: {comparison.local_path or 'N/A'}\n"
+        f"Changes: {comparison.diff_summary or 'N/A'}",
+        title=f"Agent: {comparison.agent.name}",
+        border_style="cyan"
+    ))
 
 
 def get_duplicate_name(target_dir: Path, base_name: str) -> Path:

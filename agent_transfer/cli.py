@@ -8,7 +8,7 @@ from rich.console import Console
 
 from . import __version__
 from .utils.parser import find_all_agents
-from .utils.transfer import export_agents, import_agents
+from .utils.transfer import export_agents, import_agents, import_agents_selective
 from .utils.discovery import discover_claude_code_info, display_discovery_info
 from .utils.web_server import start_server
 from .utils.conflict_resolver import ConflictMode
@@ -17,6 +17,8 @@ from .utils.tool_checker import (
     get_missing_servers, check_tool_compatibility
 )
 from .utils.discovery import find_agent_directories
+from .utils.import_analyzer import analyze_import_archive
+from .utils.selector import interactive_select_import_agents
 
 console = Console()
 
@@ -75,16 +77,26 @@ def export(output_file, export_all, interactive, agent_type, discover):
 @click.option('--conflict-mode', '-c', type=click.Choice(['overwrite', 'keep', 'duplicate', 'diff']),
               default='diff', help='How to handle conflicts: overwrite, keep, duplicate, or diff (default: diff)')
 @click.option('--discover', is_flag=True, help='Show Claude Code installation info before import')
-def import_cmd(input_file, overwrite, conflict_mode, discover):
+@click.option('--bulk', is_flag=True, help='Skip preview, import all agents (old behavior)')
+@click.option('--agent', type=str, help='Import specific agent by name')
+def import_cmd(input_file, overwrite, conflict_mode, discover, bulk, agent):
     """Import agents from a tar.gz archive.
 
     INPUT_FILE is the path to the backup archive to import.
+
+    By default, shows an interactive preview where you can select which
+    agents to import. Use --bulk to import all agents without preview.
 
     Conflict handling modes:
       - diff: Interactive diff/merge (default) - view changes and choose what to keep
       - overwrite: Replace existing files with incoming
       - keep: Skip conflicts, keep existing files
       - duplicate: Save incoming as filename_1.md, filename_2.md, etc.
+
+    Examples:
+      agent-transfer import backup.tar.gz              # Interactive preview
+      agent-transfer import backup.tar.gz --bulk       # Import all
+      agent-transfer import backup.tar.gz --agent data-analyst  # Import one
     """
     try:
         if discover:
@@ -99,13 +111,75 @@ def import_cmd(input_file, overwrite, conflict_mode, discover):
         if overwrite:
             mode = ConflictMode.OVERWRITE
 
-        import_agents(input_file, conflict_mode=mode)
-        console.print(f"\n[green]✓ Successfully imported from: {input_file}[/green]")
+        # Route based on flags
+        if bulk:
+            # OLD BEHAVIOR: Import all agents
+            import_agents(input_file, conflict_mode=mode)
+        elif agent:
+            # DIRECT IMPORT: Import specific agent by name
+            preview = analyze_import_archive(input_file)
+
+            # Find agent in comparisons
+            comparison = None
+            for comp in preview.comparisons:
+                if comp.agent.name == agent:
+                    comparison = comp
+                    break
+
+            if not comparison:
+                console.print(f"[red]Error: Agent '{agent}' not found in archive[/red]")
+                console.print("\n[cyan]Available agents:[/cyan]")
+                for comp in preview.comparisons:
+                    console.print(f"  - {comp.agent.name} ({comp.status})")
+                sys.exit(1)
+
+            # Import single agent
+            total_count = len(preview.comparisons)
+            import_agents_selective(input_file, [comparison], mode, total_count)
+        else:
+            # DEFAULT: Interactive preview (NEW BEHAVIOR)
+            from rich.panel import Panel
+            from rich.prompt import Confirm
+
+            preview = analyze_import_archive(input_file)
+
+            # Show preview summary
+            console.print(Panel(
+                f"[bold]Archive:[/bold] {input_file}\n"
+                f"[bold]Agents:[/bold] {len(preview.comparisons)} total\n"
+                f"  [green]NEW:[/green] {preview.new_count}\n"
+                f"  [yellow]CHANGED:[/yellow] {preview.changed_count}\n"
+                f"  [dim]IDENTICAL:[/dim] {preview.identical_count}",
+                title="Import Preview",
+                border_style="cyan"
+            ))
+
+            # Handle all identical case
+            if preview.new_count == 0 and preview.changed_count == 0 and len(preview.comparisons) > 0:
+                console.print("\n[yellow]All agents are identical to local versions.[/yellow]")
+                if not Confirm.ask("Show identical agents anyway?", default=False):
+                    console.print("[dim]Import cancelled[/dim]")
+                    return
+
+            # Interactive selection
+            selected = interactive_select_import_agents(preview.comparisons)
+
+            if not selected:
+                console.print("[yellow]No agents selected. Import cancelled.[/yellow]")
+                return
+
+            # Import selected agents
+            total_count = len(preview.comparisons)
+            import_agents_selective(input_file, selected, mode, total_count)
+
+        console.print(f"\n[green]✓ Import operation complete[/green]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Import cancelled[/yellow]")
         sys.exit(1)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
 
 

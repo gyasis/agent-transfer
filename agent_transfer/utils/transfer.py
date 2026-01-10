@@ -6,12 +6,12 @@ import tarfile
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from rich.console import Console
 from rich.panel import Panel
 
-from ..models import Agent
+from ..models import Agent, AgentComparison
 from .parser import find_all_agents
 from .discovery import find_agent_directories
 from .conflict_resolver import ConflictMode, resolve_conflict, get_duplicate_name
@@ -310,4 +310,138 @@ def import_agents(
                 console.print(f"[dim]{type_label}: {agent_count} agent(s) in {agent_dir_path}[/dim]")
 
     console.print(f"[green]Total agents available: {total}[/green]")
+
+
+def import_agents_selective(
+    archive_path: str,
+    selected_comparisons: List[AgentComparison],
+    conflict_mode: ConflictMode,
+    total_in_archive: int
+) -> Dict[str, int]:
+    """Import selected agents from a tar.gz archive with per-agent control.
+
+    Args:
+        archive_path: Path to the backup archive
+        selected_comparisons: List of AgentComparison objects to import
+        conflict_mode: How to handle conflicts (OVERWRITE, KEEP, DUPLICATE, DIFF)
+        total_in_archive: Total number of agents in the archive (for stats)
+
+    Returns:
+        Dict with import statistics:
+            - new_imported: Number of new agents imported
+            - changed_imported: Number of changed agents imported
+            - identical_skipped: Number of identical agents skipped
+            - not_selected: Number of agents not selected for import
+    """
+    archive_file = Path(archive_path)
+
+    if not archive_file.exists():
+        console.print(f"[red]Archive not found: {archive_path}[/red]")
+        raise SystemExit(1)
+
+    console.print(f"[blue]Starting selective import...[/blue]")
+    console.print(f"[dim]Archive: {archive_path}[/dim]")
+    console.print(f"[dim]Importing {len(selected_comparisons)} of {total_in_archive} agents[/dim]")
+    console.print(f"[dim]Conflict mode: {conflict_mode.value}[/dim]")
+
+    # Initialize statistics
+    new_imported = 0
+    changed_imported = 0
+    identical_skipped = 0
+    not_selected = total_in_archive - len(selected_comparisons)
+
+    # Extract archive to temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        console.print("[dim]Extracting archive...[/dim]")
+        with tarfile.open(archive_file, 'r:gz') as tar:
+            tar.extractall(temp_path)
+
+        # Read metadata if present
+        metadata_file = temp_path / "metadata.txt"
+        if metadata_file.exists():
+            console.print("[dim]Backup metadata:[/dim]")
+            with open(metadata_file) as f:
+                for line in f:
+                    console.print(f"  [dim]{line.strip()}[/dim]")
+
+        # Process each selected agent
+        console.print("\n[bold]Processing selected agents...[/bold]")
+
+        for comparison in selected_comparisons:
+            agent = comparison.agent
+            filename = Path(agent.file_path).name
+
+            # Determine source and target paths based on agent type
+            if agent.agent_type == "user":
+                source_dir = temp_path / "user-agents"
+                target_dir = Path.home() / ".claude" / "agents"
+            else:  # project
+                source_dir = temp_path / "project-agents"
+                target_dir = Path.cwd() / ".claude" / "agents"
+
+            # Find source file in archive (handle nested structures)
+            source_path = None
+            for md_file in source_dir.rglob("*.md"):
+                if md_file.name == filename:
+                    source_path = md_file
+                    break
+
+            if not source_path or not source_path.exists():
+                console.print(f"[red]Warning: {filename} not found in archive[/red]")
+                continue
+
+            # Ensure target directory exists
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_path = target_dir / filename
+
+            # Process based on status
+            if comparison.status == 'NEW':
+                # Direct copy for new agents
+                shutil.copy2(source_path, target_path)
+                console.print(f"[green]Imported: {filename}[/green]")
+                new_imported += 1
+
+            elif comparison.status == 'CHANGED':
+                # Handle conflicts using conflict resolver
+                result = resolve_conflict(
+                    existing_path=target_path,
+                    incoming_path=source_path,
+                    target_dir=target_dir,
+                    mode=conflict_mode
+                )
+                if result:
+                    console.print(f"[green]Updated: {filename}[/green]")
+                    changed_imported += 1
+                else:
+                    console.print(f"[dim]Skipped: {filename}[/dim]")
+
+            elif comparison.status == 'IDENTICAL':
+                # Skip identical agents
+                console.print(f"[dim]Skipping {filename} (identical)[/dim]")
+                identical_skipped += 1
+
+    # Display summary panel
+    console.print()
+    skipped_total = identical_skipped + not_selected
+    summary_panel = Panel(
+        f"[bold green]Imported: {new_imported + changed_imported} agents[/bold green]\n"
+        f"  NEW: {new_imported}\n"
+        f"  CHANGED: {changed_imported}\n\n"
+        f"[yellow]Skipped: {skipped_total} agents[/yellow]\n"
+        f"  IDENTICAL: {identical_skipped}\n"
+        f"  NOT SELECTED: {not_selected}",
+        title="Import Complete",
+        border_style="green"
+    )
+    console.print(summary_panel)
+
+    # Return statistics
+    return {
+        'new_imported': new_imported,
+        'changed_imported': changed_imported,
+        'identical_skipped': identical_skipped,
+        'not_selected': not_selected
+    }
 

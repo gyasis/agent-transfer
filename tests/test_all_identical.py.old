@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""
+Test the "all identical" edge case by creating a test archive and checking the flow.
+This demonstrates the logic but doesn't test the interactive prompt.
+"""
+import tempfile
+import tarfile
+from pathlib import Path
+from agent_transfer.utils.import_analyzer import analyze_import_archive
+
+
+def create_test_archive_with_identical_agent():
+    """Create a test archive with an agent that matches a local one."""
+    print("Creating test archive with identical agent...")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        # Create a user-agents directory in the temp location
+        user_agents_dir = temp_path / "user-agents"
+        user_agents_dir.mkdir(parents=True)
+
+        # Create a simple agent file
+        agent_content = """---
+name: test-agent
+description: A test agent
+tools: Read, Edit
+---
+
+This is a test agent.
+"""
+        agent_file = user_agents_dir / "test-agent.md"
+        agent_file.write_text(agent_content)
+
+        # Create the tar.gz archive
+        archive_path = temp_path / "test.tar.gz"
+        with tarfile.open(archive_path, "w:gz") as tar:
+            tar.add(user_agents_dir, arcname="user-agents")
+
+        # Create matching local agent
+        local_agents_dir = Path.home() / ".claude" / "agents"
+        local_agents_dir.mkdir(parents=True, exist_ok=True)
+        local_agent_file = local_agents_dir / "test-agent.md"
+
+        # Write same content to local file
+        local_agent_file.write_text(agent_content)
+
+        try:
+            # Analyze the archive
+            preview = analyze_import_archive(str(archive_path))
+
+            print(f"\nPreview statistics:")
+            print(f"  Total agents: {len(preview.comparisons)}")
+            print(f"  NEW: {preview.new_count}")
+            print(f"  CHANGED: {preview.changed_count}")
+            print(f"  IDENTICAL: {preview.identical_count}")
+
+            # Check the condition that triggers "all identical" prompt
+            all_identical = (
+                preview.new_count == 0 and
+                preview.changed_count == 0 and
+                len(preview.comparisons) > 0
+            )
+
+            if all_identical:
+                print("\n✓ All identical condition detected correctly!")
+                print("  (In real CLI, user would be prompted: 'Show identical agents anyway?')")
+            else:
+                print("\n✗ All identical condition NOT detected")
+                print(f"  new_count={preview.new_count}, changed_count={preview.changed_count}, total={len(preview.comparisons)}")
+
+        finally:
+            # Cleanup test file
+            if local_agent_file.exists():
+                local_agent_file.unlink()
+                print(f"\n✓ Cleaned up test file: {local_agent_file}")
+
+
+if __name__ == "__main__":
+    create_test_archive_with_identical_agent()

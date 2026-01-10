@@ -1,0 +1,197 @@
+{
+  "execution_plan": {
+    "phase_id": "Selective Import Feature Implementation",
+    "waves": [
+      {
+        "wave_id": 1,
+        "strategy": "COMPLETED",
+        "rationale": "Foundation layer: Data models created, analyzer module implemented",
+        "tasks": [
+          {
+            "task_id": "P1.1",
+            "agent_role": "Backend_Dev",
+            "instruction": "Add AgentComparison and ImportPreview dataclasses to models.py",
+            "file_locks": ["agent_transfer/models.py"],
+            "completion_handshake": "COMPLETED",
+            "dependencies": []
+          },
+          {
+            "task_id": "P1.2",
+            "agent_role": "Python_Pro",
+            "instruction": "Create import_analyzer.py with analyze_import_archive() function",
+            "file_locks": ["agent_transfer/utils/import_analyzer.py"],
+            "completion_handshake": "COMPLETED WITH ERRORS",
+            "dependencies": ["P1.1"]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": false,
+          "verification_criteria": "N/A - Wave 1 complete",
+          "git_agent": "N/A",
+          "memory_bank_agent": "N/A"
+        }
+      },
+      {
+        "wave_id": 2,
+        "strategy": "FIX_ERRORS_SEQUENTIAL",
+        "rationale": "Wave 1 produced code with type errors and incorrect function calls. Must fix before proceeding with parallel Wave 3",
+        "tasks": [
+          {
+            "task_id": "P1.2-FIX",
+            "agent_role": "Debugger",
+            "instruction": "Fix type errors in import_analyzer.py: parse_agent_file expects Path not str, AgentComparison constructor has wrong params, handle Optional[str] for content",
+            "file_locks": ["agent_transfer/utils/import_analyzer.py"],
+            "completion_handshake": "Upon success, verify 'uv run python -m agent_transfer.utils.import_analyzer' has no import errors",
+            "dependencies": ["P1.2"],
+            "error_details": [
+              "Line 87: parse_agent_file expects Path, not str",
+              "Lines 100, 129: AgentComparison constructor signature mismatch",
+              "Lines 139-140: _compute_content_hash receives Optional[str], expects str",
+              "Lines 64, 72: find_all_agents() expects 0 args but receiving argument"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "No Pyright errors in import_analyzer.py, module imports successfully",
+          "git_agent": "N/A",
+          "memory_bank_agent": "N/A"
+        }
+      },
+      {
+        "wave_id": 3,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Three independent modules editing different files. No shared file locks. All depend only on completed Wave 1+2",
+        "tasks": [
+          {
+            "task_id": "P2.1",
+            "agent_role": "Frontend_Developer",
+            "instruction": "Enhance selector.py: Add status/diff columns, create interactive_select_import_agents(), handle filter commands (v,s,n,c,f)",
+            "file_locks": ["agent_transfer/utils/selector.py"],
+            "completion_handshake": "Upon success, mark Phase 2 complete in todo list",
+            "dependencies": ["P1.2-FIX"],
+            "required_fixes": [
+              "Handle agent.tools being None before accessing with [:3]",
+              "Import AgentComparison from models",
+              "Import show_unified_diff, show_side_by_side from conflict_resolver"
+            ]
+          },
+          {
+            "task_id": "P3.1",
+            "agent_role": "Backend_Architect",
+            "instruction": "Create import_agents_selective() in transfer.py: Handle NEW/CHANGED/IDENTICAL agents, display Rich summary panel",
+            "file_locks": ["agent_transfer/utils/transfer.py"],
+            "completion_handshake": "Upon success, mark Phase 3 complete in todo list",
+            "dependencies": ["P1.2-FIX"],
+            "required_fixes": [
+              "Import AgentComparison from models",
+              "Handle file paths correctly for user vs project agents",
+              "Use resolve_conflict() correctly with ConflictMode"
+            ]
+          },
+          {
+            "task_id": "P4.1",
+            "agent_role": "Python_Pro",
+            "instruction": "Add show_comparison_diff(), show_comparison_side_by_side(), show_diff_summary() to conflict_resolver.py",
+            "file_locks": ["agent_transfer/utils/conflict_resolver.py"],
+            "completion_handshake": "Upon success, mark Phase 4 complete in todo list",
+            "dependencies": ["P1.2-FIX"],
+            "required_fixes": [
+              "Import AgentComparison from models",
+              "Create wrapper functions that extract content from comparison object",
+              "Call existing show_unified_diff() with extracted strings"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "All Wave 3 tasks complete, no Pyright errors in selector.py, transfer.py, conflict_resolver.py",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 4,
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "CLI integration requires all previous components working. Single file edit",
+        "tasks": [
+          {
+            "task_id": "P5.1",
+            "agent_role": "Backend_Architect",
+            "instruction": "Modify import_cmd() in cli.py: Add --bulk and --agent flags, wire up analyzer → selector → import_agents_selective flow",
+            "file_locks": ["agent_transfer/cli.py"],
+            "completion_handshake": "Upon success, mark Phase 5 complete in todo list",
+            "dependencies": ["P2.1", "P3.1", "P4.1"],
+            "integration_points": [
+              "Import analyze_import_archive from utils.import_analyzer",
+              "Import interactive_select_import_agents from utils.selector",
+              "Import import_agents_selective from utils.transfer",
+              "Route based on flags: bulk → old import, agent → direct, default → interactive"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "CLI imports successfully, uv run agent-transfer import --help shows new flags",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 5,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Error handling and testing are independent activities on different concerns",
+        "tasks": [
+          {
+            "task_id": "P6.1",
+            "agent_role": "QA_Engineer",
+            "instruction": "Add error handling: empty archive, all IDENTICAL, invalid --agent name, archive extraction failures, interrupted selection, missing directories",
+            "file_locks": [
+              "agent_transfer/utils/import_analyzer.py",
+              "agent_transfer/utils/selector.py",
+              "agent_transfer/utils/transfer.py",
+              "agent_transfer/cli.py"
+            ],
+            "completion_handshake": "Upon success, mark Phase 6 complete in todo list",
+            "dependencies": ["P5.1"]
+          },
+          {
+            "task_id": "P7.1",
+            "agent_role": "Test_Automator",
+            "instruction": "Setup test environment with uv, create test archive with NEW/CHANGED/IDENTICAL agents, run manual test scenarios from verification plan",
+            "file_locks": ["test_results.md"],
+            "completion_handshake": "Upon success, mark Phase 7 testing complete in todo list, document test results",
+            "dependencies": ["P5.1"]
+          },
+          {
+            "task_id": "P7.2",
+            "agent_role": "Technical_Writer",
+            "instruction": "Update README.md with new workflow examples, update USER_STORIES.md with selective import scenarios",
+            "file_locks": ["README.md", "USER_STORIES.md"],
+            "completion_handshake": "Upon success, mark Phase 7 documentation complete in todo list",
+            "dependencies": ["P5.1"]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "All tests pass, documentation updated, ready for final commit",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      }
+    ],
+    "current_status": {
+      "completed_waves": [1],
+      "current_wave": 2,
+      "blocker": "Wave 1 produced code with type errors. Must fix import_analyzer.py before proceeding to Wave 3 parallel execution",
+      "next_action": "Deploy debugger agent to fix import_analyzer.py type errors and function signature issues"
+    },
+    "parallelization_summary": {
+      "total_waves": 5,
+      "parallel_waves": [3, 5],
+      "sequential_waves": [2, 4],
+      "max_concurrent_agents": 3,
+      "estimated_time_saved": "~60% faster than pure sequential execution"
+    }
+  }
+}

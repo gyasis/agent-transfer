@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""
+Quick test to verify edge case handling.
+"""
+import tempfile
+import tarfile
+from pathlib import Path
+from agent_transfer.utils.import_analyzer import analyze_import_archive
+
+
+def test_empty_archive():
+    """Test that empty archives are handled gracefully."""
+    print("Testing empty archive handling...")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create an empty tar.gz archive
+        archive_path = Path(temp_dir) / "empty.tar.gz"
+        with tarfile.open(archive_path, "w:gz") as tar:
+            # Don't add any files - create empty archive
+            pass
+
+        # Analyze the empty archive
+        preview = analyze_import_archive(str(archive_path))
+
+        assert len(preview.comparisons) == 0, "Empty archive should have 0 comparisons"
+        assert preview.new_count == 0, "Empty archive should have 0 new agents"
+        assert preview.changed_count == 0, "Empty archive should have 0 changed agents"
+        assert preview.identical_count == 0, "Empty archive should have 0 identical agents"
+
+        print("✓ Empty archive handled correctly")
+
+
+def test_corrupted_archive():
+    """Test that corrupted archives produce clear error messages."""
+    print("\nTesting corrupted archive handling...")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a corrupted file (not a valid tar.gz)
+        corrupted_path = Path(temp_dir) / "corrupted.tar.gz"
+        corrupted_path.write_text("This is not a valid tar.gz file")
+
+        try:
+            analyze_import_archive(str(corrupted_path))
+            assert False, "Should have raised RuntimeError for corrupted archive"
+        except RuntimeError as e:
+            assert "Failed to extract archive" in str(e)
+            assert "corrupted" in str(e).lower()
+            print(f"✓ Corrupted archive error: {e}")
+        except Exception as e:
+            print(f"✗ Unexpected error type: {type(e).__name__}: {e}")
+            raise
+
+
+if __name__ == "__main__":
+    print("Running edge case tests...\n")
+    test_empty_archive()
+    test_corrupted_archive()
+    print("\n✓ All edge case tests passed!")

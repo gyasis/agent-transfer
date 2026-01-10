@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+"""Test script for interactive_select_import_agents functionality."""
+
+from agent_transfer.models import Agent, AgentComparison
+from agent_transfer.utils.selector import interactive_select_import_agents
+
+# Create test agents
+agent1 = Agent(
+    name="data-analyst",
+    description="Analyzes data and generates insights",
+    file_path="data-analyst.md",
+    agent_type="user",
+    tools=["Read", "Bash", "Write"],
+    permission_mode="full",
+    model="claude-opus-4"
+)
+
+agent2 = Agent(
+    name="frontend-dev",
+    description="Frontend development specialist with React expertise",
+    file_path="frontend-dev.md",
+    agent_type="user",
+    tools=["Read", "Edit", "Bash", "WebSearch"],
+    permission_mode="full",
+    model="claude-sonnet-4"
+)
+
+agent3 = Agent(
+    name="backend-api",
+    description="Backend API developer",
+    file_path="backend-api.md",
+    agent_type="project",
+    tools=["Read", "Write", "Bash"],
+    permission_mode="restricted",
+    model="claude-sonnet-4"
+)
+
+# Create test comparisons
+comparisons = [
+    AgentComparison(
+        agent=agent1,
+        status="NEW",
+        local_path=None,
+        local_content=None,
+        archive_content="# Data Analyst\nNew agent content here...",
+        diff_summary=None
+    ),
+    AgentComparison(
+        agent=agent2,
+        status="CHANGED",
+        local_path="/home/user/.claude/agents/frontend-dev.md",
+        local_content="# Frontend Dev\nOld content here...",
+        archive_content="# Frontend Dev\nNew content with updates...",
+        diff_summary="+12 -5 ~3"
+    ),
+    AgentComparison(
+        agent=agent3,
+        status="IDENTICAL",
+        local_path="/path/to/.claude/agents/backend-api.md",
+        local_content="# Backend API\nSame content...",
+        archive_content="# Backend API\nSame content...",
+        diff_summary=None
+    )
+]
+
+if __name__ == "__main__":
+    print("Testing interactive_select_import_agents...")
+    print(f"Created {len(comparisons)} test comparisons:")
+    print(f"  - NEW: 1")
+    print(f"  - CHANGED: 1")
+    print(f"  - IDENTICAL: 1")
+    print()
+    print("Expected behavior:")
+    print("  - NEW + CHANGED should be pre-selected (2 agents)")
+    print("  - IDENTICAL should be dimmed but not selected")
+    print("  - Table should show Status and Diff columns")
+    print("  - Commands: v (diff), s (side-by-side), n (NEW only), c (CHANGED only), f (filter)")
+    print()
+
+    # Run interactive selector
+    selected = interactive_select_import_agents(comparisons)
+
+    print(f"\nSelected {len(selected)} agent(s):")
+    for comp in selected:
+        print(f"  - {comp.agent.name} ({comp.status})")

@@ -396,6 +396,183 @@ agent-transfer view
 
 ---
 
+## Selective Import Scenarios
+
+### US-013: Preview Before Import
+
+**As a** developer working across multiple machines
+**I want to** see what will change before importing agents
+**So that** I can avoid overwriting my local work unnecessarily
+
+**Acceptance Criteria:**
+- ✅ Interactive preview shows NEW, CHANGED, and IDENTICAL agents
+- ✅ Smart defaults: NEW + CHANGED pre-selected
+- ✅ View diffs for CHANGED agents before importing
+- ✅ Toggle selection per agent
+- ✅ Filter by status (NEW/CHANGED/IDENTICAL)
+- ✅ Confirm before import
+
+**Example Flow:**
+```bash
+# Machine A: Export agents
+agent-transfer export --all team-backup.tar.gz
+
+# Machine B: Import with preview
+agent-transfer import team-backup.tar.gz
+# Preview shows:
+#   5 NEW agents
+#   3 CHANGED agents (with diff option)
+#   7 IDENTICAL agents
+# Review diffs with 'v' command
+# Select desired agents
+# Import safely
+```
+
+**User Benefit:** Developer can see that 3 agents changed since last sync, review the diffs to see if they're improvements or conflicts, and selectively import only the desired updates without blindly overwriting local work.
+
+---
+
+### US-014: Quick Single Agent Import
+
+**As a** developer
+**I want to** import just one specific agent from an archive
+**So that** I don't have to browse through an entire backup
+
+**Acceptance Criteria:**
+- ✅ `--agent` flag imports specific agent by name
+- ✅ No interactive selection needed
+- ✅ Fast extraction of single agent
+- ✅ Works with any backup archive
+
+**Example:**
+```bash
+agent-transfer import backup.tar.gz --agent data-analyst
+# Directly imports data-analyst.md
+# Skips all other agents
+```
+
+**User Benefit:** Team member receives a backup with 50 agents but only needs the updated "data-analyst" agent. They can extract just that one without scrolling through the entire list.
+
+---
+
+### US-015: Multi-System Development Workflow
+
+**As a** team member collaborating on agents
+**I want to** merge agent improvements from colleagues
+**So that** we can share work without conflicts
+
+**Acceptance Criteria:**
+- ✅ Preview shows which agents changed
+- ✅ Filter to see only CHANGED agents
+- ✅ View side-by-side diffs
+- ✅ Selective import of improvements
+- ✅ Keep local changes for some agents
+
+**Example Flow:**
+```bash
+# Receive teammate's backup
+agent-transfer import colleague-agents.tar.gz
+
+# Preview shows:
+#   2 NEW agents (new work)
+#   5 CHANGED agents (improvements to existing)
+#   10 IDENTICAL agents
+
+# Use 'f' to filter CHANGED only
+# Review each diff with 'v' and 's'
+# Select improvements to merge
+# Import selected agents
+```
+
+**User Benefit:** Developer receives updated agents from a colleague. The preview shows that 5 agents were improved. They review the diffs, see valuable improvements in 3 agents but want to keep their local versions of 2 others. They selectively import only the 3 improved agents.
+
+---
+
+### US-016: Safe Backup Restoration
+
+**As a** developer restoring from backup
+**I want to** see what's different from my current setup
+**So that** I don't lose recent changes
+
+**Acceptance Criteria:**
+- ✅ Compare backup to current local agents
+- ✅ Identify which backup agents are outdated
+- ✅ Identify which backup agents are newer
+- ✅ Selectively restore only what's needed
+
+**Example:**
+```bash
+# Restore from last week's backup
+agent-transfer import weekly-backup.tar.gz
+
+# Preview detects:
+#   0 NEW agents
+#   8 CHANGED agents (backup is older than local)
+#   15 IDENTICAL agents
+
+# Review diffs - see local versions are newer
+# Deselect all CHANGED agents
+# Import nothing (keep current work)
+```
+
+**User Benefit:** Developer accidentally deleted their backup disk and starts fresh install. When importing their backup, they discover their local agents are actually newer than the backup. They safely skip the outdated backup versions.
+
+---
+
+### US-017: Bulk Import for Automation
+
+**As a** DevOps engineer
+**I want to** import agents in CI/CD without manual interaction
+**So that** I can automate agent deployment
+
+**Acceptance Criteria:**
+- ✅ `--bulk` flag skips interactive preview
+- ✅ Imports all agents automatically
+- ✅ Works in non-interactive environments
+- ✅ Suitable for scripts and automation
+
+**Example:**
+```bash
+# In CI/CD pipeline
+agent-transfer import production-agents.tar.gz --bulk
+# All agents imported automatically
+# No user interaction required
+```
+
+**User Benefit:** Automated deployment pipeline needs to provision agents to new developer machines. The bulk import flag allows the script to run without requiring manual selection.
+
+---
+
+### US-018: Incremental Agent Updates
+
+**As a** developer maintaining agents across environments
+**I want to** only import new or updated agents
+**So that** I minimize unnecessary file operations
+
+**Acceptance Criteria:**
+- ✅ Smart detection of IDENTICAL agents
+- ✅ Auto-deselect IDENTICAL agents
+- ✅ Focus on NEW and CHANGED only
+- ✅ Skip redundant imports
+
+**Example:**
+```bash
+# Daily sync workflow
+agent-transfer import daily-sync.tar.gz
+
+# Preview auto-selects:
+#   2 NEW agents ✓
+#   1 CHANGED agent ✓
+#   20 IDENTICAL agents ✗ (auto-deselected)
+
+# Press enter to import only 3 agents
+# Skip re-importing 20 unchanged agents
+```
+
+**User Benefit:** Developer syncs agents daily between work laptop and home desktop. Most agents are identical, so the preview automatically focuses on only the 3 that actually changed, saving time and avoiding unnecessary file writes.
+
+---
+
 ## Success Metrics
 
 - ✅ Users can transfer agents between machines with one command
@@ -404,4 +581,7 @@ agent-transfer view
 - ✅ Deep discovery finds Claude Code in 95%+ of installations
 - ✅ Installation is one-command with uv
 - ✅ No environment pollution from dependencies
+- ✅ Interactive preview prevents accidental overwrites
+- ✅ Selective import saves time on large agent collections
+- ✅ Diff viewing enables informed merge decisions
 

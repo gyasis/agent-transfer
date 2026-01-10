@@ -68,8 +68,14 @@ agent-transfer export --all
 # Export with custom filename
 agent-transfer export my-backup.tar.gz
 
-# Import agents
+# Import agents (interactive preview)
 agent-transfer import backup.tar.gz
+
+# Import specific agent directly
+agent-transfer import backup.tar.gz --agent data-analyst
+
+# Bulk import (skip preview)
+agent-transfer import backup.tar.gz --bulk
 
 # List all available agents
 agent-transfer list-agents
@@ -100,6 +106,7 @@ agent-transfer --version
 
 - 🎨 **Beautiful Interactive UI** - Select agents with a rich terminal interface
 - 📦 **Selective Export** - Choose specific agents or export all
+- 📥 **Smart Import Preview** - See what's NEW, CHANGED, or IDENTICAL before importing
 - 🔍 **Agent Details** - View full information about each agent
 - 🚀 **Fast & Isolated** - Works with uv for dependency isolation
 - 📋 **Agent Listing** - List all available agents without exporting
@@ -131,12 +138,31 @@ $ agent-transfer export --all my-agents-backup.tar.gz
 
 ### Import Agents
 
+#### Interactive Preview (Recommended)
 ```bash
 $ agent-transfer import my-agents-backup.tar.gz
-# Automatically detects Claude Code
-# Handles conflicts with interactive diff/merge (default)
+# Shows beautiful preview:
+# - 5 NEW agents (not on your system)
+# - 3 CHANGED agents (different from your version)
+# - 7 IDENTICAL agents (same as yours)
+# NEW + CHANGED pre-selected for import
+# Toggle selection, view diffs, then import
+```
 
-# Conflict resolution modes:
+#### Import Specific Agent
+```bash
+$ agent-transfer import backup.tar.gz --agent data-analyst
+# Directly imports one agent by name
+```
+
+#### Bulk Import
+```bash
+$ agent-transfer import backup.tar.gz --bulk
+# Import all without preview (legacy behavior)
+```
+
+#### Conflict Resolution Modes
+```bash
 $ agent-transfer import backup.tar.gz                     # Interactive diff (default)
 $ agent-transfer import backup.tar.gz -c overwrite        # Overwrite all existing
 $ agent-transfer import backup.tar.gz -c keep             # Skip conflicts, keep existing
@@ -211,6 +237,75 @@ Scanning agents for tool compatibility...
   Missing: mcp__snowflake__read_query, mcp__snowflake__describe_table
 
 Summary: 1/2 agents compatible
+```
+
+## Import Modes
+
+Agent Transfer supports three import modes for maximum flexibility:
+
+### Interactive Preview (Default)
+
+```bash
+agent-transfer import backup.tar.gz
+```
+
+Shows a beautiful preview before importing with smart change detection:
+
+**What You See:**
+- Agents marked as **NEW** (not on your system)
+- Agents marked as **CHANGED** (different from your local version)
+- Agents marked as **IDENTICAL** (same as your local version)
+- File size and modification time for each agent
+
+**Smart Defaults:**
+- NEW + CHANGED agents are pre-selected
+- IDENTICAL agents are deselected (no need to re-import)
+
+**Interactive Commands:**
+- `1-N` - Toggle specific agent selection
+- `a` - Select all | `d` - Deselect all
+- `n` - Select NEW only | `c` - Select CHANGED only
+- `v` - View unified diff for CHANGED agents
+- `s` - View side-by-side diff
+- `f` - Filter by status (NEW/CHANGED/IDENTICAL)
+- `enter` - Import selected agents
+- `q` - Quit without importing
+
+**Benefits:**
+- See exactly what will change before importing
+- Avoid overwriting local work unnecessarily
+- Selectively merge improvements from backups
+- Review diffs before accepting changes
+
+### Bulk Import
+
+```bash
+agent-transfer import backup.tar.gz --bulk
+```
+
+Import all agents without preview (legacy behavior). Useful for:
+- Trusted backups where you want everything
+- Automated scripts and CI/CD pipelines
+- Quick imports when you know the source
+
+### Direct Agent Import
+
+```bash
+agent-transfer import backup.tar.gz --agent data-analyst
+```
+
+Import a specific agent by name without browsing the archive. Perfect for:
+- Sharing individual agents between team members
+- Extracting one agent from a large backup
+- Quick targeted imports
+
+**Example Workflow:**
+```bash
+# List what's in the archive first
+tar -tzf backup.tar.gz | grep "\.md$"
+
+# Import specific agent
+agent-transfer import backup.tar.gz --agent frontend-developer
 ```
 
 ## Interactive Selection

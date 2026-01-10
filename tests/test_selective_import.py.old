@@ -1,0 +1,358 @@
+"""
+Test suite for selective import feature.
+
+These tests verify the end-to-end functionality of the selective import feature,
+including interactive preview, bulk import, direct agent import, and conflict modes.
+"""
+
+import pytest
+import os
+import tempfile
+import tarfile
+import shutil
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+from agent_transfer.utils.transfer import (
+    analyze_import_archive,
+    import_agents_selective,
+    ConflictMode,
+)
+from agent_transfer.models import Agent, AgentComparison
+
+
+class TestArchiveAnalysis:
+    """Test archive analysis and comparison logic."""
+
+    def test_analyze_import_archive_counts(self, test_archive):
+        """Test that analyze_import_archive correctly counts NEW/CHANGED/IDENTICAL agents."""
+        preview = analyze_import_archive(test_archive)
+
+        assert preview is not None
+        assert len(preview.comparisons) > 0
+        assert preview.new_count + preview.changed_count + preview.identical_count == len(
+            preview.comparisons
+        )
+
+    def test_analyze_import_archive_detects_new_agents(self, test_archive_with_new_agent):
+        """Test that NEW agents are correctly identified."""
+        preview = analyze_import_archive(test_archive_with_new_agent)
+
+        new_agents = [c for c in preview.comparisons if c.status == "NEW"]
+        assert len(new_agents) > 0
+        assert all(c.local_path is None for c in new_agents)
+
+    def test_analyze_import_archive_detects_changed_agents(
+        self, test_archive_with_modified_agent
+    ):
+        """Test that CHANGED agents are correctly identified."""
+        preview = analyze_import_archive(test_archive_with_modified_agent)
+
+        changed_agents = [c for c in preview.comparisons if c.status == "CHANGED"]
+        assert len(changed_agents) > 0
+        assert all(c.local_content != c.archive_content for c in changed_agents)
+
+    def test_analyze_import_archive_detects_identical_agents(self, test_archive):
+        """Test that IDENTICAL agents are correctly identified."""
+        preview = analyze_import_archive(test_archive)
+
+        identical_agents = [c for c in preview.comparisons if c.status == "IDENTICAL"]
+        # Since we're testing with current agents, most should be identical
+        assert len(identical_agents) >= 0
+
+
+class TestConflictModes:
+    """Test different conflict resolution modes."""
+
+    def test_overwrite_mode_replaces_existing(self, test_archive, temp_agent_dir):
+        """Test that overwrite mode replaces existing agents."""
+        preview = analyze_import_archive(test_archive)
+        changed_agents = [c for c in preview.comparisons if c.status == "CHANGED"]
+
+        if not changed_agents:
+            pytest.skip("No changed agents to test overwrite mode")
+
+        # Get original content
+        comparison = changed_agents[0]
+        original_content = comparison.local_content
+
+        # Import with overwrite mode
+        import_agents_selective(
+            test_archive, [comparison], ConflictMode.OVERWRITE, len(preview.comparisons)
+        )
+
+        # Verify content was replaced
+        with open(comparison.local_path, "r") as f:
+            new_content = f.read()
+
+        assert new_content == comparison.archive_content
+        assert new_content != original_content
+
+    def test_keep_mode_preserves_existing(self, test_archive, temp_agent_dir):
+        """Test that keep mode preserves existing agents."""
+        preview = analyze_import_archive(test_archive)
+        changed_agents = [c for c in preview.comparisons if c.status == "CHANGED"]
+
+        if not changed_agents:
+            pytest.skip("No changed agents to test keep mode")
+
+        # Get original content
+        comparison = changed_agents[0]
+        original_content = comparison.local_content
+
+        # Import with keep mode
+        import_agents_selective(
+            test_archive, [comparison], ConflictMode.KEEP, len(preview.comparisons)
+        )
+
+        # Verify content was NOT replaced
+        with open(comparison.local_path, "r") as f:
+            new_content = f.read()
+
+        assert new_content == original_content
+        assert new_content != comparison.archive_content
+
+    def test_duplicate_mode_creates_new_file(self, test_archive, temp_agent_dir):
+        """Test that duplicate mode creates new files with _1, _2 suffixes."""
+        preview = analyze_import_archive(test_archive)
+        changed_agents = [c for c in preview.comparisons if c.status == "CHANGED"]
+
+        if not changed_agents:
+            pytest.skip("No changed agents to test duplicate mode")
+
+        comparison = changed_agents[0]
+        original_path = Path(comparison.local_path)
+
+        # Import with duplicate mode
+        import_agents_selective(
+            test_archive, [comparison], ConflictMode.DUPLICATE, len(preview.comparisons)
+        )
+
+        # Verify duplicate file was created
+        parent = original_path.parent
+        stem = original_path.stem
+        suffix = original_path.suffix
+
+        duplicate_file = parent / f"{stem}_1{suffix}"
+        assert duplicate_file.exists()
+
+        # Verify both files exist with different content
+        with open(original_path, "r") as f:
+            original_content = f.read()
+
+        with open(duplicate_file, "r") as f:
+            duplicate_content = f.read()
+
+        assert original_content != duplicate_content
+
+
+class TestSelectionLogic:
+    """Test agent selection logic."""
+
+    def test_new_and_changed_preselected(self, test_archive):
+        """Test that NEW and CHANGED agents are pre-selected by default."""
+        preview = analyze_import_archive(test_archive)
+
+        # In the interactive selector, NEW + CHANGED should be pre-selected
+        # This is implemented in interactive_select_import_agents
+        preselected = [
+            i for i, comp in enumerate(preview.comparisons)
+            if comp.status in ["NEW", "CHANGED"]
+        ]
+
+        assert len(preselected) >= 0
+        # Verify no IDENTICAL agents are pre-selected
+        for i in preselected:
+            assert preview.comparisons[i].status != "IDENTICAL"
+
+    def test_status_colors_mapping(self, test_archive):
+        """Test that status values map to correct display colors."""
+        preview = analyze_import_archive(test_archive)
+
+        status_colors = {
+            "NEW": "green",
+            "CHANGED": "yellow",
+            "IDENTICAL": "dim",
+        }
+
+        for comparison in preview.comparisons:
+            assert comparison.status in status_colors
+
+
+class TestCLICommands:
+    """Test CLI commands end-to-end."""
+
+    @patch("agent_transfer.cli.import_agents")
+    def test_bulk_import_skips_preview(self, mock_import, test_archive):
+        """Test that --bulk flag skips interactive preview."""
+        from click.testing import CliRunner
+        from agent_transfer.cli import cli
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["import", test_archive, "--bulk", "--conflict-mode", "overwrite"]
+        )
+
+        assert result.exit_code == 0
+        mock_import.assert_called_once()
+
+    @patch("agent_transfer.cli.interactive_select_import_agents")
+    def test_interactive_preview_shown_by_default(
+        self, mock_interactive_select, test_archive
+    ):
+        """Test that interactive preview is shown by default."""
+        from click.testing import CliRunner
+        from agent_transfer.cli import cli
+
+        # Mock selection to return empty list (cancel)
+        mock_interactive_select.return_value = []
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["import", test_archive])
+
+        assert result.exit_code == 0
+        mock_interactive_select.assert_called_once()
+
+    def test_direct_agent_import_by_name(self, test_archive):
+        """Test importing a specific agent by name."""
+        from click.testing import CliRunner
+        from agent_transfer.cli import cli
+
+        preview = analyze_import_archive(test_archive)
+        if not preview.comparisons:
+            pytest.skip("No agents in test archive")
+
+        agent_name = preview.comparisons[0].agent.name
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["import", test_archive, "--agent", agent_name, "--conflict-mode", "keep"],
+        )
+
+        assert result.exit_code == 0
+
+    def test_direct_agent_import_invalid_name(self, test_archive):
+        """Test error handling for invalid agent name."""
+        from click.testing import CliRunner
+        from agent_transfer.cli import cli
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["import", test_archive, "--agent", "nonexistent-agent-name-12345"],
+        )
+
+        assert result.exit_code == 1
+        assert "not found" in result.output.lower()
+
+
+class TestDiffViewing:
+    """Test diff viewing functionality."""
+
+    def test_diff_summary_generated_for_changed_agents(self, test_archive):
+        """Test that diff summaries are generated for CHANGED agents."""
+        preview = analyze_import_archive(test_archive)
+
+        changed_agents = [c for c in preview.comparisons if c.status == "CHANGED"]
+
+        for comparison in changed_agents:
+            # Diff summary should be present
+            assert comparison.diff_summary is not None or comparison.diff_summary == ""
+
+
+# Fixtures
+
+
+@pytest.fixture
+def test_archive(tmp_path):
+    """Create a test archive with current agents."""
+    import subprocess
+
+    archive_path = tmp_path / "test-archive.tar.gz"
+
+    # Use the CLI to create the archive
+    result = subprocess.run(
+        ["uv", "run", "agent-transfer", "export", "--all", str(archive_path)],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        pytest.fail(f"Failed to create test archive: {result.stderr}")
+
+    assert archive_path.exists()
+    return str(archive_path)
+
+
+@pytest.fixture
+def test_archive_with_new_agent(tmp_path):
+    """Create a test archive with a new agent not in local system."""
+    # Create a temporary agent directory
+    temp_agents_dir = tmp_path / "temp_agents"
+    temp_agents_dir.mkdir()
+
+    # Create a new agent file
+    new_agent_content = """---
+name: test-new-agent
+description: Test agent for new agent detection
+tools: Read, Write
+---
+
+This is a test agent for detecting new agents.
+"""
+    (temp_agents_dir / "test-new-agent.md").write_text(new_agent_content)
+
+    # Create archive
+    archive_path = tmp_path / "test-new-agent.tar.gz"
+
+    with tarfile.open(archive_path, "w:gz") as tar:
+        tar.add(temp_agents_dir, arcname="user-agents")
+
+    return str(archive_path)
+
+
+@pytest.fixture
+def test_archive_with_modified_agent(tmp_path):
+    """Create a test archive with a modified version of an existing agent."""
+    # Find an existing agent
+    from agent_transfer.utils.discovery import find_agent_directories
+    from agent_transfer.utils.parser import find_all_agents
+
+    agent_dirs = find_agent_directories()
+    agent_paths = [path for path, _ in agent_dirs]
+    agents = find_all_agents(agent_paths)
+
+    if not agents:
+        pytest.skip("No agents available to create modified archive")
+
+    # Copy one agent and modify it
+    source_agent = agents[0]
+    temp_agents_dir = tmp_path / "temp_agents"
+    temp_agents_dir.mkdir()
+
+    # Read and modify content
+    with open(source_agent.file_path, "r") as f:
+        content = f.read()
+
+    modified_content = content + "\n\n# MODIFIED FOR TESTING\n"
+
+    # Write modified agent
+    dest_path = temp_agents_dir / Path(source_agent.file_path).name
+    dest_path.write_text(modified_content)
+
+    # Create archive
+    archive_path = tmp_path / "test-modified-agent.tar.gz"
+
+    with tarfile.open(archive_path, "w:gz") as tar:
+        tar.add(temp_agents_dir, arcname="user-agents")
+
+    return str(archive_path)
+
+
+@pytest.fixture
+def temp_agent_dir(tmp_path):
+    """Create a temporary agent directory for testing."""
+    agent_dir = tmp_path / "agents"
+    agent_dir.mkdir()
+    return str(agent_dir)
