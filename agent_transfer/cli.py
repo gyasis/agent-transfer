@@ -8,17 +8,17 @@ from rich.console import Console
 
 from . import __version__
 from .utils.parser import find_all_agents
-from .utils.transfer import export_agents, import_agents, import_agents_selective
+from .utils.transfer import export_agents_and_skills, import_agents_selective, import_agents_and_skills
 from .utils.discovery import discover_claude_code_info, display_discovery_info
 from .utils.web_server import start_server
 from .utils.conflict_resolver import ConflictMode
 from .utils.tool_checker import (
-    check_all_agents, display_compatibility_report,
-    get_missing_servers, check_tool_compatibility
+    check_all_agents, display_compatibility_report
 )
 from .utils.discovery import find_agent_directories
 from .utils.import_analyzer import analyze_import_archive
 from .utils.selector import interactive_select_import_agents
+from .utils.skill_parser import find_all_skills
 
 console = Console()
 
@@ -34,15 +34,20 @@ def cli():
 @click.argument('output_file', required=False)
 @click.option('--all', 'export_all', is_flag=True, help='Export all agents without interactive selection')
 @click.option('--interactive/--no-interactive', default=True, help='Use interactive selection (default: True)')
-@click.option('--type', 'agent_type', type=click.Choice(['user', 'project', 'all']), default='all',
+@click.option('--type', 'export_type',
+              type=click.Choice(['all', 'agents', 'skills']),
+              default='all',
+              help='What to export: all, agents-only, or skills-only')
+@click.option('--agent-type', 'agent_type', type=click.Choice(['user', 'project', 'all']), default='all',
               help='Filter by agent type: user, project, or all (default: all)')
 @click.option('--discover', is_flag=True, help='Show Claude Code installation info before export')
-def export(output_file, export_all, interactive, agent_type, discover):
+def export(output_file, export_all, interactive, export_type, agent_type, discover):
     """Export agents to a tar.gz archive.
 
     If OUTPUT_FILE is not provided, a timestamped filename will be used.
 
-    Use --type to filter by agent type (user agents are in ~/.claude/agents,
+    Use --type to choose what to export (agents, skills, or all).
+    Use --agent-type to filter by agent type (user agents are in ~/.claude/agents,
     project agents are in .claude/agents within project directories).
     """
     try:
@@ -57,10 +62,19 @@ def export(output_file, export_all, interactive, agent_type, discover):
         # Convert 'all' to None for the function
         type_filter = None if agent_type == 'all' else agent_type
 
-        result_file = export_agents(
+        # Map export_type to the format expected by export_agents_and_skills
+        type_map = {
+            'all': 'all',
+            'agents': 'agents-only',
+            'skills': 'skills-only'
+        }
+        mapped_type = type_map[export_type]
+
+        result_file = export_agents_and_skills(
             output_file=output_file,
             interactive=interactive,
-            agent_type_filter=type_filter
+            agent_type_filter=type_filter,
+            export_type=mapped_type
         )
         console.print(f"\n[green]✓ Successfully exported to: {result_file}[/green]")
     except KeyboardInterrupt:
@@ -76,10 +90,14 @@ def export(output_file, export_all, interactive, agent_type, discover):
 @click.option('--overwrite', is_flag=True, help='Overwrite existing agents without prompting (legacy, use --conflict-mode)')
 @click.option('--conflict-mode', '-c', type=click.Choice(['overwrite', 'keep', 'duplicate', 'diff']),
               default='diff', help='How to handle conflicts: overwrite, keep, duplicate, or diff (default: diff)')
+@click.option('--type', 'import_type',
+              type=click.Choice(['all', 'agents', 'skills']),
+              default='all',
+              help='What to import: all, agents-only, or skills-only')
 @click.option('--discover', is_flag=True, help='Show Claude Code installation info before import')
 @click.option('--bulk', is_flag=True, help='Skip preview, import all agents (old behavior)')
 @click.option('--agent', type=str, help='Import specific agent by name')
-def import_cmd(input_file, overwrite, conflict_mode, discover, bulk, agent):
+def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk, agent):
     """Import agents from a tar.gz archive.
 
     INPUT_FILE is the path to the backup archive to import.
@@ -111,10 +129,18 @@ def import_cmd(input_file, overwrite, conflict_mode, discover, bulk, agent):
         if overwrite:
             mode = ConflictMode.OVERWRITE
 
+        # Map import_type to the format expected by import_agents_and_skills
+        type_map = {
+            'all': 'all',
+            'agents': 'agents-only',
+            'skills': 'skills-only'
+        }
+        mapped_type = type_map[import_type]
+
         # Route based on flags
         if bulk:
-            # OLD BEHAVIOR: Import all agents
-            import_agents(input_file, conflict_mode=mode)
+            # OLD BEHAVIOR: Import all agents (now with type support)
+            import_agents_and_skills(input_file, conflict_mode=mode, import_type=mapped_type)
         elif agent:
             # DIRECT IMPORT: Import specific agent by name
             preview = analyze_import_archive(input_file)
@@ -172,7 +198,7 @@ def import_cmd(input_file, overwrite, conflict_mode, discover, bulk, agent):
             total_count = len(preview.comparisons)
             import_agents_selective(input_file, selected, mode, total_count)
 
-        console.print(f"\n[green]✓ Import operation complete[/green]")
+        console.print("\n[green]✓ Import operation complete[/green]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Import cancelled[/yellow]")
         sys.exit(1)
@@ -234,6 +260,60 @@ def list_agents(discover):
     
     console.print(table)
     console.print(f"\n[dim]Total: {len(agents)} agent(s)[/dim]")
+
+
+@cli.command('list-skills')
+def list_skills():
+    """List all available Claude Code skills."""
+    skills = find_all_skills()
+
+    if not skills:
+        console.print("[yellow]No skills found[/yellow]")
+        console.print("\n[dim]Checked locations:[/dim]")
+        console.print(f"  - {Path.home() / '.claude' / 'skills'}")
+        console.print(f"  - {Path.cwd() / '.claude' / 'skills'}")
+        return
+
+    from rich.table import Table
+
+    # Create Rich table
+    table = Table(title=f"Found {len(skills)} skill(s)")
+    table.add_column("Name", style="cyan")
+    table.add_column("Type", justify="center")
+    table.add_column("Files", justify="right")
+    table.add_column("Size", justify="right")
+    table.add_column("Scripts", justify="center")
+    table.add_column("Deps", justify="center")
+    table.add_column("Description", style="dim")
+
+    for skill in skills:
+        # Type badge
+        type_badge = "[green]USER[/green]" if skill.skill_type == "user" else "[blue]PROJECT[/blue]"
+
+        # Size
+        size_mb = skill.total_size_bytes / (1024 * 1024)
+        size_str = f"{size_mb:.1f} MB" if size_mb >= 1 else f"{skill.total_size_bytes / 1024:.1f} KB"
+
+        # Scripts indicator
+        scripts = "[green]Yes[/green]" if skill.has_scripts else "[dim]No[/dim]"
+
+        # Dependencies indicator
+        deps = "[yellow]Yes[/yellow]" if (skill.has_requirements_txt or skill.has_pyproject_toml) else "[dim]No[/dim]"
+
+        # Truncate description
+        desc = skill.description[:60] + "..." if len(skill.description) > 60 else skill.description
+
+        table.add_row(
+            skill.name,
+            type_badge,
+            str(skill.file_count),
+            size_str,
+            scripts,
+            deps,
+            desc
+        )
+
+    console.print(table)
 
 
 @cli.command()
