@@ -5,50 +5,292 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ agent.name }} - Agent Transfer Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind Typography Plugin for beautiful markdown rendering -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {}
+            },
+            plugins: []
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tailwindcss/typography@0.5.10/dist/typography.min.css">
+    <!-- Fuse.js for fuzzy string matching (typo tolerance) -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
     <style>
-        /* Custom styles for markdown content */
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Dark scrollbar for sidebar */
+        .bg-gray-900::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        .bg-gray-900::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        /* Firefox scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+        .bg-gray-900 {
+            scrollbar-color: #475569 transparent;
+        }
+
+        /* Markdown/Prose styling */
+        .prose-agent {
+            color: #374151;
+            line-height: 1.75;
+        }
+        .prose-agent h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #111827;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        .prose-agent h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 1.75rem;
+            margin-bottom: 0.75rem;
+            color: #1f2937;
+        }
+        .prose-agent h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        .prose-agent p {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .prose-agent ul, .prose-agent ol {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        .prose-agent ul {
+            list-style-type: disc;
+        }
+        .prose-agent ol {
+            list-style-type: decimal;
+        }
+        .prose-agent li {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose-agent li::marker {
+            color: #6b7280;
+        }
+        .prose-agent code {
+            background: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            color: #dc2626;
+        }
+        .prose-agent pre {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .prose-agent pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+            font-size: 0.875rem;
+        }
+        .prose-agent blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #4b5563;
+            font-style: italic;
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+        .prose-agent a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        .prose-agent a:hover {
+            color: #1d4ed8;
+        }
+        .prose-agent strong {
+            font-weight: 600;
+            color: #111827;
+        }
+        .prose-agent em {
+            font-style: italic;
+        }
+        .prose-agent hr {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 2rem 0;
+        }
+        .prose-agent table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .prose-agent th, .prose-agent td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .prose-agent th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        .prose-agent tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .agent-item { transition: opacity 0.2s ease; }
+        .agent-item.hidden-by-search { display: none; }
+        .relevance-badge {
+            font-size: 9px;
+            padding: 1px 5px;
+            border-radius: 9999px;
+        }
+        /* Collapsible search container */
+        .search-container {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+            margin-bottom: 0;
+        }
+        .search-container.active {
+            max-height: 80px;
+            opacity: 1;
+            margin-bottom: 1rem;
+        }
+        .search-trigger {
+            transition: background-color 0.2s ease;
+        }
+        .search-trigger:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        .search-trigger.active {
+            background-color: rgba(59, 130, 246, 0.3);
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden bg-gray-50">
     <!-- Sidebar -->
-    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto p-5 border-r border-gray-700">
-        <h1 class="text-xl font-bold mb-5 text-white border-b-2 border-gray-700 pb-3">
-            <a href="/" class="text-white no-underline">🤖 Agent Transfer</a>
-        </h1>
-        
-        {% if user_agents %}
-        <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide">
-            User Agents ({{ user_agents|length }})
-        </h2>
-        <ul class="space-y-1">
-            {% for a in user_agents %}
-            <li>
-                <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm {% if a.name == agent.name %}bg-blue-600 text-white{% endif %}">
-                    <span class="font-semibold block">{{ a.name }}</span>
-                    <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        {% if project_agents %}
-        <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide">
-            Project Agents ({{ project_agents|length }})
-        </h2>
-        <ul class="space-y-1">
-            {% for a in project_agents %}
-            <li>
-                <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm {% if a.name == agent.name %}bg-blue-600 text-white{% endif %}">
-                    <span class="font-semibold block">{{ a.name }}</span>
-                    <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
+    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto p-5 border-r border-gray-700 flex flex-col">
+        <div class="flex items-center justify-between mb-4 border-b-2 border-gray-700 pb-3">
+            <h1 class="text-xl font-bold text-white">
+                <a href="/" class="text-white no-underline hover:text-blue-300">Agent Transfer</a>
+            </h1>
+            <button id="searchToggle" class="search-trigger p-2 rounded-lg text-gray-400" title="Search (⌘K)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Search Box (hidden by default) -->
+        <div id="searchContainer" class="search-container">
+            <div class="relative">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Loading AI search..."
+                    class="w-full px-3 py-2 bg-gray-800 text-gray-100 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none text-sm placeholder-gray-500"
+                    disabled
+                >
+                <div id="searchStatus" class="absolute right-3 top-2.5 text-xs text-gray-500">
+                    <span class="loading-spinner"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agent Lists -->
+        <div class="flex-1 overflow-y-auto">
+            {% if user_agents %}
+            <h2 class="text-xs uppercase text-gray-400 mt-2 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>User Agents</span>
+                <span id="userAgentCount">({{ user_agents|length }})</span>
+            </h2>
+            <ul id="userAgentList" class="space-y-1">
+                {% for a in user_agents %}
+                <li class="agent-item" data-name="{{ a.name }}" data-description="{{ a.description|default('', true) }}" data-tools="{{ a.tools|default('', true) }}" data-type="user">
+                    <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm {% if a.name == agent.name %}bg-blue-600 text-white{% endif %}">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">{{ a.name }}</span>
+                            <span class="relevance-badge bg-green-900 text-green-300 hidden"></span>
+                        </span>
+                        <span class="text-xs {% if a.name == agent.name %}text-blue-200{% else %}text-gray-400{% endif %} mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if project_agents %}
+            <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>Project Agents</span>
+                <span id="projectAgentCount">({{ project_agents|length }})</span>
+            </h2>
+            <ul id="projectAgentList" class="space-y-1">
+                {% for a in project_agents %}
+                <li class="agent-item" data-name="{{ a.name }}" data-description="{{ a.description|default('', true) }}" data-tools="{{ a.tools|default('', true) }}" data-type="project">
+                    <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm {% if a.name == agent.name %}bg-blue-600 text-white{% endif %}">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">{{ a.name }}</span>
+                            <span class="relevance-badge bg-green-900 text-green-300 hidden"></span>
+                        </span>
+                        <span class="text-xs {% if a.name == agent.name %}text-blue-200{% else %}text-gray-400{% endif %} mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <!-- No results message -->
+            <div id="noResults" class="hidden text-center py-8 text-gray-500">
+                <p class="text-sm">No agents match your search</p>
+            </div>
+        </div>
     </div>
-    
+
     <!-- Main Content -->
     <div class="flex-1 overflow-y-auto p-10 bg-white">
         <div class="max-w-4xl mx-auto">
@@ -56,7 +298,7 @@
             <div class="border-b border-gray-200 pb-5 mb-8">
                 <h1 class="text-4xl font-bold text-gray-900 mb-3">{{ agent.name }}</h1>
                 <p class="text-lg text-gray-600 mb-4 whitespace-pre-line">{{ agent.description|replace('\\n', '\n') if agent.description else 'No description available' }}</p>
-                
+
                 <div class="flex flex-wrap gap-3 mt-4">
                     <span class="px-3 py-1 rounded-full text-xs font-semibold {% if agent.agent_type == 'user' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
                         {{ agent.agent_type|title }} Agent
@@ -72,20 +314,560 @@
                     </span>
                     {% endif %}
                 </div>
-                
-                <div class="mt-4 text-sm text-gray-600 space-y-1">
-                    <div><strong>File:</strong> <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ agent.file_path }}</code></div>
+
+                <div class="mt-4 text-sm text-gray-600 space-y-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <strong>File:</strong>
+                        <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ agent.file_path }}</code>
+                        <div class="flex gap-1">
+                            <button onclick="openInEditor('{{ agent.file_path }}')"
+                               class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors cursor-pointer"
+                               title="Open in Cursor">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M13.325 3.05L8.667 20.432l1.932.518 4.658-17.382-1.932-.518zM7.612 18.36l1.36-1.448-.001-.019-5.094-4.78 5.095-4.787v-.015l-1.36-1.45-6.551 6.252 6.551 6.247zM16.388 18.36l-1.36-1.448.001-.019 5.094-4.78-5.095-4.787v-.015l1.36-1.45 6.551 6.252-6.551 6.247z"/></svg>
+                                Cursor
+                            </button>
+                            <button onclick="copyPath('{{ agent.file_path }}')"
+                                    class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                                    title="Copy path">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                Copy
+                            </button>
+                            <button onclick="openFolderInEditor('{{ agent.file_path }}')"
+                               class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors cursor-pointer"
+                               title="Open folder in Cursor">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                Folder
+                            </button>
+                        </div>
+                    </div>
                     {% if agent.tools %}
                     <div><strong>Tools:</strong> {{ agent.tools|join(", ") }}</div>
                     {% endif %}
                 </div>
+
+                <script>
+                function copyPath(path) {
+                    navigator.clipboard.writeText(path).then(() => {
+                        const btn = event.target.closest('button');
+                        const origText = btn.innerHTML;
+                        btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+                        btn.classList.add('bg-green-100', 'text-green-700');
+                        setTimeout(() => {
+                            btn.innerHTML = origText;
+                            btn.classList.remove('bg-green-100', 'text-green-700');
+                        }, 1500);
+                    });
+                }
+
+                async function openInEditor(filePath) {
+                    // Use server-side API to open editor (works in WSL+Windows setups)
+                    const btn = event.target.closest('button');
+                    const origText = btn.innerHTML;
+                    btn.innerHTML = '<span class="loading-spinner"></span> Opening...';
+                    btn.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/open-editor?path=${encodeURIComponent(filePath)}`);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Opened!';
+                            btn.classList.add('bg-green-100', 'text-green-700');
+                            setTimeout(() => {
+                                btn.innerHTML = origText;
+                                btn.classList.remove('bg-green-100', 'text-green-700');
+                                btn.disabled = false;
+                            }, 1500);
+                        } else {
+                            throw new Error(data.error || 'Failed to open editor');
+                        }
+                    } catch (error) {
+                        console.error('Failed to open in editor:', error);
+                        btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Error';
+                        btn.classList.add('bg-red-100', 'text-red-700');
+                        setTimeout(() => {
+                            btn.innerHTML = origText;
+                            btn.classList.remove('bg-red-100', 'text-red-700');
+                            btn.disabled = false;
+                        }, 2000);
+                    }
+                }
+
+                async function openFolderInEditor(filePath) {
+                    // Use server-side API to open folder in editor
+                    const btn = event.target.closest('button');
+                    const origText = btn.innerHTML;
+                    btn.innerHTML = '<span class="loading-spinner"></span> Opening...';
+                    btn.disabled = true;
+
+                    try {
+                        const response = await fetch(`/api/open-editor?path=${encodeURIComponent(filePath)}&folder=true`);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Opened!';
+                            btn.classList.add('bg-green-100', 'text-green-700');
+                            setTimeout(() => {
+                                btn.innerHTML = origText;
+                                btn.classList.remove('bg-green-100', 'text-green-700');
+                                btn.disabled = false;
+                            }, 1500);
+                        } else {
+                            throw new Error(data.error || 'Failed to open folder');
+                        }
+                    } catch (error) {
+                        console.error('Failed to open folder:', error);
+                        btn.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Error';
+                        btn.classList.add('bg-red-100', 'text-red-700');
+                        setTimeout(() => {
+                            btn.innerHTML = origText;
+                            btn.classList.remove('bg-red-100', 'text-red-700');
+                            btn.disabled = false;
+                        }, 2000);
+                    }
+                }
+                </script>
             </div>
-            
+
             <!-- Agent Content -->
-            <div class="agent-content-body">
+            <div class="agent-content-body prose-agent">
                 {{ html_content|safe }}
             </div>
         </div>
     </div>
+
+    <!-- Transformers.js Semantic Search -->
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+        env.allowLocalModels = false;
+
+        let embedder = null;
+        let agentEmbeddings = [];
+        let agentElements = [];
+        let originalOrder = []; // Store original DOM order for reset
+        let isModelLoaded = false;
+        let fuseIndex = null;  // Fuse.js index for fuzzy matching
+
+        const searchInput = document.getElementById('searchInput');
+        const searchStatus = document.getElementById('searchStatus');
+        const noResults = document.getElementById('noResults');
+        const userAgentCount = document.getElementById('userAgentCount');
+        const projectAgentCount = document.getElementById('projectAgentCount');
+
+        function cosineSimilarity(a, b) {
+            let dotProduct = 0, normA = 0, normB = 0;
+            for (let i = 0; i < a.length; i++) {
+                dotProduct += a[i] * b[i];
+                normA += a[i] * a[i];
+                normB += b[i] * b[i];
+            }
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        // Initialize Fuse.js index for fuzzy matching (typo tolerance)
+        function initFuseIndex() {
+            const agentData = agentElements.map((el, i) => ({
+                index: i,
+                name: el.dataset.name || '',
+                description: el.dataset.description || '',
+                tools: el.dataset.tools || ''
+            }));
+
+            fuseIndex = new Fuse(agentData, {
+                keys: [
+                    { name: 'name', weight: 0.4 },
+                    { name: 'description', weight: 0.4 },
+                    { name: 'tools', weight: 0.2 }
+                ],
+                threshold: 0.4,
+                distance: 100,
+                includeScore: true,
+                ignoreLocation: true,
+                minMatchCharLength: 2,
+                findAllMatches: true
+            });
+        }
+
+        // Correct typos using fuzzy matching before semantic search
+        function correctQueryTypos(query) {
+            if (!fuseIndex) return query;
+
+            const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+            const correctedWords = [];
+
+            const vocabulary = new Set();
+            agentElements.forEach(el => {
+                const text = `${el.dataset.name} ${el.dataset.description} ${el.dataset.tools}`.toLowerCase();
+                text.split(/\W+/).forEach(w => {
+                    if (w.length > 2) vocabulary.add(w);
+                });
+            });
+
+            const vocabArray = Array.from(vocabulary);
+            const wordFuse = new Fuse(vocabArray, {
+                threshold: 0.4,
+                distance: 50
+            });
+
+            for (const word of words) {
+                if (vocabulary.has(word)) {
+                    correctedWords.push(word);
+                } else {
+                    const matches = wordFuse.search(word);
+                    if (matches.length > 0 && matches[0].score < 0.3) {
+                        correctedWords.push(matches[0].item);
+                    } else {
+                        correctedWords.push(word);
+                    }
+                }
+            }
+
+            return correctedWords.join(' ');
+        }
+
+        // Get fuzzy match scores for all agents
+        function getFuzzyScores(query) {
+            if (!fuseIndex) return new Map();
+
+            const results = fuseIndex.search(query);
+            const scores = new Map();
+
+            results.forEach(result => {
+                scores.set(result.item.index, 1 - result.score);
+            });
+
+            return scores;
+        }
+
+        async function initializeSearch() {
+            try {
+                embedder = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5', {
+                    quantized: true
+                });
+
+                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                // Store original order for reset
+                originalOrder = agentElements.map((el, i) => ({ element: el, originalIndex: i }));
+
+                const agentTexts = agentElements.map(el => {
+                    const name = el.dataset.name || '';
+                    const description = el.dataset.description || '';
+                    const tools = el.dataset.tools || '';
+                    return `${name} ${description} ${tools}`.trim();
+                });
+
+                if (agentTexts.length > 0) {
+                    const output = await embedder(agentTexts, {
+                        pooling: 'mean',
+                        normalize: true
+                    });
+                    agentEmbeddings = output.tolist();
+                }
+
+                // Initialize Fuse.js for typo tolerance
+                initFuseIndex();
+
+                searchInput.disabled = false;
+                searchInput.placeholder = 'Search (typos OK!)...';
+                searchStatus.textContent = '';
+                isModelLoaded = true;
+
+            } catch (error) {
+                console.error('Failed to load AI model:', error);
+
+                // Initialize Fuse.js even without AI model (for fuzzy fallback)
+                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                initFuseIndex();
+
+                searchInput.disabled = false;
+                searchInput.placeholder = 'Search (fuzzy mode)...';
+                searchStatus.textContent = '';
+            }
+        }
+
+        // Reorder elements in DOM by relevance score
+        function reorderByRelevance(scoredElements) {
+            const userList = document.getElementById('userAgentList');
+            const projectList = document.getElementById('projectAgentList');
+
+            // Separate by type and sort by score
+            const userItems = scoredElements.filter(s => s.element.dataset.type === 'user');
+            const projectItems = scoredElements.filter(s => s.element.dataset.type === 'project');
+
+            // Reorder user agents
+            if (userList) {
+                userItems.forEach(item => {
+                    userList.appendChild(item.element);
+                });
+            }
+
+            // Reorder project agents
+            if (projectList) {
+                projectItems.forEach(item => {
+                    projectList.appendChild(item.element);
+                });
+            }
+        }
+
+        // Restore original DOM order
+        function restoreOriginalOrder() {
+            const userList = document.getElementById('userAgentList');
+            const projectList = document.getElementById('projectAgentList');
+
+            const userItems = originalOrder.filter(o => o.element.dataset.type === 'user')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+            const projectItems = originalOrder.filter(o => o.element.dataset.type === 'project')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+
+            if (userList) {
+                userItems.forEach(item => userList.appendChild(item.element));
+            }
+            if (projectList) {
+                projectItems.forEach(item => projectList.appendChild(item.element));
+            }
+        }
+
+        // Hybrid Search: Combines semantic embeddings + fuzzy matching for typo tolerance
+        async function performSearch(query) {
+            if (!query.trim()) {
+                agentElements.forEach(el => {
+                    el.classList.remove('hidden-by-search');
+                    const badge = el.querySelector('.relevance-badge');
+                    if (badge) badge.classList.add('hidden');
+                });
+                restoreOriginalOrder(); // Restore original order when search is cleared
+                noResults.classList.add('hidden');
+                updateCounts();
+                return;
+            }
+
+            if (!isModelLoaded) {
+                fuzzySearch(query);
+                return;
+            }
+
+            searchStatus.innerHTML = '<span class="loading-spinner"></span>';
+
+            try {
+                // Step 1: Correct typos in query using fuzzy matching
+                const correctedQuery = correctQueryTypos(query);
+                const queryToEmbed = correctedQuery || query;
+
+                // Step 2: Get fuzzy scores (works even with typos)
+                const fuzzyScores = getFuzzyScores(query);
+
+                // Step 3: Get semantic embeddings for corrected query
+                const queryOutput = await embedder([queryToEmbed], {
+                    pooling: 'mean',
+                    normalize: true
+                });
+                const queryEmbedding = queryOutput.tolist()[0];
+
+                // Step 4: Calculate semantic similarities
+                const semanticScores = agentEmbeddings.map((emb, i) => ({
+                    index: i,
+                    score: cosineSimilarity(queryEmbedding, emb)
+                }));
+
+                // Step 5: Combine semantic + fuzzy scores (hybrid approach)
+                const hybridScores = semanticScores.map(sem => {
+                    const fuzzy = fuzzyScores.get(sem.index) || 0;
+                    const combined = (sem.score * 0.6) + (fuzzy * 0.4);
+                    const boost = (sem.score > 0.3 && fuzzy > 0.5) ? 0.1 : 0;
+                    return {
+                        index: sem.index,
+                        score: Math.min(combined + boost, 1.0),
+                        semantic: sem.score,
+                        fuzzy: fuzzy
+                    };
+                });
+
+                hybridScores.sort((a, b) => b.score - a.score);
+
+                const hasTypos = correctedQuery !== query.toLowerCase();
+                const threshold = hasTypos ? 0.2 : 0.25;
+                let visibleCount = 0;
+
+                // Build scored elements list for reordering
+                const scoredElements = [];
+
+                agentElements.forEach((el, i) => {
+                    const result = hybridScores.find(s => s.index === i);
+                    const badge = el.querySelector('.relevance-badge');
+
+                    if (result && result.score >= threshold) {
+                        el.classList.remove('hidden-by-search');
+                        if (badge) {
+                            badge.textContent = Math.round(result.score * 100) + '%';
+                            badge.classList.remove('hidden');
+                        }
+                        scoredElements.push({ element: el, score: result.score });
+                        visibleCount++;
+                    } else {
+                        el.classList.add('hidden-by-search');
+                        if (badge) badge.classList.add('hidden');
+                        // Add hidden elements with score 0 so they stay at bottom
+                        scoredElements.push({ element: el, score: 0 });
+                    }
+                });
+
+                // Sort by score (highest first) and reorder DOM
+                scoredElements.sort((a, b) => b.score - a.score);
+                reorderByRelevance(scoredElements);
+
+                if (visibleCount === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+
+                updateCounts();
+                searchStatus.textContent = '';
+
+            } catch (error) {
+                console.error('Search error:', error);
+                searchStatus.textContent = '';
+                fuzzySearch(query);
+            }
+        }
+
+        // Fuzzy-only search (fallback when AI model not loaded)
+        function fuzzySearch(query) {
+            if (!fuseIndex) {
+                basicSearch(query);
+                return;
+            }
+
+            const fuzzyScores = getFuzzyScores(query);
+            let visibleCount = 0;
+            const scoredElements = [];
+
+            agentElements.forEach((el, i) => {
+                const score = fuzzyScores.get(i) || 0;
+                const badge = el.querySelector('.relevance-badge');
+
+                if (score > 0.3) {
+                    el.classList.remove('hidden-by-search');
+                    if (badge) {
+                        badge.textContent = Math.round(score * 100) + '%';
+                        badge.classList.remove('hidden');
+                    }
+                    scoredElements.push({ element: el, score: score });
+                    visibleCount++;
+                } else {
+                    el.classList.add('hidden-by-search');
+                    if (badge) badge.classList.add('hidden');
+                    scoredElements.push({ element: el, score: 0 });
+                }
+            });
+
+            // Sort by score and reorder DOM
+            scoredElements.sort((a, b) => b.score - a.score);
+            reorderByRelevance(scoredElements);
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            updateCounts();
+        }
+
+        function basicSearch(query) {
+            const lowerQuery = query.toLowerCase();
+            let visibleCount = 0;
+
+            agentElements.forEach(el => {
+                const name = (el.dataset.name || '').toLowerCase();
+                const description = (el.dataset.description || '').toLowerCase();
+                const tools = (el.dataset.tools || '').toLowerCase();
+                const searchText = `${name} ${description} ${tools}`;
+
+                if (searchText.includes(lowerQuery)) {
+                    el.classList.remove('hidden-by-search');
+                    visibleCount++;
+                } else {
+                    el.classList.add('hidden-by-search');
+                }
+
+                const badge = el.querySelector('.relevance-badge');
+                if (badge) badge.classList.add('hidden');
+            });
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            updateCounts();
+        }
+
+        function updateCounts() {
+            const visibleUser = document.querySelectorAll('.agent-item[data-type="user"]:not(.hidden-by-search)').length;
+            const visibleProject = document.querySelectorAll('.agent-item[data-type="project"]:not(.hidden-by-search)').length;
+
+            if (userAgentCount) userAgentCount.textContent = `(${visibleUser})`;
+            if (projectAgentCount) projectAgentCount.textContent = `(${visibleProject})`;
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        const debouncedSearch = debounce(performSearch, 300);
+        searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
+
+        // Search toggle functionality
+        const searchToggle = document.getElementById('searchToggle');
+        const searchContainer = document.getElementById('searchContainer');
+
+        function openSearch() {
+            searchContainer.classList.add('active');
+            searchToggle.classList.add('active');
+            setTimeout(() => searchInput.focus(), 100);
+        }
+
+        function closeSearch() {
+            searchContainer.classList.remove('active');
+            searchToggle.classList.remove('active');
+        }
+
+        function toggleSearch() {
+            if (searchContainer.classList.contains('active')) {
+                closeSearch();
+            } else {
+                openSearch();
+            }
+        }
+
+        searchToggle.addEventListener('click', toggleSearch);
+
+        // Keyboard shortcuts: Cmd/Ctrl+K to open, ESC to close
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                openSearch();
+            }
+            if (e.key === 'Escape' && searchContainer.classList.contains('active')) {
+                searchInput.value = '';
+                performSearch('');
+                closeSearch();
+                searchInput.blur();
+            }
+        });
+
+        initializeSearch();
+    </script>
 </body>
 </html>

@@ -5,50 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent Transfer Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fuse.js for fuzzy string matching (typo tolerance) -->
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
     <style>
-        /* Custom styles for markdown content */
+        .search-highlight { background-color: #fef08a; }
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .agent-item { transition: opacity 0.2s ease; }
+        .agent-item.hidden-by-search { display: none; }
+        .relevance-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 9999px;
+        }
+        /* Hidden search - expands on activation */
+        .search-container {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.2s ease, margin 0.3s ease;
+            margin-bottom: 0;
+        }
+        .search-container.active {
+            max-height: 80px;
+            opacity: 1;
+            margin-bottom: 1rem;
+        }
+        .search-trigger {
+            transition: all 0.2s ease;
+        }
+        .search-trigger:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        .search-trigger.active {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+        .kbd {
+            font-size: 10px;
+            padding: 2px 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden bg-gray-50">
     <!-- Sidebar -->
-    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto p-5 border-r border-gray-700">
-        <h1 class="text-xl font-bold mb-5 text-white border-b-2 border-gray-700 pb-3">
-            🤖 Agent Transfer
-        </h1>
-        
-        {% if user_agents %}
-        <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide">
-            User Agents ({{ user_agents|length }})
-        </h2>
-        <ul class="space-y-1">
-            {% for agent in user_agents %}
-            <li>
-                <a href="/agent/{{ agent.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
-                    <span class="font-semibold block">{{ agent.name }}</span>
-                    <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ agent.description|replace('\\n', ' ') if agent.description else '' }}</span>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        {% if project_agents %}
-        <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide">
-            Project Agents ({{ project_agents|length }})
-        </h2>
-        <ul class="space-y-1">
-            {% for agent in project_agents %}
-            <li>
-                <a href="/agent/{{ agent.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
-                    <span class="font-semibold block">{{ agent.name }}</span>
-                    <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ agent.description|replace('\\n', ' ') if agent.description else '' }}</span>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-        {% endif %}
+    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto p-5 border-r border-gray-700 flex flex-col">
+        <!-- Header with search toggle -->
+        <div class="flex items-center justify-between mb-4 border-b-2 border-gray-700 pb-3">
+            <h1 class="text-xl font-bold text-white">Agent Transfer</h1>
+            <button id="searchToggle" class="search-trigger p-2 rounded-lg text-gray-400" title="Search (⌘K)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Collapsible Search Box (hidden by default) -->
+        <div id="searchContainer" class="search-container">
+            <div class="relative">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search... (typos OK)"
+                    class="w-full px-3 py-2 bg-gray-800 text-gray-100 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none text-sm placeholder-gray-500"
+                >
+                <div id="searchStatus" class="absolute right-3 top-2.5 text-xs text-gray-500"></div>
+            </div>
+            <div class="flex items-center justify-between mt-2">
+                <div id="modelStatus" class="text-xs text-gray-500 hidden">
+                    <span class="loading-spinner"></span>
+                    <span id="modelStatusText">Loading...</span>
+                </div>
+                <span class="text-xs text-gray-600"><span class="kbd">ESC</span> to close</span>
+            </div>
+        </div>
+
+        <!-- Agent Lists Container -->
+        <div id="agentLists" class="flex-1 overflow-y-auto">
+            {% if user_agents %}
+            <h2 class="text-xs uppercase text-gray-400 mt-2 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>User Agents</span>
+                <span id="userAgentCount">({{ user_agents|length }})</span>
+            </h2>
+            <ul id="userAgentList" class="space-y-1">
+                {% for agent in user_agents %}
+                <li class="agent-item" data-name="{{ agent.name }}" data-description="{{ agent.description|default('', true) }}" data-tools="{{ agent.tools|default('', true) }}" data-type="user">
+                    <a href="/agent/{{ agent.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">{{ agent.name }}</span>
+                            <span class="relevance-badge bg-green-900 text-green-300 hidden"></span>
+                        </span>
+                        <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ agent.description|replace('\\n', ' ') if agent.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if project_agents %}
+            <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>Project Agents</span>
+                <span id="projectAgentCount">({{ project_agents|length }})</span>
+            </h2>
+            <ul id="projectAgentList" class="space-y-1">
+                {% for agent in project_agents %}
+                <li class="agent-item" data-name="{{ agent.name }}" data-description="{{ agent.description|default('', true) }}" data-tools="{{ agent.tools|default('', true) }}" data-type="project">
+                    <a href="/agent/{{ agent.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">{{ agent.name }}</span>
+                            <span class="relevance-badge bg-green-900 text-green-300 hidden"></span>
+                        </span>
+                        <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ agent.description|replace('\\n', ' ') if agent.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <!-- No results message -->
+            <div id="noResults" class="hidden text-center py-8 text-gray-500">
+                <p class="text-sm">No agents match your search</p>
+            </div>
+        </div>
     </div>
-    
+
     <!-- Main Content -->
     <div class="flex-1 overflow-y-auto p-10 bg-white">
         <div class="max-w-4xl mx-auto">
@@ -56,7 +150,7 @@
             <p class="text-lg text-gray-600 mb-8 leading-relaxed">
                 Browse and view your Claude Code agents with a beautiful interface. Select an agent from the sidebar to view its details.
             </p>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
                 <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
                     <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ total_agents }}</h3>
@@ -71,18 +165,513 @@
                     <p class="text-sm text-gray-600">Project Agents</p>
                 </div>
             </div>
-            
+
+            <!-- AI Search Info Box -->
+            <div id="aiSearchInfo" class="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-8">
+                <h3 class="text-lg font-semibold text-blue-800 mb-3">Hybrid AI + Fuzzy Search</h3>
+                <p class="text-blue-700 text-sm mb-3">
+                    This viewer combines <strong>Transformers.js</strong> semantic embeddings with <strong>Fuse.js</strong> fuzzy matching.
+                    Search by concept AND typos are automatically corrected!
+                </p>
+                <ul class="text-blue-600 text-xs mb-3 list-disc list-inside space-y-1">
+                    <li><strong>Semantic:</strong> "dataviz" finds "visualization" agents</li>
+                    <li><strong>Typo-tolerant:</strong> "grpahs" matches "graphs"</li>
+                    <li><strong>Concept-aware:</strong> "database" finds SQL agents</li>
+                </ul>
+                <div class="text-xs text-blue-600">
+                    <span id="aiStatusIndicator" class="inline-flex items-center">
+                        <span class="loading-spinner mr-2"></span>
+                        Loading AI model (first time: ~30MB download, cached after)...
+                    </span>
+                </div>
+            </div>
+
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-5 mt-8">
-                <h3 class="text-lg font-semibold text-yellow-800 mb-3">📖 How to Use</h3>
+                <h3 class="text-lg font-semibold text-yellow-800 mb-3">How to Use</h3>
                 <ul class="list-disc list-inside space-y-2 text-yellow-800">
+                    <li><strong>Semantic Search:</strong> Type "dataviz" to find visualization agents, "database" for SQL agents</li>
+                    <li><strong>Typo Tolerance:</strong> Misspelled? No problem! "visulization" still finds what you need</li>
                     <li>Click on any agent in the sidebar to view its details</li>
                     <li>Agent markdown files are rendered as beautiful HTML</li>
-                    <li>Navigate between agents using the sidebar</li>
-                    <li>All agent content is syntax-highlighted</li>
+                    <li>Search understands concepts, synonyms, and related terms</li>
                 </ul>
             </div>
         </div>
     </div>
+
+    <!-- Transformers.js Semantic Search -->
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+        // Configure cache
+        env.allowLocalModels = false;
+
+        // State
+        let embedder = null;
+        let agentEmbeddings = [];
+        let agentElements = [];
+        let originalOrder = []; // Store original DOM order for reset
+        let isModelLoaded = false;
+        let fuseIndex = null;  // Fuse.js index for fuzzy matching
+
+        // DOM Elements
+        const searchInput = document.getElementById('searchInput');
+        const searchStatus = document.getElementById('searchStatus');
+        const modelStatus = document.getElementById('modelStatus');
+        const modelStatusText = document.getElementById('modelStatusText');
+        const aiStatusIndicator = document.getElementById('aiStatusIndicator');
+        const noResults = document.getElementById('noResults');
+        const userAgentCount = document.getElementById('userAgentCount');
+        const projectAgentCount = document.getElementById('projectAgentCount');
+
+        // Cosine similarity
+        function cosineSimilarity(a, b) {
+            let dotProduct = 0, normA = 0, normB = 0;
+            for (let i = 0; i < a.length; i++) {
+                dotProduct += a[i] * b[i];
+                normA += a[i] * a[i];
+                normB += b[i] * b[i];
+            }
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        // Initialize Fuse.js index for fuzzy matching (typo tolerance)
+        function initFuseIndex() {
+            const agentData = agentElements.map((el, i) => ({
+                index: i,
+                name: el.dataset.name || '',
+                description: el.dataset.description || '',
+                tools: el.dataset.tools || ''
+            }));
+
+            fuseIndex = new Fuse(agentData, {
+                keys: [
+                    { name: 'name', weight: 0.4 },
+                    { name: 'description', weight: 0.4 },
+                    { name: 'tools', weight: 0.2 }
+                ],
+                threshold: 0.4,           // 0=exact, 1=match anything
+                distance: 100,            // How far to search for matches
+                includeScore: true,       // Return match scores
+                ignoreLocation: true,     // Don't penalize matches far from start
+                minMatchCharLength: 2,    // Minimum chars to match
+                findAllMatches: true      // Find all matches, not just first
+            });
+        }
+
+        // Correct typos using fuzzy matching before semantic search
+        function correctQueryTypos(query) {
+            if (!fuseIndex) return query;
+
+            // Split query into words and try to correct each
+            const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+            const correctedWords = [];
+
+            // Common vocabulary from all agents
+            const vocabulary = new Set();
+            agentElements.forEach(el => {
+                const text = `${el.dataset.name} ${el.dataset.description} ${el.dataset.tools}`.toLowerCase();
+                text.split(/\W+/).forEach(w => {
+                    if (w.length > 2) vocabulary.add(w);
+                });
+            });
+
+            const vocabArray = Array.from(vocabulary);
+            const wordFuse = new Fuse(vocabArray, {
+                threshold: 0.4,
+                distance: 50
+            });
+
+            for (const word of words) {
+                // Check if word exists in vocabulary
+                if (vocabulary.has(word)) {
+                    correctedWords.push(word);
+                } else {
+                    // Try to find closest match
+                    const matches = wordFuse.search(word);
+                    if (matches.length > 0 && matches[0].score < 0.3) {
+                        correctedWords.push(matches[0].item);
+                    } else {
+                        correctedWords.push(word); // Keep original if no good match
+                    }
+                }
+            }
+
+            return correctedWords.join(' ');
+        }
+
+        // Get fuzzy match scores for all agents
+        function getFuzzyScores(query) {
+            if (!fuseIndex) return new Map();
+
+            const results = fuseIndex.search(query);
+            const scores = new Map();
+
+            results.forEach(result => {
+                // Convert Fuse score (0=perfect, 1=worst) to our format (1=perfect, 0=worst)
+                scores.set(result.item.index, 1 - result.score);
+            });
+
+            return scores;
+        }
+
+        // Initialize embedder and compute agent embeddings
+        async function initializeSearch() {
+            try {
+                modelStatus.classList.remove('hidden');
+                modelStatusText.textContent = 'Loading AI model (first time may take a moment)...';
+
+                // Load the model
+                embedder = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5', {
+                    quantized: true
+                });
+
+                modelStatusText.textContent = 'Computing agent embeddings...';
+
+                // Get all agent elements and their text
+                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                // Store original order for reset
+                originalOrder = agentElements.map((el, i) => ({ element: el, originalIndex: i }));
+
+                const agentTexts = agentElements.map(el => {
+                    const name = el.dataset.name || '';
+                    const description = el.dataset.description || '';
+                    const tools = el.dataset.tools || '';
+                    // Combine all text for richer embeddings
+                    return `${name} ${description} ${tools}`.trim();
+                });
+
+                // Compute embeddings for all agents
+                if (agentTexts.length > 0) {
+                    const output = await embedder(agentTexts, {
+                        pooling: 'mean',
+                        normalize: true
+                    });
+                    agentEmbeddings = output.tolist();
+                }
+
+                // Initialize Fuse.js for typo tolerance
+                initFuseIndex();
+
+                // Update UI
+                modelStatus.classList.add('hidden');
+                aiStatusIndicator.innerHTML = '<span class="text-green-600">AI model ready - semantic + fuzzy search enabled!</span>';
+                searchInput.placeholder = 'Search by concept (typos OK!)...';
+                isModelLoaded = true;
+
+            } catch (error) {
+                console.error('Failed to load AI model:', error);
+                modelStatus.classList.add('hidden');
+
+                // Initialize Fuse.js even without AI model (for fuzzy fallback)
+                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                // Store original order for reset
+                originalOrder = agentElements.map((el, i) => ({ element: el, originalIndex: i }));
+                initFuseIndex();
+
+                aiStatusIndicator.innerHTML = '<span class="text-yellow-600">AI model unavailable. Using fuzzy search (typos still work!).</span>';
+                searchInput.placeholder = 'Search agents (fuzzy mode - typos OK)...';
+            }
+        }
+
+        // Hybrid Search: Combines semantic embeddings + fuzzy matching for typo tolerance
+        async function performSearch(query) {
+            if (!query.trim()) {
+                // Show all agents
+                agentElements.forEach(el => {
+                    el.classList.remove('hidden-by-search');
+                    const badge = el.querySelector('.relevance-badge');
+                    if (badge) badge.classList.add('hidden');
+                });
+                restoreOriginalOrder(); // Restore original order when search is cleared
+                noResults.classList.add('hidden');
+                updateCounts();
+                return;
+            }
+
+            if (!isModelLoaded) {
+                // Fallback to fuzzy-only search
+                fuzzySearch(query);
+                return;
+            }
+
+            searchStatus.innerHTML = '<span class="loading-spinner"></span>';
+
+            try {
+                // Step 1: Correct typos in query using fuzzy matching
+                const correctedQuery = correctQueryTypos(query);
+                const queryToEmbed = correctedQuery || query;
+
+                // Step 2: Get fuzzy scores (works even with typos)
+                const fuzzyScores = getFuzzyScores(query);
+
+                // Step 3: Get semantic embeddings for corrected query
+                const queryOutput = await embedder([queryToEmbed], {
+                    pooling: 'mean',
+                    normalize: true
+                });
+                const queryEmbedding = queryOutput.tolist()[0];
+
+                // Step 4: Calculate semantic similarities
+                const semanticScores = agentEmbeddings.map((emb, i) => ({
+                    index: i,
+                    score: cosineSimilarity(queryEmbedding, emb)
+                }));
+
+                // Step 5: Combine semantic + fuzzy scores (hybrid approach)
+                const hybridScores = semanticScores.map(sem => {
+                    const fuzzy = fuzzyScores.get(sem.index) || 0;
+                    // Weight: 60% semantic, 40% fuzzy (fuzzy helps with typos)
+                    const combined = (sem.score * 0.6) + (fuzzy * 0.4);
+                    // Boost if both methods agree
+                    const boost = (sem.score > 0.3 && fuzzy > 0.5) ? 0.1 : 0;
+                    return {
+                        index: sem.index,
+                        score: Math.min(combined + boost, 1.0),
+                        semantic: sem.score,
+                        fuzzy: fuzzy
+                    };
+                });
+
+                // Sort by combined score
+                hybridScores.sort((a, b) => b.score - a.score);
+
+                // Dynamic threshold: lower if query seems typo-heavy
+                const hasTypos = correctedQuery !== query.toLowerCase();
+                const threshold = hasTypos ? 0.2 : 0.25;
+                let visibleCount = 0;
+
+                // Build scored elements list for reordering
+                const scoredElements = [];
+
+                // Update visibility based on hybrid scores
+                agentElements.forEach((el, i) => {
+                    const result = hybridScores.find(s => s.index === i);
+                    const badge = el.querySelector('.relevance-badge');
+
+                    if (result && result.score >= threshold) {
+                        el.classList.remove('hidden-by-search');
+                        if (badge) {
+                            badge.textContent = Math.round(result.score * 100) + '%';
+                            badge.classList.remove('hidden');
+                        }
+                        scoredElements.push({ element: el, score: result.score });
+                        visibleCount++;
+                    } else {
+                        el.classList.add('hidden-by-search');
+                        if (badge) badge.classList.add('hidden');
+                        // Add hidden elements with score 0 so they stay at bottom
+                        scoredElements.push({ element: el, score: 0 });
+                    }
+                });
+
+                // Sort by score (highest first) and reorder DOM
+                scoredElements.sort((a, b) => b.score - a.score);
+                reorderByRelevance(scoredElements);
+
+                // Show no results message if needed
+                if (visibleCount === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+
+                updateCounts();
+                searchStatus.textContent = '';
+
+            } catch (error) {
+                console.error('Search error:', error);
+                searchStatus.textContent = '';
+                fuzzySearch(query);
+            }
+        }
+
+        // Fuzzy-only search (fallback when AI model not loaded)
+        function fuzzySearch(query) {
+            if (!fuseIndex) {
+                basicSearch(query);
+                return;
+            }
+
+            const fuzzyScores = getFuzzyScores(query);
+            let visibleCount = 0;
+            const scoredElements = [];
+
+            agentElements.forEach((el, i) => {
+                const score = fuzzyScores.get(i) || 0;
+                const badge = el.querySelector('.relevance-badge');
+
+                if (score > 0.3) {
+                    el.classList.remove('hidden-by-search');
+                    if (badge) {
+                        badge.textContent = Math.round(score * 100) + '%';
+                        badge.classList.remove('hidden');
+                    }
+                    scoredElements.push({ element: el, score: score });
+                    visibleCount++;
+                } else {
+                    el.classList.add('hidden-by-search');
+                    if (badge) badge.classList.add('hidden');
+                    scoredElements.push({ element: el, score: 0 });
+                }
+            });
+
+            // Sort by score and reorder DOM
+            scoredElements.sort((a, b) => b.score - a.score);
+            reorderByRelevance(scoredElements);
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            updateCounts();
+        }
+
+        // Basic fallback search
+        function basicSearch(query) {
+            const lowerQuery = query.toLowerCase();
+            let visibleCount = 0;
+
+            agentElements.forEach(el => {
+                const name = (el.dataset.name || '').toLowerCase();
+                const description = (el.dataset.description || '').toLowerCase();
+                const tools = (el.dataset.tools || '').toLowerCase();
+                const searchText = `${name} ${description} ${tools}`;
+
+                if (searchText.includes(lowerQuery)) {
+                    el.classList.remove('hidden-by-search');
+                    visibleCount++;
+                } else {
+                    el.classList.add('hidden-by-search');
+                }
+
+                const badge = el.querySelector('.relevance-badge');
+                if (badge) badge.classList.add('hidden');
+            });
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            updateCounts();
+        }
+
+        // Update visible counts
+        function updateCounts() {
+            const visibleUser = document.querySelectorAll('.agent-item[data-type="user"]:not(.hidden-by-search)').length;
+            const visibleProject = document.querySelectorAll('.agent-item[data-type="project"]:not(.hidden-by-search)').length;
+
+            if (userAgentCount) userAgentCount.textContent = `(${visibleUser})`;
+            if (projectAgentCount) projectAgentCount.textContent = `(${visibleProject})`;
+        }
+
+        // Reorder elements in DOM by relevance score
+        function reorderByRelevance(scoredElements) {
+            const userList = document.getElementById('userAgentList');
+            const projectList = document.getElementById('projectAgentList');
+
+            // Separate by type and sort by score
+            const userItems = scoredElements.filter(s => s.element.dataset.type === 'user');
+            const projectItems = scoredElements.filter(s => s.element.dataset.type === 'project');
+
+            // Reorder user agents
+            if (userList) {
+                userItems.forEach(item => {
+                    userList.appendChild(item.element);
+                });
+            }
+
+            // Reorder project agents
+            if (projectList) {
+                projectItems.forEach(item => {
+                    projectList.appendChild(item.element);
+                });
+            }
+        }
+
+        // Restore original DOM order
+        function restoreOriginalOrder() {
+            const userList = document.getElementById('userAgentList');
+            const projectList = document.getElementById('projectAgentList');
+
+            const userItems = originalOrder.filter(o => o.element.dataset.type === 'user')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+            const projectItems = originalOrder.filter(o => o.element.dataset.type === 'project')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+
+            if (userList) {
+                userItems.forEach(item => userList.appendChild(item.element));
+            }
+            if (projectList) {
+                projectItems.forEach(item => projectList.appendChild(item.element));
+            }
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Search toggle functionality
+        const searchToggle = document.getElementById('searchToggle');
+        const searchContainer = document.getElementById('searchContainer');
+
+        function openSearch() {
+            searchContainer.classList.add('active');
+            searchToggle.classList.add('active');
+            setTimeout(() => searchInput.focus(), 100);
+        }
+
+        function closeSearch() {
+            if (!searchInput.value.trim()) {
+                searchContainer.classList.remove('active');
+                searchToggle.classList.remove('active');
+            }
+        }
+
+        // Toggle search on button click
+        searchToggle.addEventListener('click', () => {
+            if (searchContainer.classList.contains('active')) {
+                searchInput.value = '';
+                performSearch('');
+                closeSearch();
+            } else {
+                openSearch();
+            }
+        });
+
+        // Keyboard shortcuts: Cmd/Ctrl+K to open, ESC to close
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                openSearch();
+            }
+            if (e.key === 'Escape' && searchContainer.classList.contains('active')) {
+                searchInput.value = '';
+                performSearch('');
+                closeSearch();
+                searchInput.blur();
+            }
+        });
+
+        // Event listeners
+        const debouncedSearch = debounce(performSearch, 300);
+        searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
+
+        // Initialize on page load
+        initializeSearch();
+    </script>
 </body>
 </html>
-
