@@ -8,6 +8,8 @@
 
 ## Sprint Overview
 
+> **Note:** Numbered items in each sprint group related sub-tasks (e.g., Sprint 1 item 2 covers T002-T005). See `tasks.md` for atomic task counts.
+
 | Sprint | Focus | Tasks | Dependencies |
 |--------|-------|-------|-------------|
 | 1 | Bug Fixes + Security + Hygiene | 21 | None (foundation) |
@@ -112,7 +114,8 @@
    - Constitution: R2
 
 3. Create `agent_transfer/ir/capability.py`
-   - Canonical tool map: platform-specific name <-> neutral name
+   - Step 1: Research native tool names for each platform (discovery)
+   - Step 2: Build canonical tool map: platform-specific name <-> neutral name
    - Built-in mappings for all 5 platforms
    - `map_tool(platform, tool_name) -> canonical_name`
 
@@ -145,7 +148,8 @@
     - Test with skills (SKILL.md, scripts, deps)
 
 12. Create test corpus: 5+ canonical agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks)
-    - Define "preserved" = byte-identical for same-platform, semantic equivalence for cross-platform
+    - "Preserved" for same-platform = byte-identical after round-trip (R1)
+    - "Preserved" for cross-platform = system prompt text matches after whitespace normalization; tool references map through canonical registry; MCP configs are structurally identical via dict comparison
 
 13. Tests for `ir/validators.py`, `ingestors/base.py`, `emitters/base.py` (R11)
 
@@ -209,9 +213,9 @@
 1. Create `agent_transfer/ingestors/opencode.py` + `agent_transfer/emitters/opencode.py`
 2. Update compatibility matrix with OpenCode's 4 platform pairs — verify all 20 pairs present (SC-3)
 3. IR portability test: load pre-generated `.aim.yaml` → emit to each target platform (US-5 validation)
-4. Create Claude Code skill: `/transfer-agent`
+4. Create Claude Code skill: `/transfer-agent` (convenience wrapper for US-1/US-3)
    - Trigger: "transfer agent to [platform]"; Input: agent name + target; Output: converted files + compat report
-5. Create Claude Code skill: `/analyze-platform`
+5. Create Claude Code skill: `/analyze-platform` (convenience wrapper for US-1/US-3)
    - Trigger: "analyze platform compatibility"; Input: optional --from/--to; Output: compat matrix table
 6. Register entry_points for all platforms in `pyproject.toml`
 7. Tests for OpenCode ingestor/emitter + skill behavior (R11)

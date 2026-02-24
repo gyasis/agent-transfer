@@ -56,7 +56,7 @@
 
 - [ ] T035 Create `agent_transfer/ir/__init__.py` package
 - [ ] T036 Create `agent_transfer/ir/manifest.py` — AIIntentManifest dataclass + `to_yaml()`/`from_yaml()` serialization, `.aim.yaml` extension (R2)
-- [ ] T037 [P] Create `agent_transfer/ir/capability.py` — canonical tool mapping registry for all 5 platforms (`map_tool(platform, tool_name) -> canonical_name`)
+- [ ] T037 [P] Create `agent_transfer/ir/capability.py` — Step 1: research native tool names per platform; Step 2: build canonical tool mapping registry for all 5 platforms (`map_tool(platform, tool_name) -> canonical_name`)
 - [ ] T038 [P] Create `agent_transfer/ir/validators.py` — IR schema validation: required fields, type checks, version compat, no secrets (R8)
 - [ ] T039 Create `agent_transfer/ingestors/__init__.py` package
 - [ ] T040 Create `agent_transfer/ingestors/base.py` — BaseIngestor ABC: `ingest_agent(path) -> AIIntentManifest`, `ingest_skill(path) -> AIIntentManifest`
@@ -64,7 +64,7 @@
 - [ ] T042 Create `agent_transfer/emitters/__init__.py` package
 - [ ] T043 Create `agent_transfer/emitters/base.py` — BaseEmitter ABC: `emit_agent(manifest, target_dir) -> Path`, `emit_skill(manifest, target_dir) -> Path`
 - [ ] T044 [US4] Create `agent_transfer/emitters/claude_code.py` — reconstructs `.md` from IR using shadow data `original_content` for lossless output (R1)
-- [ ] T045 Create test corpus in `tests/fixtures/canonical/` — 5+ agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks) for SC-2 validation
+- [ ] T045 Create test corpus in `tests/fixtures/canonical/` — 5+ agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks) for SC-2 validation. Preserved = byte-identical for same-platform (R1); cross-platform = system prompt matches after whitespace normalization, tool refs map through canonical registry, MCP configs structurally identical via dict comparison
 - [ ] T046 [US4] CRITICAL TEST: Claude Code -> Ingestor -> IR -> Emitter -> Claude Code = byte-identical in `tests/test_lossless_roundtrip.py` (R1, R11)
 - [ ] T047 [US5] Add `agent-transfer convert` CLI command in `agent_transfer/cli.py` — `convert <name> --from <platform> --to <platform>`, Claude Code <-> AIM only at this point (R5)
 - [ ] T048 Tests for `ir/validators.py`, `ingestors/base.py`, `emitters/base.py` in `tests/test_ir.py` (R11)
@@ -105,8 +105,8 @@
 - [ ] T068 [US1] [US2] Create `agent_transfer/ingestors/opencode.py` + `agent_transfer/emitters/opencode.py`
 - [ ] T069 Update `agent_transfer/compat/matrix.py` with OpenCode's 4 platform pairs — verify all 20 pairs present (SC-3)
 - [ ] T070 [US5] IR portability test in `tests/test_ir_portability.py`: load pre-generated `.aim.yaml` → emit to each of the 4 non-AIM target platforms (US-5 end-to-end validation)
-- [ ] T071 Create Claude Code skill `/transfer-agent` — trigger: "transfer agent to [platform]"; input: agent name + target; output: converted files + compat report
-- [ ] T072 Create Claude Code skill `/analyze-platform` — trigger: "analyze platform compatibility"; input: optional --from/--to; output: compat matrix table
+- [ ] T071 Create Claude Code skill `/transfer-agent` (wraps US-1/US-3) — trigger: "transfer agent to [platform]"; input: agent name + target; output: converted files + compat report
+- [ ] T072 Create Claude Code skill `/analyze-platform` (wraps US-1/US-3) — trigger: "analyze platform compatibility"; input: optional --from/--to; output: compat matrix table
 - [ ] T073 Register entry_points for all 5 platforms in `pyproject.toml` (R9)
 - [ ] T074 Tests for OpenCode ingestor/emitter + skill behavior in `tests/test_opencode.py` + `tests/test_skills.py` (R11)
 - [ ] T075 Adversarial scan — full codebase (R12)

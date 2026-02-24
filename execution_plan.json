@@ -1,138 +1,446 @@
 {
   "execution_plan": {
-    "phase_id": "Selective Import Feature Implementation",
+    "phase_id": "Feature Implementation",
     "waves": [
       {
         "wave_id": 1,
-        "strategy": "COMPLETED",
-        "rationale": "Foundation layer: Data models created, analyzer module implemented",
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 1 [Phase 1]: 8 task(s), max 8/wave",
         "tasks": [
           {
-            "task_id": "P1.1",
-            "agent_role": "Backend_Dev",
-            "instruction": "Add AgentComparison and ImportPreview dataclasses to models.py",
-            "file_locks": ["agent_transfer/models.py"],
-            "completion_handshake": "COMPLETED",
-            "dependencies": []
+            "task_id": "T001",
+            "agent_role": "Developer",
+            "instruction": "T001 [US6] Create `agent_transfer/utils/tar_safety.py` \u2014 safe extraction rejecting path traversal, symlinks, absolute paths (R7)",
+            "file_locks": [
+              "agent_transfer/utils/tar_safety.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T001 [US6] Create `agent_transfer/utils/tar_safety.py` \u2014 safe extraction rejecting path traversal, symlinks, absolute paths (R7)' to [x]",
+            "dependencies": [],
+            "phase": 1
           },
           {
-            "task_id": "P1.2",
-            "agent_role": "Python_Pro",
-            "instruction": "Create import_analyzer.py with analyze_import_archive() function",
-            "file_locks": ["agent_transfer/utils/import_analyzer.py"],
-            "completion_handshake": "COMPLETED WITH ERRORS",
-            "dependencies": ["P1.1"]
-          }
-        ],
-        "checkpoint_after": {
-          "enabled": false,
-          "verification_criteria": "N/A - Wave 1 complete",
-          "git_agent": "N/A",
-          "memory_bank_agent": "N/A"
-        }
-      },
-      {
-        "wave_id": 2,
-        "strategy": "FIX_ERRORS_SEQUENTIAL",
-        "rationale": "Wave 1 produced code with type errors and incorrect function calls. Must fix before proceeding with parallel Wave 3",
-        "tasks": [
+            "task_id": "T002",
+            "agent_role": "Developer",
+            "instruction": "T002 [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:331` with safe extraction (B1)",
+            "file_locks": [
+              "agent_transfer/transfer.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T002 [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:331` with safe extraction (B1)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
           {
-            "task_id": "P1.2-FIX",
-            "agent_role": "Debugger",
-            "instruction": "Fix type errors in import_analyzer.py: parse_agent_file expects Path not str, AgentComparison constructor has wrong params, handle Optional[str] for content",
-            "file_locks": ["agent_transfer/utils/import_analyzer.py"],
-            "completion_handshake": "Upon success, verify 'uv run python -m agent_transfer.utils.import_analyzer' has no import errors",
-            "dependencies": ["P1.2"],
-            "error_details": [
-              "Line 87: parse_agent_file expects Path, not str",
-              "Lines 100, 129: AgentComparison constructor signature mismatch",
-              "Lines 139-140: _compute_content_hash receives Optional[str], expects str",
-              "Lines 64, 72: find_all_agents() expects 0 args but receiving argument"
-            ]
+            "task_id": "T004",
+            "agent_role": "Developer",
+            "instruction": "T004 [P] [US6] Replace `tar.extractall()` in `agent_transfer/import_analyzer.py:52` with safe extraction (B1)",
+            "file_locks": [
+              "agent_transfer/import_analyzer.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T004 [P] [US6] Replace `tar.extractall()` in `agent_transfer/import_analyzer.py:52` with safe extraction (B1)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T005",
+            "agent_role": "Developer",
+            "instruction": "T005 [P] [US6] Replace `tar.extractall()` in `agent_transfer/utils/skill_validator.py:654` with safe extraction (B1)",
+            "file_locks": [
+              "agent_transfer/utils/skill_validator.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T005 [P] [US6] Replace `tar.extractall()` in `agent_transfer/utils/skill_validator.py:654` with safe extraction (B1)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T006",
+            "agent_role": "Developer",
+            "instruction": "T006 [US6] Grep codebase for remaining `tar.extractall()` / `tarfile.open()` \u2014 verify T002-T005 cover all sites (R7 audit)",
+            "file_locks": [
+              "tarfile.open"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T006 [US6] Grep codebase for remaining `tar.extractall()` / `tarfile.open()` \u2014 verify T002-T005 cover all sites (R7 audit)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T008",
+            "agent_role": "Developer",
+            "instruction": "T008 [P] Sanitize markdown output in `agent_transfer/templates/agent_view.html:442` \u2014 fix XSS (B3)",
+            "file_locks": [
+              "agent_transfer/templates/agent_view.html"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T008 [P] Sanitize markdown output in `agent_transfer/templates/agent_view.html:442` \u2014 fix XSS (B3)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T009",
+            "agent_role": "Developer",
+            "instruction": "T009 [P] Sanitize markdown output in `agent_transfer/templates/skill_view.html:561` \u2014 fix XSS (B3)",
+            "file_locks": [
+              "agent_transfer/templates/skill_view.html"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T009 [P] Sanitize markdown output in `agent_transfer/templates/skill_view.html:561` \u2014 fix XSS (B3)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T010",
+            "agent_role": "Developer",
+            "instruction": "T010 [P] Sanitize markdown in `agent_transfer/utils/web_server.py` render pipeline \u2014 fix XSS (B3)",
+            "file_locks": [
+              "agent_transfer/utils/web_server.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T010 [P] Sanitize markdown in `agent_transfer/utils/web_server.py` render pipeline \u2014 fix XSS (B3)' to [x]",
+            "dependencies": [],
+            "phase": 1
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "No Pyright errors in import_analyzer.py, module imports successfully",
-          "git_agent": "N/A",
-          "memory_bank_agent": "N/A"
+          "verification_criteria": "Verify all Wave 1 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 2,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 2 [Phase 1]: 8 task(s), max 8/wave",
+        "tasks": [
+          {
+            "task_id": "T003",
+            "agent_role": "Developer",
+            "instruction": "T003 [P] [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:647` with safe extraction (B1)",
+            "file_locks": [
+              "agent_transfer/transfer.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T003 [P] [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:647` with safe extraction (B1)' to [x]",
+            "dependencies": [
+              "T002"
+            ],
+            "phase": 1
+          },
+          {
+            "task_id": "T007",
+            "agent_role": "Developer",
+            "instruction": "T007 Fix `ImportPreview` missing `skill_comparisons=[]` default in `agent_transfer/import_analyzer.py:111` (B2)",
+            "file_locks": [
+              "agent_transfer/import_analyzer.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T007 Fix `ImportPreview` missing `skill_comparisons=[]` default in `agent_transfer/import_analyzer.py:111` (B2)' to [x]",
+            "dependencies": [
+              "T004"
+            ],
+            "phase": 1
+          },
+          {
+            "task_id": "T011",
+            "agent_role": "Developer",
+            "instruction": "T011 Fix KEEP mode return value in `agent_transfer/conflict_resolver.py:428` \u2014 return `None` not truthy path (B4)",
+            "file_locks": [
+              "agent_transfer/conflict_resolver.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T011 Fix KEEP mode return value in `agent_transfer/conflict_resolver.py:428` \u2014 return `None` not truthy path (B4)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T012",
+            "agent_role": "Developer",
+            "instruction": "T012 Fix `pyproject.toml` \u2014 add `agent_transfer.utils` to packages + `templates/*.html` to package-data (B5)",
+            "file_locks": [
+              "agent_transfer.utils",
+              "pyproject.toml",
+              "templates/*.html"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T012 Fix `pyproject.toml` \u2014 add `agent_transfer.utils` to packages + `templates/*.html` to package-data (B5)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T014",
+            "agent_role": "Developer",
+            "instruction": "T014 Replace hand-rolled TOML parser in `agent_transfer/utils/skill_validator.py:155-194` with `tomllib`/`tomli` (B7)",
+            "file_locks": [
+              "agent_transfer/utils/skill_validator.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T014 Replace hand-rolled TOML parser in `agent_transfer/utils/skill_validator.py:155-194` with `tomllib`/`tomli` (B7)' to [x]",
+            "dependencies": [
+              "T005"
+            ],
+            "phase": 1
+          },
+          {
+            "task_id": "T015",
+            "agent_role": "Developer",
+            "instruction": "T015 Audit codebase for hardcoded absolute paths \u2014 replace with `Path.home()` / platform config (R6)",
+            "file_locks": [
+              "Path.home"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T015 Audit codebase for hardcoded absolute paths \u2014 replace with `Path.home()` / platform config (R6)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T016",
+            "agent_role": "Developer",
+            "instruction": "T016 Add filename lint gate \u2014 reject `_v2`, `_new`, `_old` suffixes in CI/pre-commit (R10)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T016 Add filename lint gate \u2014 reject `_v2`, `_new`, `_old` suffixes in CI/pre-commit (R10)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T017",
+            "agent_role": "Developer",
+            "instruction": "T017 Run ruff lint + format on full codebase",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T017 Run ruff lint + format on full codebase' to [x]",
+            "dependencies": [],
+            "phase": 1
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 2 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
         }
       },
       {
         "wave_id": 3,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Three independent modules editing different files. No shared file locks. All depend only on completed Wave 1+2",
+        "rationale": "Wave 3 [Phase 1,2]: 8 task(s), max 8/wave",
         "tasks": [
           {
-            "task_id": "P2.1",
-            "agent_role": "Frontend_Developer",
-            "instruction": "Enhance selector.py: Add status/diff columns, create interactive_select_import_agents(), handle filter commands (v,s,n,c,f)",
-            "file_locks": ["agent_transfer/utils/selector.py"],
-            "completion_handshake": "Upon success, mark Phase 2 complete in todo list",
-            "dependencies": ["P1.2-FIX"],
-            "required_fixes": [
-              "Handle agent.tools being None before accessing with [:3]",
-              "Import AgentComparison from models",
-              "Import show_unified_diff, show_side_by_side from conflict_resolver"
-            ]
+            "task_id": "T013",
+            "agent_role": "Developer",
+            "instruction": "T013 Sync version `agent_transfer/__init__.py` to `\"1.1.0\"` to match `pyproject.toml` (B6)",
+            "file_locks": [
+              "agent_transfer/__init__.py",
+              "pyproject.toml"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T013 Sync version `agent_transfer/__init__.py` to `\"1.1.0\"` to match `pyproject.toml` (B6)' to [x]",
+            "dependencies": [
+              "T012"
+            ],
+            "phase": 1
           },
           {
-            "task_id": "P3.1",
-            "agent_role": "Backend_Architect",
-            "instruction": "Create import_agents_selective() in transfer.py: Handle NEW/CHANGED/IDENTICAL agents, display Rich summary panel",
-            "file_locks": ["agent_transfer/utils/transfer.py"],
-            "completion_handshake": "Upon success, mark Phase 3 complete in todo list",
-            "dependencies": ["P1.2-FIX"],
-            "required_fixes": [
-              "Import AgentComparison from models",
-              "Handle file paths correctly for user vs project agents",
-              "Use resolve_conflict() correctly with ConflictMode"
-            ]
+            "task_id": "T018",
+            "agent_role": "Developer",
+            "instruction": "T018 Run full test suite \u2014 verify zero regressions (R11)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T018 Run full test suite \u2014 verify zero regressions (R11)' to [x]",
+            "dependencies": [],
+            "phase": 1
           },
           {
-            "task_id": "P4.1",
-            "agent_role": "Python_Pro",
-            "instruction": "Add show_comparison_diff(), show_comparison_side_by_side(), show_diff_summary() to conflict_resolver.py",
-            "file_locks": ["agent_transfer/utils/conflict_resolver.py"],
-            "completion_handshake": "Upon success, mark Phase 4 complete in todo list",
-            "dependencies": ["P1.2-FIX"],
-            "required_fixes": [
-              "Import AgentComparison from models",
-              "Create wrapper functions that extract content from comparison object",
-              "Call existing show_unified_diff() with extracted strings"
-            ]
+            "task_id": "T019",
+            "agent_role": "Developer",
+            "instruction": "T019 Adversarial bug hunt \u2014 targeted report (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T019 Adversarial bug hunt \u2014 targeted report (R12)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T020",
+            "agent_role": "Developer",
+            "instruction": "T020 Adversarial bug hunt \u2014 general logic scan (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T020 Adversarial bug hunt \u2014 general logic scan (R12)' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T021",
+            "agent_role": "Developer",
+            "instruction": "T021 Git checkpoint `v1.2.0-security`",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T021 Git checkpoint `v1.2.0-security`' to [x]",
+            "dependencies": [],
+            "phase": 1
+          },
+          {
+            "task_id": "T022",
+            "agent_role": "Developer",
+            "instruction": "T022 Create `agent_transfer/platforms/__init__.py` package",
+            "file_locks": [
+              "agent_transfer/platforms/__init__.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T022 Create `agent_transfer/platforms/__init__.py` package' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T023",
+            "agent_role": "Developer",
+            "instruction": "T023 Create `agent_transfer/platforms/base.py` \u2014 PlatformConfig dataclass, BasePlatform ABC (`detect()`, `find_agents()`, `find_skills()`), PlatformRegistry (`register()`, `get()`, `detect_all()`) (R9)",
+            "file_locks": [
+              "agent_transfer/platforms/base.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T023 Create `agent_transfer/platforms/base.py` \u2014 PlatformConfig dataclass, BasePlatform ABC (`detect()`, `find_agents()`, `find_skills()`), PlatformRegistry (`register()`, `get()`, `detect_all()`) (R9)' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T024",
+            "agent_role": "Developer",
+            "instruction": "T024 Create `agent_transfer/platforms/claude_code.py` \u2014 wrap existing `discovery.py`, `skill_discovery.py`, `parser.py` (R4)",
+            "file_locks": [
+              "agent_transfer/platforms/claude_code.py",
+              "parser.py",
+              "skill_discovery.py",
+              "discovery.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T024 Create `agent_transfer/platforms/claude_code.py` \u2014 wrap existing `discovery.py`, `skill_discovery.py`, `parser.py` (R4)' to [x]",
+            "dependencies": [],
+            "phase": 2
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "All Wave 3 tasks complete, no Pyright errors in selector.py, transfer.py, conflict_resolver.py",
+          "verification_criteria": "Verify all Wave 3 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
           "memory_bank_agent": "memory-bank-keeper"
         }
       },
       {
         "wave_id": 4,
-        "strategy": "SEQUENTIAL_MERGE",
-        "rationale": "CLI integration requires all previous components working. Single file edit",
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 4 [Phase 2]: 8 task(s), max 8/wave",
         "tasks": [
           {
-            "task_id": "P5.1",
-            "agent_role": "Backend_Architect",
-            "instruction": "Modify import_cmd() in cli.py: Add --bulk and --agent flags, wire up analyzer → selector → import_agents_selective flow",
-            "file_locks": ["agent_transfer/cli.py"],
-            "completion_handshake": "Upon success, mark Phase 5 complete in todo list",
-            "dependencies": ["P2.1", "P3.1", "P4.1"],
-            "integration_points": [
-              "Import analyze_import_archive from utils.import_analyzer",
-              "Import interactive_select_import_agents from utils.selector",
-              "Import import_agents_selective from utils.transfer",
-              "Route based on flags: bulk → old import, agent → direct, default → interactive"
-            ]
+            "task_id": "T025",
+            "agent_role": "Developer",
+            "instruction": "T025 [P] Create `agent_transfer/platforms/codex.py` \u2014 stub: detect + PlatformConfig only",
+            "file_locks": [
+              "agent_transfer/platforms/codex.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T025 [P] Create `agent_transfer/platforms/codex.py` \u2014 stub: detect + PlatformConfig only' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T026",
+            "agent_role": "Developer",
+            "instruction": "T026 [P] Create `agent_transfer/platforms/gemini_cli.py` \u2014 stub: detect + PlatformConfig only",
+            "file_locks": [
+              "agent_transfer/platforms/gemini_cli.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T026 [P] Create `agent_transfer/platforms/gemini_cli.py` \u2014 stub: detect + PlatformConfig only' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T027",
+            "agent_role": "Developer",
+            "instruction": "T027 [P] Create `agent_transfer/platforms/goose.py` \u2014 stub: detect + PlatformConfig only",
+            "file_locks": [
+              "agent_transfer/platforms/goose.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T027 [P] Create `agent_transfer/platforms/goose.py` \u2014 stub: detect + PlatformConfig only' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T028",
+            "agent_role": "Developer",
+            "instruction": "T028 [P] Create `agent_transfer/platforms/opencode.py` \u2014 stub: detect + PlatformConfig only",
+            "file_locks": [
+              "agent_transfer/platforms/opencode.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T028 [P] Create `agent_transfer/platforms/opencode.py` \u2014 stub: detect + PlatformConfig only' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T029",
+            "agent_role": "Developer",
+            "instruction": "T029 [US3] Add `agent-transfer platforms` CLI command in `agent_transfer/cli.py` \u2014 Rich table: name, slug, detected Y/N, config dir, MCP support (R5: addition only)",
+            "file_locks": [
+              "agent_transfer/cli.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T029 [US3] Add `agent-transfer platforms` CLI command in `agent_transfer/cli.py` \u2014 Rich table: name, slug, detected Y/N, config dir, MCP support (R5: addition only)' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T030",
+            "agent_role": "Developer",
+            "instruction": "T030 Register platforms via entry_points in `pyproject.toml` (R9)",
+            "file_locks": [
+              "pyproject.toml"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T030 Register platforms via entry_points in `pyproject.toml` (R9)' to [x]",
+            "dependencies": [
+              "T013",
+              "T012"
+            ],
+            "phase": 2
+          },
+          {
+            "task_id": "T031",
+            "agent_role": "Developer",
+            "instruction": "T031 Verify all platform config dirs use `Path.home()`, zero hardcoded paths (R6 audit)",
+            "file_locks": [
+              "Path.home"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T031 Verify all platform config dirs use `Path.home()`, zero hardcoded paths (R6 audit)' to [x]",
+            "dependencies": [
+              "T015"
+            ],
+            "phase": 2
+          },
+          {
+            "task_id": "T032",
+            "agent_role": "Developer",
+            "instruction": "T032 Tests \u2014 platform detection, PlatformConfig correctness, PlatformRegistry in `tests/test_platforms.py` (R11)",
+            "file_locks": [
+              "tests/test_platforms.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T032 Tests \u2014 platform detection, PlatformConfig correctness, PlatformRegistry in `tests/test_platforms.py` (R11)' to [x]",
+            "dependencies": [],
+            "phase": 2
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "CLI imports successfully, uv run agent-transfer import --help shows new flags",
+          "verification_criteria": "Verify all Wave 4 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
           "memory_bank_agent": "memory-bank-keeper"
         }
@@ -140,58 +448,619 @@
       {
         "wave_id": 5,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Error handling and testing are independent activities on different concerns",
+        "rationale": "Wave 5 [Phase 2,3]: 8 task(s), max 8/wave",
         "tasks": [
           {
-            "task_id": "P6.1",
-            "agent_role": "QA_Engineer",
-            "instruction": "Add error handling: empty archive, all IDENTICAL, invalid --agent name, archive extraction failures, interrupted selection, missing directories",
+            "task_id": "T033",
+            "agent_role": "Developer",
+            "instruction": "T033 Adversarial scan (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T033 Adversarial scan (R12)' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T034",
+            "agent_role": "Developer",
+            "instruction": "T034 Git checkpoint",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T034 Git checkpoint' to [x]",
+            "dependencies": [],
+            "phase": 2
+          },
+          {
+            "task_id": "T035",
+            "agent_role": "Developer",
+            "instruction": "T035 Create `agent_transfer/ir/__init__.py` package",
             "file_locks": [
-              "agent_transfer/utils/import_analyzer.py",
-              "agent_transfer/utils/selector.py",
-              "agent_transfer/utils/transfer.py",
-              "agent_transfer/cli.py"
+              "agent_transfer/ir/__init__.py"
             ],
-            "completion_handshake": "Upon success, mark Phase 6 complete in todo list",
-            "dependencies": ["P5.1"]
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T035 Create `agent_transfer/ir/__init__.py` package' to [x]",
+            "dependencies": [],
+            "phase": 3
           },
           {
-            "task_id": "P7.1",
-            "agent_role": "Test_Automator",
-            "instruction": "Setup test environment with uv, create test archive with NEW/CHANGED/IDENTICAL agents, run manual test scenarios from verification plan",
-            "file_locks": ["test_results.md"],
-            "completion_handshake": "Upon success, mark Phase 7 testing complete in todo list, document test results",
-            "dependencies": ["P5.1"]
+            "task_id": "T036",
+            "agent_role": "Developer",
+            "instruction": "T036 Create `agent_transfer/ir/manifest.py` \u2014 AIIntentManifest dataclass + `to_yaml()`/`from_yaml()` serialization, `.aim.yaml` extension (R2)",
+            "file_locks": [
+              ".aim.yaml",
+              "agent_transfer/ir/manifest.py",
+              "aim.yaml"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T036 Create `agent_transfer/ir/manifest.py` \u2014 AIIntentManifest dataclass + `to_yaml()`/`from_yaml()` serialization, `.aim.yaml` extension (R2)' to [x]",
+            "dependencies": [],
+            "phase": 3
           },
           {
-            "task_id": "P7.2",
-            "agent_role": "Technical_Writer",
-            "instruction": "Update README.md with new workflow examples, update USER_STORIES.md with selective import scenarios",
-            "file_locks": ["README.md", "USER_STORIES.md"],
-            "completion_handshake": "Upon success, mark Phase 7 documentation complete in todo list",
-            "dependencies": ["P5.1"]
+            "task_id": "T037",
+            "agent_role": "Developer",
+            "instruction": "T037 [P] Create `agent_transfer/ir/capability.py` \u2014 Step 1: research native tool names per platform; Step 2: build canonical tool mapping registry for all 5 platforms (`map_tool(platform, tool_name) -> canonical_name`)",
+            "file_locks": [
+              "agent_transfer/ir/capability.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T037 [P] Create `agent_transfer/ir/capability.py` \u2014 Step 1: research native tool names per platform; Step 2: build canonical tool mapping registry for all 5 platforms (`map_tool(platform, tool_name) -> canonical_name`)' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T038",
+            "agent_role": "Developer",
+            "instruction": "T038 [P] Create `agent_transfer/ir/validators.py` \u2014 IR schema validation: required fields, type checks, version compat, no secrets (R8)",
+            "file_locks": [
+              "agent_transfer/ir/validators.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T038 [P] Create `agent_transfer/ir/validators.py` \u2014 IR schema validation: required fields, type checks, version compat, no secrets (R8)' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T039",
+            "agent_role": "Developer",
+            "instruction": "T039 Create `agent_transfer/ingestors/__init__.py` package",
+            "file_locks": [
+              "agent_transfer/ingestors/__init__.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T039 Create `agent_transfer/ingestors/__init__.py` package' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T040",
+            "agent_role": "Developer",
+            "instruction": "T040 Create `agent_transfer/ingestors/base.py` \u2014 BaseIngestor ABC: `ingest_agent(path) -> AIIntentManifest`, `ingest_skill(path) -> AIIntentManifest`",
+            "file_locks": [
+              "agent_transfer/ingestors/base.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T040 Create `agent_transfer/ingestors/base.py` \u2014 BaseIngestor ABC: `ingest_agent(path) -> AIIntentManifest`, `ingest_skill(path) -> AIIntentManifest`' to [x]",
+            "dependencies": [],
+            "phase": 3
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "All tests pass, documentation updated, ready for final commit",
+          "verification_criteria": "Verify all Wave 5 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 6,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 6 [Phase 3]: 8 task(s), max 8/wave",
+        "tasks": [
+          {
+            "task_id": "T041",
+            "agent_role": "Developer",
+            "instruction": "T041 [US4] Create `agent_transfer/ingestors/claude_code.py` \u2014 wraps `parser.py`/`skill_parser.py`, produces AIIntentManifest with shadow data (R4)",
+            "file_locks": [
+              "parser.py",
+              "skill_parser.py",
+              "agent_transfer/ingestors/claude_code.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T041 [US4] Create `agent_transfer/ingestors/claude_code.py` \u2014 wraps `parser.py`/`skill_parser.py`, produces AIIntentManifest with shadow data (R4)' to [x]",
+            "dependencies": [
+              "T024"
+            ],
+            "phase": 3
+          },
+          {
+            "task_id": "T042",
+            "agent_role": "Developer",
+            "instruction": "T042 Create `agent_transfer/emitters/__init__.py` package",
+            "file_locks": [
+              "agent_transfer/emitters/__init__.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T042 Create `agent_transfer/emitters/__init__.py` package' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T043",
+            "agent_role": "Developer",
+            "instruction": "T043 Create `agent_transfer/emitters/base.py` \u2014 BaseEmitter ABC: `emit_agent(manifest, target_dir) -> Path`, `emit_skill(manifest, target_dir) -> Path`",
+            "file_locks": [
+              "agent_transfer/emitters/base.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T043 Create `agent_transfer/emitters/base.py` \u2014 BaseEmitter ABC: `emit_agent(manifest, target_dir) -> Path`, `emit_skill(manifest, target_dir) -> Path`' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T044",
+            "agent_role": "Developer",
+            "instruction": "T044 [US4] Create `agent_transfer/emitters/claude_code.py` \u2014 reconstructs `.md` from IR using shadow data `original_content` for lossless output (R1)",
+            "file_locks": [
+              "agent_transfer/emitters/claude_code.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T044 [US4] Create `agent_transfer/emitters/claude_code.py` \u2014 reconstructs `.md` from IR using shadow data `original_content` for lossless output (R1)' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T045",
+            "agent_role": "Developer",
+            "instruction": "T045 Create test corpus in `tests/fixtures/canonical/` \u2014 5+ agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks) for SC-2 validation. Preserved = byte-identical for same-platform (R1); cross-platform = system prompt matches after whitespace normalization, tool refs map through canonical registry, MCP configs structurally identical via dict comparison",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T045 Create test corpus in `tests/fixtures/canonical/` \u2014 5+ agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks) for SC-2 validation. Preserved = byte-identical for same-platform (R1); cross-platform = system prompt matches after whitespace normalization, tool refs map through canonical registry, MCP configs structurally identical via dict comparison' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T046",
+            "agent_role": "Developer",
+            "instruction": "T046 [US4] CRITICAL TEST: Claude Code -> Ingestor -> IR -> Emitter -> Claude Code = byte-identical in `tests/test_lossless_roundtrip.py` (R1, R11)",
+            "file_locks": [
+              "tests/test_lossless_roundtrip.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T046 [US4] CRITICAL TEST: Claude Code -> Ingestor -> IR -> Emitter -> Claude Code = byte-identical in `tests/test_lossless_roundtrip.py` (R1, R11)' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T047",
+            "agent_role": "Developer",
+            "instruction": "T047 [US5] Add `agent-transfer convert` CLI command in `agent_transfer/cli.py` \u2014 `convert <name> --from <platform> --to <platform>`, Claude Code <-> AIM only at this point (R5)",
+            "file_locks": [
+              "agent_transfer/cli.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T047 [US5] Add `agent-transfer convert` CLI command in `agent_transfer/cli.py` \u2014 `convert <name> --from <platform> --to <platform>`, Claude Code <-> AIM only at this point (R5)' to [x]",
+            "dependencies": [
+              "T029"
+            ],
+            "phase": 3
+          },
+          {
+            "task_id": "T048",
+            "agent_role": "Developer",
+            "instruction": "T048 Tests for `ir/validators.py`, `ingestors/base.py`, `emitters/base.py` in `tests/test_ir.py` (R11)",
+            "file_locks": [
+              "tests/test_ir.py",
+              "emitters/base.py",
+              "ir/validators.py",
+              "ingestors/base.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T048 Tests for `ir/validators.py`, `ingestors/base.py`, `emitters/base.py` in `tests/test_ir.py` (R11)' to [x]",
+            "dependencies": [],
+            "phase": 3
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 6 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 7,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 7 [Phase 3,4]: 8 task(s), max 8/wave",
+        "tasks": [
+          {
+            "task_id": "T049",
+            "agent_role": "Developer",
+            "instruction": "T049 Update `pyproject.toml` with new packages: `ir`, `ingestors`, `emitters`",
+            "file_locks": [
+              "pyproject.toml"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T049 Update `pyproject.toml` with new packages: `ir`, `ingestors`, `emitters`' to [x]",
+            "dependencies": [
+              "T013",
+              "T012",
+              "T030"
+            ],
+            "phase": 3
+          },
+          {
+            "task_id": "T050",
+            "agent_role": "Developer",
+            "instruction": "T050 Adversarial scan (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T050 Adversarial scan (R12)' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T051",
+            "agent_role": "Developer",
+            "instruction": "T051 Git checkpoint",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T051 Git checkpoint' to [x]",
+            "dependencies": [],
+            "phase": 3
+          },
+          {
+            "task_id": "T052",
+            "agent_role": "Developer",
+            "instruction": "T052 Create `agent_transfer/compat/__init__.py` package",
+            "file_locks": [
+              "agent_transfer/compat/__init__.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T052 Create `agent_transfer/compat/__init__.py` package' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T053",
+            "agent_role": "Developer",
+            "instruction": "T053 Create `agent_transfer/compat/matrix.py` \u2014 feature compatibility data for all platform pairs, classifications: `clean_transfer`, `best_effort_shim`, `cannot_transfer`",
+            "file_locks": [
+              "agent_transfer/compat/matrix.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T053 Create `agent_transfer/compat/matrix.py` \u2014 feature compatibility data for all platform pairs, classifications: `clean_transfer`, `best_effort_shim`, `cannot_transfer`' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T054",
+            "agent_role": "Developer",
+            "instruction": "T054 [P] Create `agent_transfer/compat/reporter.py` \u2014 Rich table display with per-feature breakdown and color coding",
+            "file_locks": [
+              "agent_transfer/compat/reporter.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T054 [P] Create `agent_transfer/compat/reporter.py` \u2014 Rich table display with per-feature breakdown and color coding' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T055",
+            "agent_role": "Developer",
+            "instruction": "T055 [P] Create `agent_transfer/compat/shims.py` \u2014 instructional shim generation for non-transferable hooks, inject into system prompt",
+            "file_locks": [
+              "agent_transfer/compat/shims.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T055 [P] Create `agent_transfer/compat/shims.py` \u2014 instructional shim generation for non-transferable hooks, inject into system prompt' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T056",
+            "agent_role": "Developer",
+            "instruction": "T056 [US3] Add `agent-transfer compat` CLI command in `agent_transfer/cli.py` \u2014 `compat --from <platform> --to <platform>`, Rich table output (R5)",
+            "file_locks": [
+              "agent_transfer/cli.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T056 [US3] Add `agent-transfer compat` CLI command in `agent_transfer/cli.py` \u2014 `compat --from <platform> --to <platform>`, Rich table output (R5)' to [x]",
+            "dependencies": [
+              "T029",
+              "T047"
+            ],
+            "phase": 4
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 7 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 8,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 8 [Phase 4,5]: 8 task(s), max 8/wave",
+        "tasks": [
+          {
+            "task_id": "T057",
+            "agent_role": "Developer",
+            "instruction": "T057 [US1] Wire compat pre-flight into `convert` command \u2014 show compat report before cross-platform conversion",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T057 [US1] Wire compat pre-flight into `convert` command \u2014 show compat report before cross-platform conversion' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T058",
+            "agent_role": "Developer",
+            "instruction": "T058 [US1] [US2] Create `agent_transfer/ingestors/codex.py` + `agent_transfer/emitters/codex.py` \u2014 hook import policy: incoming hooks become instructional shims (Resolved Q4)",
+            "file_locks": [
+              "agent_transfer/ingestors/codex.py",
+              "agent_transfer/emitters/codex.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T058 [US1] [US2] Create `agent_transfer/ingestors/codex.py` + `agent_transfer/emitters/codex.py` \u2014 hook import policy: incoming hooks become instructional shims (Resolved Q4)' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T059",
+            "agent_role": "Developer",
+            "instruction": "T059 [US1] [US2] Test: Claude Code <-> IR <-> Codex round-trip in `tests/test_codex_roundtrip.py` + `compat/` module tests in `tests/test_compat.py` (R11)",
+            "file_locks": [
+              "tests/test_compat.py",
+              "tests/test_codex_roundtrip.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T059 [US1] [US2] Test: Claude Code <-> IR <-> Codex round-trip in `tests/test_codex_roundtrip.py` + `compat/` module tests in `tests/test_compat.py` (R11)' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T060",
+            "agent_role": "Developer",
+            "instruction": "T060 Adversarial scan \u2014 targeted + general (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T060 Adversarial scan \u2014 targeted + general (R12)' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T061",
+            "agent_role": "Developer",
+            "instruction": "T061 Git checkpoint",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T061 Git checkpoint' to [x]",
+            "dependencies": [],
+            "phase": 4
+          },
+          {
+            "task_id": "T062",
+            "agent_role": "Developer",
+            "instruction": "T062 [US1] [US2] Create `agent_transfer/ingestors/goose.py` + `agent_transfer/emitters/goose.py` \u2014 recipe steps map to/from system prompt + shims",
+            "file_locks": [
+              "agent_transfer/emitters/goose.py",
+              "agent_transfer/ingestors/goose.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T062 [US1] [US2] Create `agent_transfer/ingestors/goose.py` + `agent_transfer/emitters/goose.py` \u2014 recipe steps map to/from system prompt + shims' to [x]",
+            "dependencies": [],
+            "phase": 5
+          },
+          {
+            "task_id": "T063",
+            "agent_role": "Developer",
+            "instruction": "T063 [P] [US1] [US2] Create `agent_transfer/ingestors/gemini_cli.py` + `agent_transfer/emitters/gemini_cli.py` \u2014 JSON settings parsing + generation",
+            "file_locks": [
+              "agent_transfer/ingestors/gemini_cli.py",
+              "agent_transfer/emitters/gemini_cli.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T063 [P] [US1] [US2] Create `agent_transfer/ingestors/gemini_cli.py` + `agent_transfer/emitters/gemini_cli.py` \u2014 JSON settings parsing + generation' to [x]",
+            "dependencies": [],
+            "phase": 5
+          },
+          {
+            "task_id": "T064",
+            "agent_role": "Developer",
+            "instruction": "T064 [US1] [US2] Test cross-platform conversions in `tests/test_cross_platform.py`: Claude <-> Goose, Claude <-> Gemini, Goose <-> Gemini (R11)",
+            "file_locks": [
+              "tests/test_cross_platform.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T064 [US1] [US2] Test cross-platform conversions in `tests/test_cross_platform.py`: Claude <-> Goose, Claude <-> Gemini, Goose <-> Gemini (R11)' to [x]",
+            "dependencies": [],
+            "phase": 5
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 8 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 9,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 9 [Phase 5,6]: 8 task(s), max 8/wave",
+        "tasks": [
+          {
+            "task_id": "T065",
+            "agent_role": "Developer",
+            "instruction": "T065 Update `agent_transfer/compat/matrix.py` with real test results from Goose + Gemini conversions",
+            "file_locks": [
+              "agent_transfer/compat/matrix.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T065 Update `agent_transfer/compat/matrix.py` with real test results from Goose + Gemini conversions' to [x]",
+            "dependencies": [
+              "T053"
+            ],
+            "phase": 5
+          },
+          {
+            "task_id": "T066",
+            "agent_role": "Developer",
+            "instruction": "T066 Adversarial scan (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T066 Adversarial scan (R12)' to [x]",
+            "dependencies": [],
+            "phase": 5
+          },
+          {
+            "task_id": "T067",
+            "agent_role": "Developer",
+            "instruction": "T067 Git checkpoint",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T067 Git checkpoint' to [x]",
+            "dependencies": [],
+            "phase": 5
+          },
+          {
+            "task_id": "T068",
+            "agent_role": "Developer",
+            "instruction": "T068 [US1] [US2] Create `agent_transfer/ingestors/opencode.py` + `agent_transfer/emitters/opencode.py`",
+            "file_locks": [
+              "agent_transfer/emitters/opencode.py",
+              "agent_transfer/ingestors/opencode.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T068 [US1] [US2] Create `agent_transfer/ingestors/opencode.py` + `agent_transfer/emitters/opencode.py`' to [x]",
+            "dependencies": [],
+            "phase": 6
+          },
+          {
+            "task_id": "T070",
+            "agent_role": "Developer",
+            "instruction": "T070 [US5] IR portability test in `tests/test_ir_portability.py`: load pre-generated `.aim.yaml` \u2192 emit to each of the 4 non-AIM target platforms (US-5 end-to-end validation)",
+            "file_locks": [
+              ".aim.yaml",
+              "tests/test_ir_portability.py",
+              "aim.yaml"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T070 [US5] IR portability test in `tests/test_ir_portability.py`: load pre-generated `.aim.yaml` \u2192 emit to each of the 4 non-AIM target platforms (US-5 end-to-end validation)' to [x]",
+            "dependencies": [
+              "T036"
+            ],
+            "phase": 6
+          },
+          {
+            "task_id": "T071",
+            "agent_role": "Developer",
+            "instruction": "T071 Create Claude Code skill `/transfer-agent` (wraps US-1/US-3) \u2014 trigger: \"transfer agent to [platform]\"; input: agent name + target; output: converted files + compat report",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T071 Create Claude Code skill `/transfer-agent` (wraps US-1/US-3) \u2014 trigger: \"transfer agent to [platform]\"; input: agent name + target; output: converted files + compat report' to [x]",
+            "dependencies": [],
+            "phase": 6
+          },
+          {
+            "task_id": "T072",
+            "agent_role": "Developer",
+            "instruction": "T072 Create Claude Code skill `/analyze-platform` (wraps US-1/US-3) \u2014 trigger: \"analyze platform compatibility\"; input: optional --from/--to; output: compat matrix table",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T072 Create Claude Code skill `/analyze-platform` (wraps US-1/US-3) \u2014 trigger: \"analyze platform compatibility\"; input: optional --from/--to; output: compat matrix table' to [x]",
+            "dependencies": [],
+            "phase": 6
+          },
+          {
+            "task_id": "T073",
+            "agent_role": "Developer",
+            "instruction": "T073 Register entry_points for all 5 platforms in `pyproject.toml` (R9)",
+            "file_locks": [
+              "pyproject.toml"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T073 Register entry_points for all 5 platforms in `pyproject.toml` (R9)' to [x]",
+            "dependencies": [
+              "T013",
+              "T012",
+              "T030",
+              "T049"
+            ],
+            "phase": 6
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 9 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "memory-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 10,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 10 [Phase 6]: 4 task(s), max 8/wave",
+        "tasks": [
+          {
+            "task_id": "T069",
+            "agent_role": "Developer",
+            "instruction": "T069 Update `agent_transfer/compat/matrix.py` with OpenCode's 4 platform pairs \u2014 verify all 20 pairs present (SC-3)",
+            "file_locks": [
+              "agent_transfer/compat/matrix.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T069 Update `agent_transfer/compat/matrix.py` with OpenCode's 4 platform pairs \u2014 verify all 20 pairs present (SC-3)' to [x]",
+            "dependencies": [
+              "T065",
+              "T053"
+            ],
+            "phase": 6
+          },
+          {
+            "task_id": "T074",
+            "agent_role": "Developer",
+            "instruction": "T074 Tests for OpenCode ingestor/emitter + skill behavior in `tests/test_opencode.py` + `tests/test_skills.py` (R11)",
+            "file_locks": [
+              "tests/test_opencode.py",
+              "tests/test_skills.py"
+            ],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T074 Tests for OpenCode ingestor/emitter + skill behavior in `tests/test_opencode.py` + `tests/test_skills.py` (R11)' to [x]",
+            "dependencies": [],
+            "phase": 6
+          },
+          {
+            "task_id": "T075",
+            "agent_role": "Developer",
+            "instruction": "T075 Adversarial scan \u2014 full codebase (R12)",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T075 Adversarial scan \u2014 full codebase (R12)' to [x]",
+            "dependencies": [],
+            "phase": 6
+          },
+          {
+            "task_id": "T076",
+            "agent_role": "Developer",
+            "instruction": "T076 Git checkpoint `v2.0.0`",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T076 Git checkpoint `v2.0.0`' to [x]",
+            "dependencies": [],
+            "phase": 6
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 10 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
           "memory_bank_agent": "memory-bank-keeper"
         }
       }
-    ],
-    "current_status": {
-      "completed_waves": [1],
-      "current_wave": 2,
-      "blocker": "Wave 1 produced code with type errors. Must fix import_analyzer.py before proceeding to Wave 3 parallel execution",
-      "next_action": "Deploy debugger agent to fix import_analyzer.py type errors and function signature issues"
-    },
-    "parallelization_summary": {
-      "total_waves": 5,
-      "parallel_waves": [3, 5],
-      "sequential_waves": [2, 4],
-      "max_concurrent_agents": 3,
-      "estimated_time_saved": "~60% faster than pure sequential execution"
-    }
+    ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "task_orchestration": {
     "task_watchdog_minutes": 15,
-    "wave_size": 5,
+    "wave_size": 8,
     "max_parallel_tasks": 3,
     "checkpoint_auto_save": true
   },
