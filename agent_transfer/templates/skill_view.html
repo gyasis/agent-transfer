@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ agent.name }} - Agent Transfer Viewer</title>
+    <title>{{ skill.name }} - Agent Transfer Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tailwind Typography Plugin for beautiful markdown rendering -->
     <script>
@@ -50,11 +50,11 @@
         }
 
         /* Markdown/Prose styling */
-        .prose-agent {
+        .prose-skill {
             color: #374151;
             line-height: 1.75;
         }
-        .prose-agent h1 {
+        .prose-skill h1 {
             font-size: 2rem;
             font-weight: 700;
             margin-top: 2rem;
@@ -63,51 +63,51 @@
             border-bottom: 2px solid #e5e7eb;
             padding-bottom: 0.5rem;
         }
-        .prose-agent h2 {
+        .prose-skill h2 {
             font-size: 1.5rem;
             font-weight: 600;
             margin-top: 1.75rem;
             margin-bottom: 0.75rem;
             color: #1f2937;
         }
-        .prose-agent h3 {
+        .prose-skill h3 {
             font-size: 1.25rem;
             font-weight: 600;
             margin-top: 1.5rem;
             margin-bottom: 0.5rem;
             color: #374151;
         }
-        .prose-agent p {
+        .prose-skill p {
             margin-top: 1rem;
             margin-bottom: 1rem;
         }
-        .prose-agent ul, .prose-agent ol {
+        .prose-skill ul, .prose-skill ol {
             margin-top: 1rem;
             margin-bottom: 1rem;
             padding-left: 1.5rem;
         }
-        .prose-agent ul {
+        .prose-skill ul {
             list-style-type: disc;
         }
-        .prose-agent ol {
+        .prose-skill ol {
             list-style-type: decimal;
         }
-        .prose-agent li {
+        .prose-skill li {
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
         }
-        .prose-agent li::marker {
+        .prose-skill li::marker {
             color: #6b7280;
         }
-        .prose-agent code {
+        .prose-skill code {
             background: #f3f4f6;
             padding: 0.2rem 0.4rem;
             border-radius: 0.25rem;
             font-size: 0.875rem;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            color: #dc2626;
+            color: #9333ea;
         }
-        .prose-agent pre {
+        .prose-skill pre {
             background: #1f2937;
             color: #e5e7eb;
             padding: 1rem;
@@ -116,61 +116,61 @@
             margin-top: 1rem;
             margin-bottom: 1rem;
         }
-        .prose-agent pre code {
+        .prose-skill pre code {
             background: transparent;
             padding: 0;
             color: inherit;
             font-size: 0.875rem;
         }
-        .prose-agent blockquote {
-            border-left: 4px solid #3b82f6;
+        .prose-skill blockquote {
+            border-left: 4px solid #9333ea;
             padding-left: 1rem;
             margin: 1rem 0;
             color: #4b5563;
             font-style: italic;
-            background: #f9fafb;
+            background: #faf5ff;
             padding: 1rem;
             border-radius: 0 0.5rem 0.5rem 0;
         }
-        .prose-agent a {
-            color: #2563eb;
+        .prose-skill a {
+            color: #7c3aed;
             text-decoration: underline;
         }
-        .prose-agent a:hover {
-            color: #1d4ed8;
+        .prose-skill a:hover {
+            color: #6d28d9;
         }
-        .prose-agent strong {
+        .prose-skill strong {
             font-weight: 600;
             color: #111827;
         }
-        .prose-agent em {
+        .prose-skill em {
             font-style: italic;
         }
-        .prose-agent hr {
+        .prose-skill hr {
             border: none;
             border-top: 1px solid #e5e7eb;
             margin: 2rem 0;
         }
-        .prose-agent table {
+        .prose-skill table {
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
         }
-        .prose-agent th, .prose-agent td {
+        .prose-skill th, .prose-skill td {
             border: 1px solid #e5e7eb;
             padding: 0.75rem;
             text-align: left;
         }
-        .prose-agent th {
+        .prose-skill th {
             background: #f9fafb;
             font-weight: 600;
         }
-        .prose-agent tr:nth-child(even) {
+        .prose-skill tr:nth-child(even) {
             background: #f9fafb;
         }
         .loading-spinner {
             border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
+            border-top: 2px solid #9333ea;
             border-radius: 50%;
             width: 14px;
             height: 14px;
@@ -181,8 +181,8 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .agent-item { transition: opacity 0.2s ease; }
-        .agent-item.hidden-by-search { display: none; }
+        .agent-item, .skill-item { transition: opacity 0.2s ease; }
+        .agent-item.hidden-by-search, .skill-item.hidden-by-search { display: none; }
         .relevance-badge {
             font-size: 9px;
             padding: 1px 5px;
@@ -208,7 +208,7 @@
             background-color: rgba(255,255,255,0.1);
         }
         .search-trigger.active {
-            background-color: rgba(59, 130, 246, 0.3);
+            background-color: rgba(147, 51, 234, 0.3);
         }
         /* Hide scrollbar but keep functionality - sidebar only */
         .scrollbar-hidden {
@@ -225,9 +225,9 @@
     <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto scrollbar-hidden p-5 border-r border-gray-700 flex flex-col">
         <div class="flex items-center justify-between mb-4 border-b-2 border-gray-700 pb-3">
             <h1 class="text-xl font-bold text-white">
-                <a href="/" class="text-white no-underline hover:text-blue-300">Agent Transfer</a>
+                <a href="/" class="text-white no-underline hover:text-purple-300">Agent Transfer</a>
             </h1>
-            <button id="searchToggle" class="search-trigger p-2 rounded-lg text-gray-400" title="Search (⌘K)">
+            <button id="searchToggle" class="search-trigger p-2 rounded-lg text-gray-400" title="Search (Cmd/Ctrl+K)">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
@@ -241,7 +241,7 @@
                     type="text"
                     id="searchInput"
                     placeholder="Loading AI search..."
-                    class="w-full px-3 py-2 bg-gray-800 text-gray-100 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none text-sm placeholder-gray-500"
+                    class="w-full px-3 py-2 bg-gray-800 text-gray-100 rounded-lg border border-gray-700 focus:border-purple-500 focus:outline-none text-sm placeholder-gray-500"
                     disabled
                 >
                 <div id="searchStatus" class="absolute right-3 top-2.5 text-xs text-gray-500">
@@ -250,7 +250,7 @@
             </div>
         </div>
 
-        <!-- Agent Lists -->
+        <!-- Agent and Skill Lists -->
         <div class="flex-1 overflow-y-auto scrollbar-hidden">
             {% if user_agents %}
             <h2 class="text-xs uppercase text-gray-400 mt-2 mb-3 font-semibold tracking-wide flex justify-between">
@@ -259,13 +259,13 @@
             </h2>
             <ul id="userAgentList" class="space-y-1">
                 {% for a in user_agents %}
-                <li class="agent-item" data-name="{{ a.name }}" data-description="{{ a.description|default('', true) }}" data-tools="{{ a.tools|default('', true) }}" data-type="user">
-                    <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm {% if a.name == agent.name %}bg-blue-600 text-white{% endif %}">
+                <li class="agent-item" data-name="{{ a.name }}" data-description="{{ a.description|default('', true) }}" data-tools="{{ a.tools|default('', true) }}" data-type="user" data-item-type="agent">
+                    <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
                         <span class="flex items-center justify-between">
                             <span class="font-semibold block truncate">{{ a.name }}</span>
                             <span class="relevance-badge bg-green-900 text-green-300 hidden"></span>
                         </span>
-                        <span class="text-xs {% if a.name == agent.name %}text-blue-200{% else %}text-gray-400{% endif %} mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
+                        <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
                     </a>
                 </li>
                 {% endfor %}
@@ -279,13 +279,53 @@
             </h2>
             <ul id="projectAgentList" class="space-y-1">
                 {% for a in project_agents %}
-                <li class="agent-item" data-name="{{ a.name }}" data-description="{{ a.description|default('', true) }}" data-tools="{{ a.tools|default('', true) }}" data-type="project">
-                    <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm {% if a.name == agent.name %}bg-blue-600 text-white{% endif %}">
+                <li class="agent-item" data-name="{{ a.name }}" data-description="{{ a.description|default('', true) }}" data-tools="{{ a.tools|default('', true) }}" data-type="project" data-item-type="agent">
+                    <a href="/agent/{{ a.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-gray-800 hover:text-white text-sm">
                         <span class="flex items-center justify-between">
                             <span class="font-semibold block truncate">{{ a.name }}</span>
                             <span class="relevance-badge bg-green-900 text-green-300 hidden"></span>
                         </span>
-                        <span class="text-xs {% if a.name == agent.name %}text-blue-200{% else %}text-gray-400{% endif %} mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
+                        <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ a.description|replace('\\n', ' ') if a.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if user_skills %}
+            <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>User Skills</span>
+                <span id="userSkillCount">({{ user_skills|length }})</span>
+            </h2>
+            <ul id="userSkillList" class="space-y-1">
+                {% for s in user_skills %}
+                <li class="skill-item" data-name="{{ s.name }}" data-description="{{ s.description|default('', true) }}" data-tools="{{ s.allowed_tools|default([], true)|join(', ') }}" data-type="user-skill" data-item-type="skill">
+                    <a href="/skill/{{ s.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-purple-900/30 hover:text-white text-sm {% if s.name == skill.name %}bg-purple-600 text-white{% endif %}">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">{{ s.name }}</span>
+                            <span class="relevance-badge bg-purple-900 text-purple-300 hidden"></span>
+                        </span>
+                        <span class="text-xs {% if s.name == skill.name %}text-purple-200{% else %}text-gray-400{% endif %} mt-1 line-clamp-2">{{ s.description|replace('\\n', ' ') if s.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if project_skills %}
+            <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>Project Skills</span>
+                <span id="projectSkillCount">({{ project_skills|length }})</span>
+            </h2>
+            <ul id="projectSkillList" class="space-y-1">
+                {% for s in project_skills %}
+                <li class="skill-item" data-name="{{ s.name }}" data-description="{{ s.description|default('', true) }}" data-tools="{{ s.allowed_tools|default([], true)|join(', ') }}" data-type="project-skill" data-item-type="skill">
+                    <a href="/skill/{{ s.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-purple-900/30 hover:text-white text-sm {% if s.name == skill.name %}bg-purple-600 text-white{% endif %}">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">{{ s.name }}</span>
+                            <span class="relevance-badge bg-purple-900 text-purple-300 hidden"></span>
+                        </span>
+                        <span class="text-xs {% if s.name == skill.name %}text-purple-200{% else %}text-gray-400{% endif %} mt-1 line-clamp-2">{{ s.description|replace('\\n', ' ') if s.description else '' }}</span>
                     </a>
                 </li>
                 {% endfor %}
@@ -294,7 +334,7 @@
 
             <!-- No results message -->
             <div id="noResults" class="hidden text-center py-8 text-gray-500">
-                <p class="text-sm">No agents match your search</p>
+                <p class="text-sm">No agents or skills match your search</p>
             </div>
         </div>
     </div>
@@ -302,45 +342,51 @@
     <!-- Main Content -->
     <div class="flex-1 overflow-y-auto p-10 bg-white">
         <div class="max-w-4xl mx-auto">
-            <!-- Agent Header -->
+            <!-- Skill Header -->
             <div class="border-b border-gray-200 pb-5 mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 mb-3">{{ agent.name }}</h1>
-                <p class="text-lg text-gray-600 mb-4 whitespace-pre-line">{{ agent.description|replace('\\n', '\n') if agent.description else 'No description available' }}</p>
+                <h1 class="text-4xl font-bold text-gray-900 mb-3">{{ skill.name }}</h1>
+                <p class="text-lg text-gray-600 mb-4 whitespace-pre-line">{{ skill.description|replace('\\n', '\n') if skill.description else 'No description available' }}</p>
 
                 <div class="flex flex-wrap gap-3 mt-4">
-                    <span class="px-3 py-1 rounded-full text-xs font-semibold {% if agent.agent_type == 'user' %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                        {{ agent.agent_type|title }} Agent
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold {% if skill.skill_type == 'user' %}bg-purple-100 text-purple-800{% else %}bg-violet-100 text-violet-800{% endif %}">
+                        {{ skill.skill_type|title }} Skill
                     </span>
-                    {% if agent.tools %}
+                    {% if skill.allowed_tools %}
                     <span class="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
-                        Tools: {{ agent.tools|length }}
+                        Tools: {{ skill.allowed_tools|length }}
                     </span>
                     {% endif %}
-                    {% if agent.model %}
+                    {% if skill.model %}
                     <span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-                        Model: {{ agent.model }}
+                        Model: {{ skill.model }}
+                    </span>
+                    {% endif %}
+                    {% if skill.agent %}
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                        Agent: {{ skill.agent }}
                     </span>
                     {% endif %}
                 </div>
 
+                <!-- File Info -->
                 <div class="mt-4 text-sm text-gray-600 space-y-2">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <strong>File:</strong>
-                        <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ agent.file_path }}</code>
+                        <strong>Path:</strong>
+                        <code class="bg-gray-100 px-2 py-1 rounded text-xs">{{ skill.skill_path }}</code>
                         <div class="flex gap-1">
-                            <button onclick="openInEditor('{{ agent.file_path }}')"
+                            <button onclick="openInEditor('{{ skill.skill_path }}')"
                                class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors cursor-pointer"
                                title="Open in Cursor">
                                 <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M13.325 3.05L8.667 20.432l1.932.518 4.658-17.382-1.932-.518zM7.612 18.36l1.36-1.448-.001-.019-5.094-4.78 5.095-4.787v-.015l-1.36-1.45-6.551 6.252 6.551 6.247zM16.388 18.36l-1.36-1.448.001-.019 5.094-4.78-5.095-4.787v-.015l1.36-1.45 6.551 6.252-6.551 6.247z"/></svg>
                                 Cursor
                             </button>
-                            <button onclick="copyPath('{{ agent.file_path }}')"
+                            <button onclick="copyPath('{{ skill.skill_path }}')"
                                     class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
                                     title="Copy path">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                 Copy
                             </button>
-                            <button onclick="openFolderInEditor('{{ agent.file_path }}')"
+                            <button onclick="openFolderInEditor('{{ skill.skill_path }}')"
                                class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors cursor-pointer"
                                title="Open folder in Cursor">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
@@ -348,10 +394,85 @@
                             </button>
                         </div>
                     </div>
-                    {% if agent.tools %}
-                    <div><strong>Tools:</strong> {{ agent.tools|join(", ") }}</div>
+
+                    {% if skill.allowed_tools %}
+                    <div><strong>Allowed Tools:</strong> {{ skill.allowed_tools|join(", ") }}</div>
+                    {% endif %}
+
+                    {% if skill.context %}
+                    <div><strong>Context:</strong> {{ skill.context[:200] }}{% if skill.context|length > 200 %}...{% endif %}</div>
                     {% endif %}
                 </div>
+
+                <!-- Stats Section -->
+                <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-50 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-purple-600">{{ skill.file_count }}</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Files</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-purple-600">{{ (skill.total_size_bytes / 1024)|round(1) }} KB</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Total Size</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold {% if skill.has_scripts %}text-green-600{% else %}text-gray-400{% endif %}">
+                            {% if skill.has_scripts %}Yes{% else %}No{% endif %}
+                        </div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Has Scripts</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3 text-center">
+                        <div class="text-2xl font-bold text-purple-600">
+                            {% if skill.has_requirements_txt or skill.has_pyproject_toml or skill.has_uv_lock %}
+                                {{ [skill.has_requirements_txt, skill.has_pyproject_toml, skill.has_uv_lock]|select|list|length }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Dep Files</div>
+                    </div>
+                </div>
+
+                <!-- Dependencies Section -->
+                {% if skill.has_requirements_txt or skill.has_pyproject_toml or skill.has_uv_lock %}
+                <div class="mt-4">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2">Dependencies</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% if skill.has_requirements_txt %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            requirements.txt
+                        </span>
+                        {% endif %}
+                        {% if skill.has_pyproject_toml %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            pyproject.toml
+                        </span>
+                        {% endif %}
+                        {% if skill.has_uv_lock %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            uv.lock
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Scripts Section -->
+                {% if skill.has_scripts and skill.script_files %}
+                <div class="mt-4">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2">Scripts</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for script in skill.script_files %}
+                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            {{ script.split('/')[-1] }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
 
                 <script>
                 function copyPath(path) {
@@ -368,7 +489,6 @@
                 }
 
                 async function openInEditor(filePath) {
-                    // Use server-side API to open editor (works in WSL+Windows setups)
                     const btn = event.target.closest('button');
                     const origText = btn.innerHTML;
                     btn.innerHTML = '<span class="loading-spinner"></span> Opening...';
@@ -401,15 +521,14 @@
                     }
                 }
 
-                async function openFolderInEditor(filePath) {
-                    // Use server-side API to open folder in editor
+                async function openFolderInEditor(folderPath) {
                     const btn = event.target.closest('button');
                     const origText = btn.innerHTML;
                     btn.innerHTML = '<span class="loading-spinner"></span> Opening...';
                     btn.disabled = true;
 
                     try {
-                        const response = await fetch(`/api/open-editor?path=${encodeURIComponent(filePath)}&folder=true`);
+                        const response = await fetch(`/api/open-editor?path=${encodeURIComponent(folderPath)}&folder=true`);
                         const data = await response.json();
 
                         if (data.success) {
@@ -437,8 +556,8 @@
                 </script>
             </div>
 
-            <!-- Agent Content -->
-            <div class="agent-content-body prose-agent">
+            <!-- Skill Content -->
+            <div class="skill-content-body prose-skill">
                 {{ html_content|safe }}
             </div>
         </div>
@@ -451,17 +570,19 @@
         env.allowLocalModels = false;
 
         let embedder = null;
-        let agentEmbeddings = [];
-        let agentElements = [];
-        let originalOrder = []; // Store original DOM order for reset
+        let itemEmbeddings = [];
+        let allItems = [];
+        let originalOrder = [];
         let isModelLoaded = false;
-        let fuseIndex = null;  // Fuse.js index for fuzzy matching
+        let fuseIndex = null;
 
         const searchInput = document.getElementById('searchInput');
         const searchStatus = document.getElementById('searchStatus');
         const noResults = document.getElementById('noResults');
         const userAgentCount = document.getElementById('userAgentCount');
         const projectAgentCount = document.getElementById('projectAgentCount');
+        const userSkillCount = document.getElementById('userSkillCount');
+        const projectSkillCount = document.getElementById('projectSkillCount');
 
         function cosineSimilarity(a, b) {
             let dotProduct = 0, normA = 0, normB = 0;
@@ -473,16 +594,15 @@
             return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
         }
 
-        // Initialize Fuse.js index for fuzzy matching (typo tolerance)
         function initFuseIndex() {
-            const agentData = agentElements.map((el, i) => ({
+            const itemData = allItems.map((el, i) => ({
                 index: i,
                 name: el.dataset.name || '',
                 description: el.dataset.description || '',
                 tools: el.dataset.tools || ''
             }));
 
-            fuseIndex = new Fuse(agentData, {
+            fuseIndex = new Fuse(itemData, {
                 keys: [
                     { name: 'name', weight: 0.4 },
                     { name: 'description', weight: 0.4 },
@@ -497,7 +617,6 @@
             });
         }
 
-        // Correct typos using fuzzy matching before semantic search
         function correctQueryTypos(query) {
             if (!fuseIndex) return query;
 
@@ -505,7 +624,7 @@
             const correctedWords = [];
 
             const vocabulary = new Set();
-            agentElements.forEach(el => {
+            allItems.forEach(el => {
                 const text = `${el.dataset.name} ${el.dataset.description} ${el.dataset.tools}`.toLowerCase();
                 text.split(/\W+/).forEach(w => {
                     if (w.length > 2) vocabulary.add(w);
@@ -534,7 +653,6 @@
             return correctedWords.join(' ');
         }
 
-        // Get fuzzy match scores for all agents
         function getFuzzyScores(query) {
             if (!fuseIndex) return new Map();
 
@@ -554,26 +672,24 @@
                     quantized: true
                 });
 
-                agentElements = Array.from(document.querySelectorAll('.agent-item'));
-                // Store original order for reset
-                originalOrder = agentElements.map((el, i) => ({ element: el, originalIndex: i }));
+                allItems = Array.from(document.querySelectorAll('.agent-item, .skill-item'));
+                originalOrder = allItems.map((el, i) => ({ element: el, originalIndex: i }));
 
-                const agentTexts = agentElements.map(el => {
+                const itemTexts = allItems.map(el => {
                     const name = el.dataset.name || '';
                     const description = el.dataset.description || '';
                     const tools = el.dataset.tools || '';
                     return `${name} ${description} ${tools}`.trim();
                 });
 
-                if (agentTexts.length > 0) {
-                    const output = await embedder(agentTexts, {
+                if (itemTexts.length > 0) {
+                    const output = await embedder(itemTexts, {
                         pooling: 'mean',
                         normalize: true
                     });
-                    agentEmbeddings = output.tolist();
+                    itemEmbeddings = output.tolist();
                 }
 
-                // Initialize Fuse.js for typo tolerance
                 initFuseIndex();
 
                 searchInput.disabled = false;
@@ -584,8 +700,7 @@
             } catch (error) {
                 console.error('Failed to load AI model:', error);
 
-                // Initialize Fuse.js even without AI model (for fuzzy fallback)
-                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                allItems = Array.from(document.querySelectorAll('.agent-item, .skill-item'));
                 initFuseIndex();
 
                 searchInput.disabled = false;
@@ -594,57 +709,68 @@
             }
         }
 
-        // Reorder elements in DOM by relevance score
         function reorderByRelevance(scoredElements) {
-            const userList = document.getElementById('userAgentList');
-            const projectList = document.getElementById('projectAgentList');
+            const userAgentList = document.getElementById('userAgentList');
+            const projectAgentList = document.getElementById('projectAgentList');
+            const userSkillList = document.getElementById('userSkillList');
+            const projectSkillList = document.getElementById('projectSkillList');
 
-            // Separate by type and sort by score
-            const userItems = scoredElements.filter(s => s.element.dataset.type === 'user');
-            const projectItems = scoredElements.filter(s => s.element.dataset.type === 'project');
+            const userAgents = scoredElements.filter(s => s.element.dataset.type === 'user');
+            const projectAgents = scoredElements.filter(s => s.element.dataset.type === 'project');
+            const userSkills = scoredElements.filter(s => s.element.dataset.type === 'user-skill');
+            const projectSkills = scoredElements.filter(s => s.element.dataset.type === 'project-skill');
 
-            // Reorder user agents
-            if (userList) {
-                userItems.forEach(item => {
-                    userList.appendChild(item.element);
-                });
+            if (userAgentList) {
+                userAgents.forEach(item => userAgentList.appendChild(item.element));
             }
-
-            // Reorder project agents
-            if (projectList) {
-                projectItems.forEach(item => {
-                    projectList.appendChild(item.element);
-                });
+            if (projectAgentList) {
+                projectAgents.forEach(item => projectAgentList.appendChild(item.element));
+            }
+            if (userSkillList) {
+                userSkills.forEach(item => userSkillList.appendChild(item.element));
+            }
+            if (projectSkillList) {
+                projectSkills.forEach(item => projectSkillList.appendChild(item.element));
             }
         }
 
-        // Restore original DOM order
         function restoreOriginalOrder() {
-            const userList = document.getElementById('userAgentList');
-            const projectList = document.getElementById('projectAgentList');
+            const userAgentList = document.getElementById('userAgentList');
+            const projectAgentList = document.getElementById('projectAgentList');
+            const userSkillList = document.getElementById('userSkillList');
+            const projectSkillList = document.getElementById('projectSkillList');
 
-            const userItems = originalOrder.filter(o => o.element.dataset.type === 'user')
+            const userAgents = originalOrder.filter(o => o.element.dataset.type === 'user')
                 .sort((a, b) => a.originalIndex - b.originalIndex);
-            const projectItems = originalOrder.filter(o => o.element.dataset.type === 'project')
+            const projectAgents = originalOrder.filter(o => o.element.dataset.type === 'project')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+            const userSkills = originalOrder.filter(o => o.element.dataset.type === 'user-skill')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+            const projectSkills = originalOrder.filter(o => o.element.dataset.type === 'project-skill')
                 .sort((a, b) => a.originalIndex - b.originalIndex);
 
-            if (userList) {
-                userItems.forEach(item => userList.appendChild(item.element));
+            if (userAgentList) {
+                userAgents.forEach(item => userAgentList.appendChild(item.element));
             }
-            if (projectList) {
-                projectItems.forEach(item => projectList.appendChild(item.element));
+            if (projectAgentList) {
+                projectAgents.forEach(item => projectAgentList.appendChild(item.element));
+            }
+            if (userSkillList) {
+                userSkills.forEach(item => userSkillList.appendChild(item.element));
+            }
+            if (projectSkillList) {
+                projectSkills.forEach(item => projectSkillList.appendChild(item.element));
             }
         }
 
-        // Hybrid Search: Combines semantic embeddings + fuzzy matching for typo tolerance
         async function performSearch(query) {
             if (!query.trim()) {
-                agentElements.forEach(el => {
+                allItems.forEach(el => {
                     el.classList.remove('hidden-by-search');
                     const badge = el.querySelector('.relevance-badge');
                     if (badge) badge.classList.add('hidden');
                 });
-                restoreOriginalOrder(); // Restore original order when search is cleared
+                restoreOriginalOrder();
                 noResults.classList.add('hidden');
                 updateCounts();
                 return;
@@ -658,27 +784,21 @@
             searchStatus.innerHTML = '<span class="loading-spinner"></span>';
 
             try {
-                // Step 1: Correct typos in query using fuzzy matching
                 const correctedQuery = correctQueryTypos(query);
                 const queryToEmbed = correctedQuery || query;
-
-                // Step 2: Get fuzzy scores (works even with typos)
                 const fuzzyScores = getFuzzyScores(query);
 
-                // Step 3: Get semantic embeddings for corrected query
                 const queryOutput = await embedder([queryToEmbed], {
                     pooling: 'mean',
                     normalize: true
                 });
                 const queryEmbedding = queryOutput.tolist()[0];
 
-                // Step 4: Calculate semantic similarities
-                const semanticScores = agentEmbeddings.map((emb, i) => ({
+                const semanticScores = itemEmbeddings.map((emb, i) => ({
                     index: i,
                     score: cosineSimilarity(queryEmbedding, emb)
                 }));
 
-                // Step 5: Combine semantic + fuzzy scores (hybrid approach)
                 const hybridScores = semanticScores.map(sem => {
                     const fuzzy = fuzzyScores.get(sem.index) || 0;
                     const combined = (sem.score * 0.6) + (fuzzy * 0.4);
@@ -696,11 +816,9 @@
                 const hasTypos = correctedQuery !== query.toLowerCase();
                 const threshold = hasTypos ? 0.2 : 0.25;
                 let visibleCount = 0;
-
-                // Build scored elements list for reordering
                 const scoredElements = [];
 
-                agentElements.forEach((el, i) => {
+                allItems.forEach((el, i) => {
                     const result = hybridScores.find(s => s.index === i);
                     const badge = el.querySelector('.relevance-badge');
 
@@ -715,12 +833,10 @@
                     } else {
                         el.classList.add('hidden-by-search');
                         if (badge) badge.classList.add('hidden');
-                        // Add hidden elements with score 0 so they stay at bottom
                         scoredElements.push({ element: el, score: 0 });
                     }
                 });
 
-                // Sort by score (highest first) and reorder DOM
                 scoredElements.sort((a, b) => b.score - a.score);
                 reorderByRelevance(scoredElements);
 
@@ -740,7 +856,6 @@
             }
         }
 
-        // Fuzzy-only search (fallback when AI model not loaded)
         function fuzzySearch(query) {
             if (!fuseIndex) {
                 basicSearch(query);
@@ -751,7 +866,7 @@
             let visibleCount = 0;
             const scoredElements = [];
 
-            agentElements.forEach((el, i) => {
+            allItems.forEach((el, i) => {
                 const score = fuzzyScores.get(i) || 0;
                 const badge = el.querySelector('.relevance-badge');
 
@@ -770,7 +885,6 @@
                 }
             });
 
-            // Sort by score and reorder DOM
             scoredElements.sort((a, b) => b.score - a.score);
             reorderByRelevance(scoredElements);
 
@@ -787,7 +901,7 @@
             const lowerQuery = query.toLowerCase();
             let visibleCount = 0;
 
-            agentElements.forEach(el => {
+            allItems.forEach(el => {
                 const name = (el.dataset.name || '').toLowerCase();
                 const description = (el.dataset.description || '').toLowerCase();
                 const tools = (el.dataset.tools || '').toLowerCase();
@@ -814,11 +928,15 @@
         }
 
         function updateCounts() {
-            const visibleUser = document.querySelectorAll('.agent-item[data-type="user"]:not(.hidden-by-search)').length;
-            const visibleProject = document.querySelectorAll('.agent-item[data-type="project"]:not(.hidden-by-search)').length;
+            const visibleUserAgents = document.querySelectorAll('.agent-item[data-type="user"]:not(.hidden-by-search)').length;
+            const visibleProjectAgents = document.querySelectorAll('.agent-item[data-type="project"]:not(.hidden-by-search)').length;
+            const visibleUserSkills = document.querySelectorAll('.skill-item[data-type="user-skill"]:not(.hidden-by-search)').length;
+            const visibleProjectSkills = document.querySelectorAll('.skill-item[data-type="project-skill"]:not(.hidden-by-search)').length;
 
-            if (userAgentCount) userAgentCount.textContent = `(${visibleUser})`;
-            if (projectAgentCount) projectAgentCount.textContent = `(${visibleProject})`;
+            if (userAgentCount) userAgentCount.textContent = `(${visibleUserAgents})`;
+            if (projectAgentCount) projectAgentCount.textContent = `(${visibleProjectAgents})`;
+            if (userSkillCount) userSkillCount.textContent = `(${visibleUserSkills})`;
+            if (projectSkillCount) projectSkillCount.textContent = `(${visibleProjectSkills})`;
         }
 
         function debounce(func, wait) {
@@ -836,7 +954,6 @@
         const debouncedSearch = debounce(performSearch, 300);
         searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
 
-        // Search toggle functionality
         const searchToggle = document.getElementById('searchToggle');
         const searchContainer = document.getElementById('searchContainer');
 
@@ -861,7 +978,6 @@
 
         searchToggle.addEventListener('click', toggleSearch);
 
-        // Keyboard shortcuts: Cmd/Ctrl+K to open, ESC to close
         document.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();

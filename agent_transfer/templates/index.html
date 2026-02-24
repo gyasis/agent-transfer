@@ -22,8 +22,8 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .agent-item { transition: opacity 0.2s ease; }
-        .agent-item.hidden-by-search { display: none; }
+        .agent-item, .skill-item { transition: opacity 0.2s ease; }
+        .agent-item.hidden-by-search, .skill-item.hidden-by-search { display: none; }
         .relevance-badge {
             font-size: 10px;
             padding: 1px 6px;
@@ -59,11 +59,19 @@
             border-radius: 3px;
             font-family: monospace;
         }
+        /* Hide scrollbar but keep functionality */
+        .scrollbar-hidden {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        .scrollbar-hidden::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden bg-gray-50">
     <!-- Sidebar -->
-    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto p-5 border-r border-gray-700 flex flex-col">
+    <div class="w-80 bg-gray-900 text-gray-100 overflow-y-auto scrollbar-hidden p-5 border-r border-gray-700 flex flex-col">
         <!-- Header with search toggle -->
         <div class="flex items-center justify-between mb-4 border-b-2 border-gray-700 pb-3">
             <h1 class="text-xl font-bold text-white">Agent Transfer</h1>
@@ -95,7 +103,7 @@
         </div>
 
         <!-- Agent Lists Container -->
-        <div id="agentLists" class="flex-1 overflow-y-auto">
+        <div id="agentLists" class="flex-1 overflow-y-auto scrollbar-hidden">
             {% if user_agents %}
             <h2 class="text-xs uppercase text-gray-400 mt-2 mb-3 font-semibold tracking-wide flex justify-between">
                 <span>User Agents</span>
@@ -136,9 +144,53 @@
             </ul>
             {% endif %}
 
+            {% if user_skills %}
+            <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>User Skills</span>
+                <span id="userSkillCount">({{ user_skills|length }})</span>
+            </h2>
+            <ul id="userSkillList" class="space-y-1">
+                {% for skill in user_skills %}
+                <li class="skill-item" data-name="{{ skill.name }}" data-description="{{ skill.description|default('', true) }}" data-tools="{{ skill.allowed_tools|join(', ') if skill.allowed_tools else '' }}" data-type="user-skill" data-item-type="skill">
+                    <a href="/skill/{{ skill.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-purple-900/30 hover:text-white text-sm border-l-2 border-transparent hover:border-purple-500">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">
+                                <span class="text-purple-400 mr-1">/</span>{{ skill.name }}
+                            </span>
+                            <span class="relevance-badge bg-purple-900 text-purple-300 hidden"></span>
+                        </span>
+                        <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ skill.description|replace('\\n', ' ') if skill.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if project_skills %}
+            <h2 class="text-xs uppercase text-gray-400 mt-5 mb-3 font-semibold tracking-wide flex justify-between">
+                <span>Project Skills</span>
+                <span id="projectSkillCount">({{ project_skills|length }})</span>
+            </h2>
+            <ul id="projectSkillList" class="space-y-1">
+                {% for skill in project_skills %}
+                <li class="skill-item" data-name="{{ skill.name }}" data-description="{{ skill.description|default('', true) }}" data-tools="{{ skill.allowed_tools|join(', ') if skill.allowed_tools else '' }}" data-type="project-skill" data-item-type="skill">
+                    <a href="/skill/{{ skill.name }}" class="block px-3 py-2 text-gray-300 rounded-lg transition-all hover:bg-purple-900/30 hover:text-white text-sm border-l-2 border-transparent hover:border-purple-500">
+                        <span class="flex items-center justify-between">
+                            <span class="font-semibold block truncate">
+                                <span class="text-purple-400 mr-1">/</span>{{ skill.name }}
+                            </span>
+                            <span class="relevance-badge bg-purple-900 text-purple-300 hidden"></span>
+                        </span>
+                        <span class="text-xs text-gray-400 mt-1 line-clamp-2">{{ skill.description|replace('\\n', ' ') if skill.description else '' }}</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
             <!-- No results message -->
             <div id="noResults" class="hidden text-center py-8 text-gray-500">
-                <p class="text-sm">No agents match your search</p>
+                <p class="text-sm">No agents or skills match your search</p>
             </div>
         </div>
     </div>
@@ -151,18 +203,30 @@
                 Browse and view your Claude Code agents with a beautiful interface. Select an agent from the sidebar to view its details.
             </p>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                    <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ total_agents }}</h3>
-                    <p class="text-sm text-gray-600">Total Agents</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 class="text-2xl font-bold text-blue-600 mb-1">{{ total_agents }}</h3>
+                    <p class="text-xs text-gray-600">Total Agents</p>
                 </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                    <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ user_agents|length }}</h3>
-                    <p class="text-sm text-gray-600">User Agents</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 class="text-2xl font-bold text-blue-600 mb-1">{{ user_agents|length }}</h3>
+                    <p class="text-xs text-gray-600">User Agents</p>
                 </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                    <h3 class="text-3xl font-bold text-blue-600 mb-2">{{ project_agents|length }}</h3>
-                    <p class="text-sm text-gray-600">Project Agents</p>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 class="text-2xl font-bold text-blue-600 mb-1">{{ project_agents|length }}</h3>
+                    <p class="text-xs text-gray-600">Project Agents</p>
+                </div>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 class="text-2xl font-bold text-purple-600 mb-1">{{ total_skills|default(0) }}</h3>
+                    <p class="text-xs text-gray-600">Total Skills</p>
+                </div>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 class="text-2xl font-bold text-purple-600 mb-1">{{ user_skills|length if user_skills else 0 }}</h3>
+                    <p class="text-xs text-gray-600">User Skills</p>
+                </div>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 class="text-2xl font-bold text-purple-600 mb-1">{{ project_skills|length if project_skills else 0 }}</h3>
+                    <p class="text-xs text-gray-600">Project Skills</p>
                 </div>
             </div>
 
@@ -208,8 +272,8 @@
 
         // State
         let embedder = null;
-        let agentEmbeddings = [];
-        let agentElements = [];
+        let itemEmbeddings = [];
+        let itemElements = [];  // Combined agents + skills
         let originalOrder = []; // Store original DOM order for reset
         let isModelLoaded = false;
         let fuseIndex = null;  // Fuse.js index for fuzzy matching
@@ -223,6 +287,8 @@
         const noResults = document.getElementById('noResults');
         const userAgentCount = document.getElementById('userAgentCount');
         const projectAgentCount = document.getElementById('projectAgentCount');
+        const userSkillCount = document.getElementById('userSkillCount');
+        const projectSkillCount = document.getElementById('projectSkillCount');
 
         // Cosine similarity
         function cosineSimilarity(a, b) {
@@ -237,14 +303,15 @@
 
         // Initialize Fuse.js index for fuzzy matching (typo tolerance)
         function initFuseIndex() {
-            const agentData = agentElements.map((el, i) => ({
+            const itemData = itemElements.map((el, i) => ({
                 index: i,
                 name: el.dataset.name || '',
                 description: el.dataset.description || '',
-                tools: el.dataset.tools || ''
+                tools: el.dataset.tools || '',
+                itemType: el.dataset.itemType || 'agent'
             }));
 
-            fuseIndex = new Fuse(agentData, {
+            fuseIndex = new Fuse(itemData, {
                 keys: [
                     { name: 'name', weight: 0.4 },
                     { name: 'description', weight: 0.4 },
@@ -267,9 +334,9 @@
             const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 1);
             const correctedWords = [];
 
-            // Common vocabulary from all agents
+            // Common vocabulary from all items (agents + skills)
             const vocabulary = new Set();
-            agentElements.forEach(el => {
+            itemElements.forEach(el => {
                 const text = `${el.dataset.name} ${el.dataset.description} ${el.dataset.tools}`.toLowerCase();
                 text.split(/\W+/).forEach(w => {
                     if (w.length > 2) vocabulary.add(w);
@@ -315,7 +382,7 @@
             return scores;
         }
 
-        // Initialize embedder and compute agent embeddings
+        // Initialize embedder and compute embeddings for all items (agents + skills)
         async function initializeSearch() {
             try {
                 modelStatus.classList.remove('hidden');
@@ -326,14 +393,14 @@
                     quantized: true
                 });
 
-                modelStatusText.textContent = 'Computing agent embeddings...';
+                modelStatusText.textContent = 'Computing embeddings...';
 
-                // Get all agent elements and their text
-                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                // Get all item elements (agents + skills) and their text
+                itemElements = Array.from(document.querySelectorAll('.agent-item, .skill-item'));
                 // Store original order for reset
-                originalOrder = agentElements.map((el, i) => ({ element: el, originalIndex: i }));
+                originalOrder = itemElements.map((el, i) => ({ element: el, originalIndex: i }));
 
-                const agentTexts = agentElements.map(el => {
+                const itemTexts = itemElements.map(el => {
                     const name = el.dataset.name || '';
                     const description = el.dataset.description || '';
                     const tools = el.dataset.tools || '';
@@ -341,13 +408,13 @@
                     return `${name} ${description} ${tools}`.trim();
                 });
 
-                // Compute embeddings for all agents
-                if (agentTexts.length > 0) {
-                    const output = await embedder(agentTexts, {
+                // Compute embeddings for all items
+                if (itemTexts.length > 0) {
+                    const output = await embedder(itemTexts, {
                         pooling: 'mean',
                         normalize: true
                     });
-                    agentEmbeddings = output.tolist();
+                    itemEmbeddings = output.tolist();
                 }
 
                 // Initialize Fuse.js for typo tolerance
@@ -356,7 +423,7 @@
                 // Update UI
                 modelStatus.classList.add('hidden');
                 aiStatusIndicator.innerHTML = '<span class="text-green-600">AI model ready - semantic + fuzzy search enabled!</span>';
-                searchInput.placeholder = 'Search by concept (typos OK!)...';
+                searchInput.placeholder = 'Search agents & skills (typos OK!)...';
                 isModelLoaded = true;
 
             } catch (error) {
@@ -364,21 +431,21 @@
                 modelStatus.classList.add('hidden');
 
                 // Initialize Fuse.js even without AI model (for fuzzy fallback)
-                agentElements = Array.from(document.querySelectorAll('.agent-item'));
+                itemElements = Array.from(document.querySelectorAll('.agent-item, .skill-item'));
                 // Store original order for reset
-                originalOrder = agentElements.map((el, i) => ({ element: el, originalIndex: i }));
+                originalOrder = itemElements.map((el, i) => ({ element: el, originalIndex: i }));
                 initFuseIndex();
 
                 aiStatusIndicator.innerHTML = '<span class="text-yellow-600">AI model unavailable. Using fuzzy search (typos still work!).</span>';
-                searchInput.placeholder = 'Search agents (fuzzy mode - typos OK)...';
+                searchInput.placeholder = 'Search agents & skills (fuzzy mode)...';
             }
         }
 
         // Hybrid Search: Combines semantic embeddings + fuzzy matching for typo tolerance
         async function performSearch(query) {
             if (!query.trim()) {
-                // Show all agents
-                agentElements.forEach(el => {
+                // Show all items (agents + skills)
+                itemElements.forEach(el => {
                     el.classList.remove('hidden-by-search');
                     const badge = el.querySelector('.relevance-badge');
                     if (badge) badge.classList.add('hidden');
@@ -413,7 +480,7 @@
                 const queryEmbedding = queryOutput.tolist()[0];
 
                 // Step 4: Calculate semantic similarities
-                const semanticScores = agentEmbeddings.map((emb, i) => ({
+                const semanticScores = itemEmbeddings.map((emb, i) => ({
                     index: i,
                     score: cosineSimilarity(queryEmbedding, emb)
                 }));
@@ -445,7 +512,7 @@
                 const scoredElements = [];
 
                 // Update visibility based on hybrid scores
-                agentElements.forEach((el, i) => {
+                itemElements.forEach((el, i) => {
                     const result = hybridScores.find(s => s.index === i);
                     const badge = el.querySelector('.relevance-badge');
 
@@ -497,7 +564,7 @@
             let visibleCount = 0;
             const scoredElements = [];
 
-            agentElements.forEach((el, i) => {
+            itemElements.forEach((el, i) => {
                 const score = fuzzyScores.get(i) || 0;
                 const badge = el.querySelector('.relevance-badge');
 
@@ -534,7 +601,7 @@
             const lowerQuery = query.toLowerCase();
             let visibleCount = 0;
 
-            agentElements.forEach(el => {
+            itemElements.forEach(el => {
                 const name = (el.dataset.name || '').toLowerCase();
                 const description = (el.dataset.description || '').toLowerCase();
                 const tools = (el.dataset.tools || '').toLowerCase();
@@ -560,54 +627,92 @@
             updateCounts();
         }
 
-        // Update visible counts
+        // Update visible counts for agents and skills
         function updateCounts() {
-            const visibleUser = document.querySelectorAll('.agent-item[data-type="user"]:not(.hidden-by-search)').length;
-            const visibleProject = document.querySelectorAll('.agent-item[data-type="project"]:not(.hidden-by-search)').length;
+            // Agent counts
+            const visibleUserAgents = document.querySelectorAll('.agent-item[data-type="user"]:not(.hidden-by-search)').length;
+            const visibleProjectAgents = document.querySelectorAll('.agent-item[data-type="project"]:not(.hidden-by-search)').length;
 
-            if (userAgentCount) userAgentCount.textContent = `(${visibleUser})`;
-            if (projectAgentCount) projectAgentCount.textContent = `(${visibleProject})`;
+            if (userAgentCount) userAgentCount.textContent = `(${visibleUserAgents})`;
+            if (projectAgentCount) projectAgentCount.textContent = `(${visibleProjectAgents})`;
+
+            // Skill counts
+            const visibleUserSkills = document.querySelectorAll('.skill-item[data-type="user-skill"]:not(.hidden-by-search)').length;
+            const visibleProjectSkills = document.querySelectorAll('.skill-item[data-type="project-skill"]:not(.hidden-by-search)').length;
+
+            if (userSkillCount) userSkillCount.textContent = `(${visibleUserSkills})`;
+            if (projectSkillCount) projectSkillCount.textContent = `(${visibleProjectSkills})`;
         }
 
         // Reorder elements in DOM by relevance score
         function reorderByRelevance(scoredElements) {
-            const userList = document.getElementById('userAgentList');
-            const projectList = document.getElementById('projectAgentList');
+            // Agent lists
+            const userAgentList = document.getElementById('userAgentList');
+            const projectAgentList = document.getElementById('projectAgentList');
+            // Skill lists
+            const userSkillList = document.getElementById('userSkillList');
+            const projectSkillList = document.getElementById('projectSkillList');
 
             // Separate by type and sort by score
-            const userItems = scoredElements.filter(s => s.element.dataset.type === 'user');
-            const projectItems = scoredElements.filter(s => s.element.dataset.type === 'project');
+            const userAgents = scoredElements.filter(s => s.element.dataset.type === 'user');
+            const projectAgents = scoredElements.filter(s => s.element.dataset.type === 'project');
+            const userSkills = scoredElements.filter(s => s.element.dataset.type === 'user-skill');
+            const projectSkills = scoredElements.filter(s => s.element.dataset.type === 'project-skill');
 
             // Reorder user agents
-            if (userList) {
-                userItems.forEach(item => {
-                    userList.appendChild(item.element);
-                });
+            if (userAgentList) {
+                userAgents.forEach(item => userAgentList.appendChild(item.element));
             }
 
             // Reorder project agents
-            if (projectList) {
-                projectItems.forEach(item => {
-                    projectList.appendChild(item.element);
-                });
+            if (projectAgentList) {
+                projectAgents.forEach(item => projectAgentList.appendChild(item.element));
+            }
+
+            // Reorder user skills
+            if (userSkillList) {
+                userSkills.forEach(item => userSkillList.appendChild(item.element));
+            }
+
+            // Reorder project skills
+            if (projectSkillList) {
+                projectSkills.forEach(item => projectSkillList.appendChild(item.element));
             }
         }
 
-        // Restore original DOM order
+        // Restore original DOM order for agents and skills
         function restoreOriginalOrder() {
-            const userList = document.getElementById('userAgentList');
-            const projectList = document.getElementById('projectAgentList');
+            // Agent lists
+            const userAgentList = document.getElementById('userAgentList');
+            const projectAgentList = document.getElementById('projectAgentList');
+            // Skill lists
+            const userSkillList = document.getElementById('userSkillList');
+            const projectSkillList = document.getElementById('projectSkillList');
 
-            const userItems = originalOrder.filter(o => o.element.dataset.type === 'user')
+            // Filter and sort by original index
+            const userAgents = originalOrder.filter(o => o.element.dataset.type === 'user')
                 .sort((a, b) => a.originalIndex - b.originalIndex);
-            const projectItems = originalOrder.filter(o => o.element.dataset.type === 'project')
+            const projectAgents = originalOrder.filter(o => o.element.dataset.type === 'project')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+            const userSkills = originalOrder.filter(o => o.element.dataset.type === 'user-skill')
+                .sort((a, b) => a.originalIndex - b.originalIndex);
+            const projectSkills = originalOrder.filter(o => o.element.dataset.type === 'project-skill')
                 .sort((a, b) => a.originalIndex - b.originalIndex);
 
-            if (userList) {
-                userItems.forEach(item => userList.appendChild(item.element));
+            // Restore agent order
+            if (userAgentList) {
+                userAgents.forEach(item => userAgentList.appendChild(item.element));
             }
-            if (projectList) {
-                projectItems.forEach(item => projectList.appendChild(item.element));
+            if (projectAgentList) {
+                projectAgents.forEach(item => projectAgentList.appendChild(item.element));
+            }
+
+            // Restore skill order
+            if (userSkillList) {
+                userSkills.forEach(item => userSkillList.appendChild(item.element));
+            }
+            if (projectSkillList) {
+                projectSkills.forEach(item => projectSkillList.appendChild(item.element));
             }
         }
 

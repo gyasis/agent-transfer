@@ -14,8 +14,9 @@ from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader
 import uvicorn
 
-from ..models import Agent
+from ..models import Agent, Skill
 from .parser import find_all_agents
+from .skill_parser import find_all_skills
 from .discovery import find_agent_directories
 
 app = FastAPI(title="Agent Transfer Viewer")
@@ -68,10 +69,10 @@ def markdown_to_html(content: str) -> str:
 
     html = md.convert(body)
     
-    # Add CSS for code highlighting
-    formatter = HtmlFormatter(style='github-dark')
+    # Add CSS for code highlighting - use 'friendly' style for light backgrounds
+    formatter = HtmlFormatter(style='friendly')
     css = formatter.get_style_defs('.highlight')
-    
+
     return f"""
     <style>
     {css}
@@ -89,17 +90,22 @@ def markdown_to_html(content: str) -> str:
         border-radius: 6px;
         padding: 16px;
         overflow: auto;
+        border: 1px solid #e1e4e8;
     }}
     .markdown-body code {{
-        background-color: rgba(27,31,35,.05);
+        background-color: #eff1f3;
         border-radius: 3px;
         font-size: 85%;
         margin: 0;
         padding: .2em .4em;
+        color: #24292e;
+        font-weight: 500;
     }}
     .markdown-body pre code {{
         background-color: transparent;
         padding: 0;
+        color: inherit;
+        font-weight: normal;
     }}
     .markdown-body table {{
         border-collapse: collapse;
@@ -123,18 +129,26 @@ def markdown_to_html(content: str) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    """Main page with agent list."""
+    """Main page with agent and skill list."""
     agents = find_all_agents()
-    
+    skills = find_all_skills()
+
     # Group agents by type
     user_agents = [a for a in agents if a.agent_type == "user"]
     project_agents = [a for a in agents if a.agent_type == "project"]
-    
+
+    # Group skills by type
+    user_skills = [s for s in skills if s.skill_type == "user"]
+    project_skills = [s for s in skills if s.skill_type == "project"]
+
     template = jinja_env.get_template("index.html")
     return HTMLResponse(template.render(
         user_agents=user_agents,
         project_agents=project_agents,
-        total_agents=len(agents)
+        total_agents=len(agents),
+        user_skills=user_skills,
+        project_skills=project_skills,
+        total_skills=len(skills)
     ))
 
 
@@ -142,17 +156,18 @@ async def index(request: Request):
 async def view_agent(request: Request, agent_name: str):
     """View a specific agent's content."""
     agents = find_all_agents()
-    
+    skills = find_all_skills()
+
     # Find the agent
     agent = None
     for a in agents:
         if a.name == agent_name or Path(a.file_path).stem == agent_name:
             agent = a
             break
-    
+
     if not agent:
         return HTMLResponse("<h1>Agent not found</h1>", status_code=404)
-    
+
     # Read and convert markdown
     agent_path = Path(agent.file_path)
     if agent_path.exists():
@@ -160,18 +175,23 @@ async def view_agent(request: Request, agent_name: str):
         html_content = markdown_to_html(content)
     else:
         html_content = "<p>Agent file not found</p>"
-    
-    # Get all agents for sidebar
+
+    # Get all agents and skills for sidebar
     user_agents = [a for a in agents if a.agent_type == "user"]
     project_agents = [a for a in agents if a.agent_type == "project"]
-    
+    user_skills = [s for s in skills if s.skill_type == "user"]
+    project_skills = [s for s in skills if s.skill_type == "project"]
+
     template = jinja_env.get_template("agent_view.html")
     return HTMLResponse(template.render(
         agent=agent,
         html_content=html_content,
         user_agents=user_agents,
         project_agents=project_agents,
-        total_agents=len(agents)
+        total_agents=len(agents),
+        user_skills=user_skills,
+        project_skills=project_skills,
+        total_skills=len(skills)
     ))
 
 
@@ -189,6 +209,70 @@ async def get_agents():
                 "tools": a.tools
             }
             for a in agents
+        ]
+    }
+
+
+@app.get("/skill/{skill_name}", response_class=HTMLResponse)
+async def view_skill(request: Request, skill_name: str):
+    """View a specific skill's content."""
+    agents = find_all_agents()
+    skills = find_all_skills()
+
+    # Find the skill
+    skill = None
+    for s in skills:
+        if s.name == skill_name or Path(s.skill_path).name == skill_name:
+            skill = s
+            break
+
+    if not skill:
+        return HTMLResponse("<h1>Skill not found</h1>", status_code=404)
+
+    # Convert skill markdown content to HTML
+    if skill.skill_md_content:
+        html_content = markdown_to_html(skill.skill_md_content)
+    else:
+        html_content = "<p>Skill file content not available</p>"
+
+    # Get all agents and skills for sidebar
+    user_agents = [a for a in agents if a.agent_type == "user"]
+    project_agents = [a for a in agents if a.agent_type == "project"]
+    user_skills = [s for s in skills if s.skill_type == "user"]
+    project_skills = [s for s in skills if s.skill_type == "project"]
+
+    template = jinja_env.get_template("skill_view.html")
+    return HTMLResponse(template.render(
+        skill=skill,
+        html_content=html_content,
+        user_agents=user_agents,
+        project_agents=project_agents,
+        total_agents=len(agents),
+        user_skills=user_skills,
+        project_skills=project_skills,
+        total_skills=len(skills)
+    ))
+
+
+@app.get("/api/skills")
+async def get_skills():
+    """API endpoint to get all skills."""
+    skills = find_all_skills()
+    return {
+        "skills": [
+            {
+                "name": s.name,
+                "description": s.description,
+                "type": s.skill_type,
+                "skill_path": s.skill_path,
+                "allowed_tools": s.allowed_tools,
+                "model": s.model,
+                "file_count": s.file_count,
+                "has_scripts": s.has_scripts,
+                "has_requirements_txt": s.has_requirements_txt,
+                "has_pyproject_toml": s.has_pyproject_toml
+            }
+            for s in skills
         ]
     }
 

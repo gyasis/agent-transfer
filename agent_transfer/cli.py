@@ -15,6 +15,14 @@ from .utils.conflict_resolver import ConflictMode
 from .utils.tool_checker import (
     check_all_agents, display_compatibility_report
 )
+from .utils.skill_validator import (
+    validate_all_skills, display_skill_validation_report,
+    detect_environment, display_environment_info,
+    get_setup_recommendations, display_setup_recommendations,
+    validate_archive_skills, display_archive_validation_report,
+    get_skills_with_missing_deps,
+    check_system_readiness, display_readiness_report
+)
 from .utils.discovery import find_agent_directories
 from .utils.import_analyzer import analyze_import_archive
 from .utils.selector import interactive_select_import_agents
@@ -394,6 +402,177 @@ def validate_tools(verbose):
 
     except Exception as e:
         console.print(f"[red]Error checking tools: {e}[/red]")
+        sys.exit(1)
+
+
+@cli.command('validate-skills')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed dependency information')
+@click.option('--archive', '-a', type=click.Path(exists=True), help='Validate skills from archive before import')
+@click.option('--env', 'show_env', is_flag=True, help='Show current Python environment info')
+@click.option('--setup', 'show_setup', is_flag=True, help='Show setup recommendations')
+def validate_skills(verbose, archive, show_env, show_setup):
+    """Check Python dependency availability for skills.
+
+    Scans skills and checks if the Python packages they reference
+    in requirements.txt or pyproject.toml are installed on this system.
+
+    Modes:
+      - Default: Validate local installed skills
+      - --archive FILE: Validate skills in archive BEFORE importing
+      - --env: Show current Python environment details
+      - --setup: Show recommended setup commands
+
+    Skills can declare dependencies via:
+    - requirements.txt
+    - pyproject.toml (dependencies section)
+    - uv.lock (indicates uv-managed project)
+
+    If uv is available, it will be recommended for installing missing
+    dependencies as it provides faster, isolated environments.
+
+    Examples:
+        agent-transfer validate-skills                    # Validate local skills
+        agent-transfer validate-skills --archive backup.tar.gz  # Pre-import check
+        agent-transfer validate-skills --env              # Show environment info
+        agent-transfer validate-skills --setup            # Show setup commands
+    """
+    import shutil
+
+    try:
+        # Show environment info if requested
+        if show_env:
+            env_info = detect_environment()
+            display_environment_info(env_info)
+            if not archive and not show_setup:
+                return
+
+        # Archive validation mode (pre-import check)
+        if archive:
+            console.print(f"[cyan]Validating skills in archive: {archive}[/cyan]\n")
+
+            reports, temp_dir = validate_archive_skills(Path(archive))
+
+            try:
+                display_archive_validation_report(reports, Path(archive))
+
+                # Show setup recommendations if requested
+                if show_setup:
+                    env_info = detect_environment()
+                    recommendations = get_setup_recommendations(env_info, reports)
+                    display_setup_recommendations(recommendations)
+
+                # Exit with error code if missing dependencies
+                missing = get_skills_with_missing_deps(reports)
+                if missing:
+                    sys.exit(1)
+            finally:
+                # Clean up temp directory
+                shutil.rmtree(temp_dir, ignore_errors=True)
+
+            return
+
+        # Default: Validate local skills
+        console.print("[cyan]Scanning skills for dependency compatibility...[/cyan]\n")
+
+        # Get all local skills
+        skills = find_all_skills()
+
+        if not skills:
+            console.print("[yellow]No skills found to validate.[/yellow]")
+            console.print("\n[dim]Checked locations:[/dim]")
+            console.print(f"  - {Path.home() / '.claude' / 'skills'}")
+            console.print(f"  - {Path.cwd() / '.claude' / 'skills'}")
+            return
+
+        # Validate all skills
+        reports = validate_all_skills(skills)
+
+        # Display report
+        display_skill_validation_report(reports)
+
+        # Show setup recommendations if requested
+        if show_setup:
+            env_info = detect_environment()
+            recommendations = get_setup_recommendations(env_info, reports)
+            display_setup_recommendations(recommendations)
+
+        # Exit with error code if missing dependencies found
+        missing = get_skills_with_missing_deps(reports)
+        if missing:
+            sys.exit(1)
+
+    except Exception as e:
+        console.print(f"[red]Error checking skill dependencies: {e}[/red]")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
+        sys.exit(1)
+
+
+@cli.command('check-ready')
+@click.option('--archive', '-a', type=click.Path(exists=True),
+              help='Check readiness for skills in archive before import')
+@click.option('--verbose', '-v', is_flag=True, help='Show detailed information')
+@click.option('--all-skills', is_flag=True, help='Show all skills, not just those with issues')
+def check_ready(archive, verbose, all_skills):
+    """Comprehensive system readiness check for skill transfer.
+
+    Performs ALL checks in one command:
+      - Python environment detection (pip, uv, venv)
+      - Skill dependency validation
+      - Missing package collection
+      - Setup recommendations
+
+    This is a "one-shot" command that tells you exactly what needs
+    to be done before skills can run properly.
+
+    Modes:
+      - Default: Check readiness for local skills
+      - --archive FILE: Check readiness BEFORE importing archive
+
+    The readiness score (0-100%) considers:
+      - Environment (30%): pip available, uv available, venv active
+      - Dependencies (70%): Percentage of required packages installed
+
+    Examples:
+        agent-transfer check-ready                         # Check local skills
+        agent-transfer check-ready --archive backup.tar.gz # Pre-import check
+        agent-transfer check-ready --verbose               # Detailed output
+        agent-transfer check-ready --all-skills            # Show all skills
+    """
+    import shutil
+
+    try:
+        # Perform comprehensive readiness check
+        if archive:
+            console.print(f"[cyan]Checking system readiness for archive: {archive}[/cyan]\n")
+            report, temp_dir = check_system_readiness(archive_path=Path(archive))
+        else:
+            console.print("[cyan]Checking system readiness for local skills...[/cyan]\n")
+            skills = find_all_skills()
+            report, temp_dir = check_system_readiness(local_skills=skills)
+
+        try:
+            # Display the comprehensive report
+            display_readiness_report(report, verbose=verbose, show_all_skills=all_skills)
+
+            # Exit with appropriate code
+            if not report.is_ready:
+                sys.exit(1)
+            elif report.readiness_score < 100:
+                # Not perfect but acceptable
+                sys.exit(0)
+            else:
+                sys.exit(0)
+
+        finally:
+            # Clean up temp directory if archive was used
+            if temp_dir:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+
+    except Exception as e:
+        console.print(f"[red]Error during readiness check: {e}[/red]")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
 
 
