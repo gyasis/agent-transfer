@@ -185,7 +185,7 @@
 - [x] T055 Adversarial bug hunt — targeted: path traversal in `remap_path()` and `translate_path()`, edge cases in project-level search, symlink handling, container edge cases (run adversarial-bug-hunter agent)
 - [x] T056 Adversarial bug hunt — general logic scan across pathfinder.py and all refactored modules (run adversarial-bug-hunter agent)
 - [x] T057 Validate quickstart.md examples work against actual implementation
-- [ ] T058 Git checkpoint — commit all changes
+- [x] T058 Git checkpoint — commit all changes
 
 ---
 
