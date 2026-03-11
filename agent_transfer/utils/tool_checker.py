@@ -7,7 +7,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from rich.console import Console
 from rich.table import Table
@@ -63,10 +63,15 @@ class ToolCompatibility:
 
 def find_mcp_config() -> Optional[Path]:
     """Find Claude Code MCP configuration file."""
-    # Check common locations for MCP config
+    from .pathfinder import get_pathfinder
+
+    pf = get_pathfinder()
+    config_dir = pf.config_dir("claude-code")
+
+    # Check locations using pathfinder-resolved config dir
     config_locations = [
-        Path.home() / ".claude" / "mcp_servers.json",
-        Path.home() / ".claude" / "mcp.json",
+        config_dir / "mcp_servers.json",
+        config_dir / "mcp.json",
         Path.home() / ".config" / "claude" / "mcp_servers.json",
         Path(".claude") / "mcp_servers.json",
         Path("mcp_servers.json"),

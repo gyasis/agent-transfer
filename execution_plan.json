@@ -1,1064 +1,702 @@
 {
   "execution_plan": {
-    "phase_id": "Feature Implementation",
+    "phase_id": "Pathfinder Module Implementation",
     "waves": [
       {
         "wave_id": 1,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 1 [Phase 1]: 8 task(s), max 8/wave",
+        "rationale": "Phase 1 Setup: Create module files and test infrastructure (independent files)",
         "tasks": [
           {
             "task_id": "T001",
             "agent_role": "Developer",
-            "instruction": "T001 [US6] Create `agent_transfer/utils/tar_safety.py` \u2014 safe extraction rejecting path traversal, symlinks, absolute paths (R7)",
-            "file_locks": [
-              "agent_transfer/utils/tar_safety.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T001 [US6] Create `agent_transfer/utils/tar_safety.py` \u2014 safe extraction rejecting path traversal, symlinks, absolute paths (R7)' to [x]",
-            "dependencies": [],
-            "phase": 1
+            "instruction": "T001 Create `agent_transfer/utils/pathfinder.py` with module docstring, `from __future__ import annotations` import, and empty `__all__` list",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R10"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T001' to [x]",
+            "dependencies": []
           },
           {
             "task_id": "T002",
             "agent_role": "Developer",
-            "instruction": "T002 [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:331` with safe extraction (B1)",
-            "file_locks": [
-              "agent_transfer/transfer.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T002 [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:331` with safe extraction (B1)' to [x]",
-            "dependencies": [],
-            "phase": 1
+            "instruction": "T002 [P] Create `tests/test_pathfinder.py` with pytest imports, basic fixtures for `tmp_path` home directory mocking, and `_reset_pathfinder()` teardown in autouse fixture",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T002' to [x]",
+            "dependencies": []
           },
           {
-            "task_id": "T004",
+            "task_id": "T003",
             "agent_role": "Developer",
-            "instruction": "T004 [P] [US6] Replace `tar.extractall()` in `agent_transfer/import_analyzer.py:52` with safe extraction (B1)",
-            "file_locks": [
-              "agent_transfer/import_analyzer.py"
-            ],
+            "instruction": "T003 [P] Add `pathfinder` imports to `agent_transfer/utils/__init__.py` (lazy import to avoid circular deps)",
+            "file_locks": ["agent_transfer/utils/__init__.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T004 [P] [US6] Replace `tar.extractall()` in `agent_transfer/import_analyzer.py:52` with safe extraction (B1)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T005",
-            "agent_role": "Developer",
-            "instruction": "T005 [P] [US6] Replace `tar.extractall()` in `agent_transfer/utils/skill_validator.py:654` with safe extraction (B1)",
-            "file_locks": [
-              "agent_transfer/utils/skill_validator.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T005 [P] [US6] Replace `tar.extractall()` in `agent_transfer/utils/skill_validator.py:654` with safe extraction (B1)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T006",
-            "agent_role": "Developer",
-            "instruction": "T006 [US6] Grep codebase for remaining `tar.extractall()` / `tarfile.open()` \u2014 verify T002-T005 cover all sites (R7 audit)",
-            "file_locks": [
-              "tarfile.open"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T006 [US6] Grep codebase for remaining `tar.extractall()` / `tarfile.open()` \u2014 verify T002-T005 cover all sites (R7 audit)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T008",
-            "agent_role": "Developer",
-            "instruction": "T008 [P] Sanitize markdown output in `agent_transfer/templates/agent_view.html:442` \u2014 fix XSS (B3)",
-            "file_locks": [
-              "agent_transfer/templates/agent_view.html"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T008 [P] Sanitize markdown output in `agent_transfer/templates/agent_view.html:442` \u2014 fix XSS (B3)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T009",
-            "agent_role": "Developer",
-            "instruction": "T009 [P] Sanitize markdown output in `agent_transfer/templates/skill_view.html:561` \u2014 fix XSS (B3)",
-            "file_locks": [
-              "agent_transfer/templates/skill_view.html"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T009 [P] Sanitize markdown output in `agent_transfer/templates/skill_view.html:561` \u2014 fix XSS (B3)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T010",
-            "agent_role": "Developer",
-            "instruction": "T010 [P] Sanitize markdown in `agent_transfer/utils/web_server.py` render pipeline \u2014 fix XSS (B3)",
-            "file_locks": [
-              "agent_transfer/utils/web_server.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T010 [P] Sanitize markdown in `agent_transfer/utils/web_server.py` render pipeline \u2014 fix XSS (B3)' to [x]",
-            "dependencies": [],
-            "phase": 1
+            "completion_handshake": "Upon success, update tasks.md line containing 'T003' to [x]",
+            "dependencies": []
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 1 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "Module files exist, test infrastructure ready",
+          "validation": "Files exist: agent_transfer/utils/pathfinder.py, tests/test_pathfinder.py"
         }
       },
       {
         "wave_id": 2,
-        "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 2 [Phase 1]: 8 task(s), max 8/wave",
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 2 Foundational: PathProfile dataclass (must exist before Registry)",
         "tasks": [
           {
-            "task_id": "T003",
+            "task_id": "T004",
             "agent_role": "Developer",
-            "instruction": "T003 [P] [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:647` with safe extraction (B1)",
-            "file_locks": [
-              "agent_transfer/transfer.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T003 [P] [US6] Replace `tar.extractall()` in `agent_transfer/transfer.py:647` with safe extraction (B1)' to [x]",
-            "dependencies": [
-              "T002"
-            ],
-            "phase": 1
-          },
-          {
-            "task_id": "T007",
-            "agent_role": "Developer",
-            "instruction": "T007 Fix `ImportPreview` missing `skill_comparisons=[]` default in `agent_transfer/import_analyzer.py:111` (B2)",
-            "file_locks": [
-              "agent_transfer/import_analyzer.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T007 Fix `ImportPreview` missing `skill_comparisons=[]` default in `agent_transfer/import_analyzer.py:111` (B2)' to [x]",
-            "dependencies": [
-              "T004"
-            ],
-            "phase": 1
-          },
-          {
-            "task_id": "T011",
-            "agent_role": "Developer",
-            "instruction": "T011 Fix KEEP mode return value in `agent_transfer/conflict_resolver.py:428` \u2014 return `None` not truthy path (B4)",
-            "file_locks": [
-              "agent_transfer/conflict_resolver.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T011 Fix KEEP mode return value in `agent_transfer/conflict_resolver.py:428` \u2014 return `None` not truthy path (B4)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T012",
-            "agent_role": "Developer",
-            "instruction": "T012 Fix `pyproject.toml` \u2014 add `agent_transfer.utils` to packages + `templates/*.html` to package-data (B5)",
-            "file_locks": [
-              "agent_transfer.utils",
-              "pyproject.toml",
-              "templates/*.html"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T012 Fix `pyproject.toml` \u2014 add `agent_transfer.utils` to packages + `templates/*.html` to package-data (B5)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T014",
-            "agent_role": "Developer",
-            "instruction": "T014 Replace hand-rolled TOML parser in `agent_transfer/utils/skill_validator.py:155-194` with `tomllib`/`tomli` (B7)",
-            "file_locks": [
-              "agent_transfer/utils/skill_validator.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T014 Replace hand-rolled TOML parser in `agent_transfer/utils/skill_validator.py:155-194` with `tomllib`/`tomli` (B7)' to [x]",
-            "dependencies": [
-              "T005"
-            ],
-            "phase": 1
-          },
-          {
-            "task_id": "T015",
-            "agent_role": "Developer",
-            "instruction": "T015 Audit codebase for hardcoded absolute paths \u2014 replace with `Path.home()` / platform config (R6)",
-            "file_locks": [
-              "Path.home"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T015 Audit codebase for hardcoded absolute paths \u2014 replace with `Path.home()` / platform config (R6)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T016",
-            "agent_role": "Developer",
-            "instruction": "T016 Add filename lint gate \u2014 reject `_v2`, `_new`, `_old` suffixes in CI/pre-commit (R10)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T016 Add filename lint gate \u2014 reject `_v2`, `_new`, `_old` suffixes in CI/pre-commit (R10)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T017",
-            "agent_role": "Developer",
-            "instruction": "T017 Run ruff lint + format on full codebase",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T017 Run ruff lint + format on full codebase' to [x]",
-            "dependencies": [],
-            "phase": 1
+            "instruction": "T004 Implement `PathProfile` dataclass in `agent_transfer/utils/pathfinder.py` with fields: slug, config_dir, agents_subdir, skills_subdir, hooks_subdir, config_files, executable_names, project_level, project_config_dir, env_override_var, search_paths — all using Optional and List from typing for Python 3.8 compat",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T004' to [x]",
+            "dependencies": ["T001"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 2 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "PathProfile dataclass defined"
         }
       },
       {
         "wave_id": 3,
-        "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 3 [Phase 1,2]: 8 task(s), max 8/wave",
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 2 Foundational: Registry + Pathfinder skeleton (depend on PathProfile)",
         "tasks": [
           {
-            "task_id": "T013",
+            "task_id": "T005",
             "agent_role": "Developer",
-            "instruction": "T013 Sync version `agent_transfer/__init__.py` to `\"1.1.0\"` to match `pyproject.toml` (B6)",
-            "file_locks": [
-              "agent_transfer/__init__.py",
-              "pyproject.toml"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T013 Sync version `agent_transfer/__init__.py` to `\"1.1.0\"` to match `pyproject.toml` (B6)' to [x]",
-            "dependencies": [
-              "T012"
-            ],
-            "phase": 1
-          },
-          {
-            "task_id": "T018",
-            "agent_role": "Developer",
-            "instruction": "T018 Run full test suite \u2014 verify zero regressions (R11)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T018 Run full test suite \u2014 verify zero regressions (R11)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T019",
-            "agent_role": "Developer",
-            "instruction": "T019 Adversarial bug hunt \u2014 targeted report (R12)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T019 Adversarial bug hunt \u2014 targeted report (R12)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T020",
-            "agent_role": "Developer",
-            "instruction": "T020 Adversarial bug hunt \u2014 general logic scan (R12)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T020 Adversarial bug hunt \u2014 general logic scan (R12)' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T021",
-            "agent_role": "Developer",
-            "instruction": "T021 Git checkpoint `v1.2.0-security`",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T021 Git checkpoint `v1.2.0-security`' to [x]",
-            "dependencies": [],
-            "phase": 1
-          },
-          {
-            "task_id": "T022",
-            "agent_role": "Developer",
-            "instruction": "T022 Create `agent_transfer/platforms/__init__.py` package",
-            "file_locks": [
-              "agent_transfer/platforms/__init__.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T022 Create `agent_transfer/platforms/__init__.py` package' to [x]",
-            "dependencies": [],
-            "phase": 2
-          },
-          {
-            "task_id": "T023",
-            "agent_role": "Developer",
-            "instruction": "T023 Create `agent_transfer/platforms/base.py` \u2014 PlatformConfig dataclass, BasePlatform ABC (`detect()`, `find_agents()`, `find_skills()`), PlatformRegistry (`register()`, `get()`, `detect_all()`) (R9)",
-            "file_locks": [
-              "agent_transfer/platforms/base.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T023 Create `agent_transfer/platforms/base.py` \u2014 PlatformConfig dataclass, BasePlatform ABC (`detect()`, `find_agents()`, `find_skills()`), PlatformRegistry (`register()`, `get()`, `detect_all()`) (R9)' to [x]",
-            "dependencies": [],
-            "phase": 2
-          },
-          {
-            "task_id": "T024",
-            "agent_role": "Developer",
-            "instruction": "T024 Create `agent_transfer/platforms/claude_code.py` \u2014 wrap existing `discovery.py`, `skill_discovery.py`, `parser.py` (R4)",
-            "file_locks": [
-              "agent_transfer/platforms/claude_code.py",
-              "parser.py",
-              "skill_discovery.py",
-              "discovery.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T024 Create `agent_transfer/platforms/claude_code.py` \u2014 wrap existing `discovery.py`, `skill_discovery.py`, `parser.py` (R4)' to [x]",
-            "dependencies": [],
-            "phase": 2
+            "instruction": "T005 Implement `PathProfileRegistry` class in `agent_transfer/utils/pathfinder.py` with register(), get(), list_slugs() methods and _profiles dict storage. get() raises KeyError with helpful message listing valid slugs",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R9"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T005' to [x]",
+            "dependencies": ["T004"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 3 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "PathProfileRegistry implemented"
         }
       },
       {
         "wave_id": 4,
-        "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 4 [Phase 2]: 8 task(s), max 8/wave",
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 2 Foundational: Pathfinder class + singleton (depend on Registry)",
         "tasks": [
           {
-            "task_id": "T025",
+            "task_id": "T006",
             "agent_role": "Developer",
-            "instruction": "T025 [P] Create `agent_transfer/platforms/codex.py` \u2014 stub: detect + PlatformConfig only",
-            "file_locks": [
-              "agent_transfer/platforms/codex.py"
-            ],
+            "instruction": "T006 Implement `Pathfinder` class skeleton in `agent_transfer/utils/pathfinder.py` with __init__(self, project_search_depth=5) that creates a PathProfileRegistry and _cache dict. Add clear_cache() and supported_platforms() methods",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T025 [P] Create `agent_transfer/platforms/codex.py` \u2014 stub: detect + PlatformConfig only' to [x]",
-            "dependencies": [],
-            "phase": 2
+            "completion_handshake": "Upon success, update tasks.md line containing 'T006' to [x]",
+            "dependencies": ["T005"]
           },
           {
-            "task_id": "T026",
+            "task_id": "T007",
             "agent_role": "Developer",
-            "instruction": "T026 [P] Create `agent_transfer/platforms/gemini_cli.py` \u2014 stub: detect + PlatformConfig only",
-            "file_locks": [
-              "agent_transfer/platforms/gemini_cli.py"
-            ],
+            "instruction": "T007 Implement get_pathfinder() and _reset_pathfinder() module-level functions in agent_transfer/utils/pathfinder.py using lazy-initialized _instance global",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T026 [P] Create `agent_transfer/platforms/gemini_cli.py` \u2014 stub: detect + PlatformConfig only' to [x]",
-            "dependencies": [],
-            "phase": 2
-          },
-          {
-            "task_id": "T027",
-            "agent_role": "Developer",
-            "instruction": "T027 [P] Create `agent_transfer/platforms/goose.py` \u2014 stub: detect + PlatformConfig only",
-            "file_locks": [
-              "agent_transfer/platforms/goose.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T027 [P] Create `agent_transfer/platforms/goose.py` \u2014 stub: detect + PlatformConfig only' to [x]",
-            "dependencies": [],
-            "phase": 2
-          },
-          {
-            "task_id": "T028",
-            "agent_role": "Developer",
-            "instruction": "T028 [P] Create `agent_transfer/platforms/opencode.py` \u2014 stub: detect + PlatformConfig only",
-            "file_locks": [
-              "agent_transfer/platforms/opencode.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T028 [P] Create `agent_transfer/platforms/opencode.py` \u2014 stub: detect + PlatformConfig only' to [x]",
-            "dependencies": [],
-            "phase": 2
-          },
-          {
-            "task_id": "T029",
-            "agent_role": "Developer",
-            "instruction": "T029 [US3] Add `agent-transfer platforms` CLI command in `agent_transfer/cli.py` \u2014 Rich table: name, slug, detected Y/N, config dir, MCP support (R5: addition only)",
-            "file_locks": [
-              "agent_transfer/cli.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T029 [US3] Add `agent-transfer platforms` CLI command in `agent_transfer/cli.py` \u2014 Rich table: name, slug, detected Y/N, config dir, MCP support (R5: addition only)' to [x]",
-            "dependencies": [],
-            "phase": 2
-          },
-          {
-            "task_id": "T030",
-            "agent_role": "Developer",
-            "instruction": "T030 Register platforms via entry_points in `pyproject.toml` (R9)",
-            "file_locks": [
-              "pyproject.toml"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T030 Register platforms via entry_points in `pyproject.toml` (R9)' to [x]",
-            "dependencies": [
-              "T013",
-              "T012"
-            ],
-            "phase": 2
-          },
-          {
-            "task_id": "T031",
-            "agent_role": "Developer",
-            "instruction": "T031 Verify all platform config dirs use `Path.home()`, zero hardcoded paths (R6 audit)",
-            "file_locks": [
-              "Path.home"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T031 Verify all platform config dirs use `Path.home()`, zero hardcoded paths (R6 audit)' to [x]",
-            "dependencies": [
-              "T015"
-            ],
-            "phase": 2
-          },
-          {
-            "task_id": "T032",
-            "agent_role": "Developer",
-            "instruction": "T032 Tests \u2014 platform detection, PlatformConfig correctness, PlatformRegistry in `tests/test_platforms.py` (R11)",
-            "file_locks": [
-              "tests/test_platforms.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T032 Tests \u2014 platform detection, PlatformConfig correctness, PlatformRegistry in `tests/test_platforms.py` (R11)' to [x]",
-            "dependencies": [],
-            "phase": 2
+            "completion_handshake": "Upon success, update tasks.md line containing 'T007' to [x]",
+            "dependencies": ["T006"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 4 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "Pathfinder skeleton + singleton ready"
         }
       },
       {
         "wave_id": 5,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 5 [Phase 2,3]: 8 task(s), max 8/wave",
+        "rationale": "Phase 2 Foundational Tests: All test foundational classes (independent test functions in same file)",
         "tasks": [
           {
-            "task_id": "T033",
+            "task_id": "T008",
             "agent_role": "Developer",
-            "instruction": "T033 Adversarial scan (R12)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T033 Adversarial scan (R12)' to [x]",
-            "dependencies": [],
-            "phase": 2
+            "instruction": "T008 Write unit tests for PathProfile creation and field defaults in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T008' to [x]",
+            "dependencies": ["T004"]
           },
           {
-            "task_id": "T034",
+            "task_id": "T009",
             "agent_role": "Developer",
-            "instruction": "T034 Git checkpoint",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T034 Git checkpoint' to [x]",
-            "dependencies": [],
-            "phase": 2
+            "instruction": "T009 Write unit tests for PathProfileRegistry — register, get, list_slugs, KeyError on unknown slug in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T009' to [x]",
+            "dependencies": ["T005"]
           },
           {
-            "task_id": "T035",
+            "task_id": "T010",
             "agent_role": "Developer",
-            "instruction": "T035 Create `agent_transfer/ir/__init__.py` package",
-            "file_locks": [
-              "agent_transfer/ir/__init__.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T035 Create `agent_transfer/ir/__init__.py` package' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T036",
-            "agent_role": "Developer",
-            "instruction": "T036 Create `agent_transfer/ir/manifest.py` \u2014 AIIntentManifest dataclass + `to_yaml()`/`from_yaml()` serialization, `.aim.yaml` extension (R2)",
-            "file_locks": [
-              ".aim.yaml",
-              "agent_transfer/ir/manifest.py",
-              "aim.yaml"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T036 Create `agent_transfer/ir/manifest.py` \u2014 AIIntentManifest dataclass + `to_yaml()`/`from_yaml()` serialization, `.aim.yaml` extension (R2)' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T037",
-            "agent_role": "Developer",
-            "instruction": "T037 [P] Create `agent_transfer/ir/capability.py` \u2014 Step 1: research native tool names per platform; Step 2: build canonical tool mapping registry for all 5 platforms (`map_tool(platform, tool_name) -> canonical_name`)",
-            "file_locks": [
-              "agent_transfer/ir/capability.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T037 [P] Create `agent_transfer/ir/capability.py` \u2014 Step 1: research native tool names per platform; Step 2: build canonical tool mapping registry for all 5 platforms (`map_tool(platform, tool_name) -> canonical_name`)' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T038",
-            "agent_role": "Developer",
-            "instruction": "T038 [P] Create `agent_transfer/ir/validators.py` \u2014 IR schema validation: required fields, type checks, version compat, no secrets (R8)",
-            "file_locks": [
-              "agent_transfer/ir/validators.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T038 [P] Create `agent_transfer/ir/validators.py` \u2014 IR schema validation: required fields, type checks, version compat, no secrets (R8)' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T039",
-            "agent_role": "Developer",
-            "instruction": "T039 Create `agent_transfer/ingestors/__init__.py` package",
-            "file_locks": [
-              "agent_transfer/ingestors/__init__.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T039 Create `agent_transfer/ingestors/__init__.py` package' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T040",
-            "agent_role": "Developer",
-            "instruction": "T040 Create `agent_transfer/ingestors/base.py` \u2014 BaseIngestor ABC: `ingest_agent(path) -> AIIntentManifest`, `ingest_skill(path) -> AIIntentManifest`",
-            "file_locks": [
-              "agent_transfer/ingestors/base.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T040 Create `agent_transfer/ingestors/base.py` \u2014 BaseIngestor ABC: `ingest_agent(path) -> AIIntentManifest`, `ingest_skill(path) -> AIIntentManifest`' to [x]",
-            "dependencies": [],
-            "phase": 3
+            "instruction": "T010 Write unit tests for get_pathfinder() singleton behavior and _reset_pathfinder() isolation in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T010' to [x]",
+            "dependencies": ["T007"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 5 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "Foundation complete — PathProfile, Registry, Pathfinder skeleton all tested",
+          "validation": "pytest tests/test_pathfinder.py passes"
         }
       },
       {
         "wave_id": 6,
-        "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 6 [Phase 3]: 8 task(s), max 8/wave",
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 3 US1+US2: Define built-in profiles + load mechanism + config_dir (sequential, same file)",
         "tasks": [
           {
-            "task_id": "T041",
+            "task_id": "T011",
             "agent_role": "Developer",
-            "instruction": "T041 [US4] Create `agent_transfer/ingestors/claude_code.py` \u2014 wraps `parser.py`/`skill_parser.py`, produces AIIntentManifest with shadow data (R4)",
-            "file_locks": [
-              "parser.py",
-              "skill_parser.py",
-              "agent_transfer/ingestors/claude_code.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T041 [US4] Create `agent_transfer/ingestors/claude_code.py` \u2014 wraps `parser.py`/`skill_parser.py`, produces AIIntentManifest with shadow data (R4)' to [x]",
-            "dependencies": [
-              "T024"
-            ],
-            "phase": 3
+            "instruction": "T011 [US1] [US2] Define all 5 built-in PathProfile instances in agent_transfer/utils/pathfinder.py: Claude Code (.claude), Codex CLI (.codex), Gemini CLI (.gemini), Goose (.config/goose), OpenCode (.opencode) — with correct subdirs, config files, executable names, and env override vars per PRD table 4.1",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R3", "R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T011' to [x]",
+            "dependencies": ["T007"]
           },
           {
-            "task_id": "T042",
+            "task_id": "T012",
             "agent_role": "Developer",
-            "instruction": "T042 Create `agent_transfer/emitters/__init__.py` package",
-            "file_locks": [
-              "agent_transfer/emitters/__init__.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T042 Create `agent_transfer/emitters/__init__.py` package' to [x]",
-            "dependencies": [],
-            "phase": 3
+            "instruction": "T012 [US1] [US2] Implement _load_builtin_profiles() in PathProfileRegistry and call from __init__. Also implement load_entry_points() to scan agent_transfer.path_profiles entry point group (graceful no-op if none found)",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R9"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T012' to [x]",
+            "dependencies": ["T011"]
           },
           {
-            "task_id": "T043",
+            "task_id": "T013",
             "agent_role": "Developer",
-            "instruction": "T043 Create `agent_transfer/emitters/base.py` \u2014 BaseEmitter ABC: `emit_agent(manifest, target_dir) -> Path`, `emit_skill(manifest, target_dir) -> Path`",
-            "file_locks": [
-              "agent_transfer/emitters/base.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T043 Create `agent_transfer/emitters/base.py` \u2014 BaseEmitter ABC: `emit_agent(manifest, target_dir) -> Path`, `emit_skill(manifest, target_dir) -> Path`' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T044",
-            "agent_role": "Developer",
-            "instruction": "T044 [US4] Create `agent_transfer/emitters/claude_code.py` \u2014 reconstructs `.md` from IR using shadow data `original_content` for lossless output (R1)",
-            "file_locks": [
-              "agent_transfer/emitters/claude_code.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T044 [US4] Create `agent_transfer/emitters/claude_code.py` \u2014 reconstructs `.md` from IR using shadow data `original_content` for lossless output (R1)' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T045",
-            "agent_role": "Developer",
-            "instruction": "T045 Create test corpus in `tests/fixtures/canonical/` \u2014 5+ agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks) for SC-2 validation. Preserved = byte-identical for same-platform (R1); cross-platform = system prompt matches after whitespace normalization, tool refs map through canonical registry, MCP configs structurally identical via dict comparison",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T045 Create test corpus in `tests/fixtures/canonical/` \u2014 5+ agent fixtures (multi-line prompts, embedded YAML, unicode, code blocks) for SC-2 validation. Preserved = byte-identical for same-platform (R1); cross-platform = system prompt matches after whitespace normalization, tool refs map through canonical registry, MCP configs structurally identical via dict comparison' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T046",
-            "agent_role": "Developer",
-            "instruction": "T046 [US4] CRITICAL TEST: Claude Code -> Ingestor -> IR -> Emitter -> Claude Code = byte-identical in `tests/test_lossless_roundtrip.py` (R1, R11)",
-            "file_locks": [
-              "tests/test_lossless_roundtrip.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T046 [US4] CRITICAL TEST: Claude Code -> Ingestor -> IR -> Emitter -> Claude Code = byte-identical in `tests/test_lossless_roundtrip.py` (R1, R11)' to [x]",
-            "dependencies": [],
-            "phase": 3
-          },
-          {
-            "task_id": "T047",
-            "agent_role": "Developer",
-            "instruction": "T047 [US5] Add `agent-transfer convert` CLI command in `agent_transfer/cli.py` \u2014 `convert <name> --from <platform> --to <platform>`, Claude Code <-> AIM only at this point (R5)",
-            "file_locks": [
-              "agent_transfer/cli.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T047 [US5] Add `agent-transfer convert` CLI command in `agent_transfer/cli.py` \u2014 `convert <name> --from <platform> --to <platform>`, Claude Code <-> AIM only at this point (R5)' to [x]",
-            "dependencies": [
-              "T029"
-            ],
-            "phase": 3
-          },
-          {
-            "task_id": "T048",
-            "agent_role": "Developer",
-            "instruction": "T048 Tests for `ir/validators.py`, `ingestors/base.py`, `emitters/base.py` in `tests/test_ir.py` (R11)",
-            "file_locks": [
-              "tests/test_ir.py",
-              "emitters/base.py",
-              "ir/validators.py",
-              "ingestors/base.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T048 Tests for `ir/validators.py`, `ingestors/base.py`, `emitters/base.py` in `tests/test_ir.py` (R11)' to [x]",
-            "dependencies": [],
-            "phase": 3
+            "instruction": "T013 [US1] Implement config_dir(slug) in Pathfinder — resolve Path.home() / profile.config_dir, return absolute path. Use _cache for results",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T013' to [x]",
+            "dependencies": ["T012"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 6 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "5 profiles registered, config_dir resolves for all platforms"
         }
       },
       {
         "wave_id": 7,
-        "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 7 [Phase 3,4]: 8 task(s), max 8/wave",
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 3 US1: Directory resolution methods (sequential, same file, each builds on prior)",
         "tasks": [
           {
-            "task_id": "T049",
+            "task_id": "T014",
             "agent_role": "Developer",
-            "instruction": "T049 Update `pyproject.toml` with new packages: `ir`, `ingestors`, `emitters`",
-            "file_locks": [
-              "pyproject.toml"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T049 Update `pyproject.toml` with new packages: `ir`, `ingestors`, `emitters`' to [x]",
-            "dependencies": [
-              "T013",
-              "T012",
-              "T030"
-            ],
-            "phase": 3
+            "instruction": "T014 [P] [US1] Implement agents_dir(slug), skills_dir(slug), hooks_dir(slug) in Pathfinder — derive from config_dir() + profile subdirs. Return None if subdir is None",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T014' to [x]",
+            "dependencies": ["T013"]
           },
           {
-            "task_id": "T050",
+            "task_id": "T015",
             "agent_role": "Developer",
-            "instruction": "T050 Adversarial scan (R12)",
-            "file_locks": [],
+            "instruction": "T015 [P] [US1] Implement config_files(slug) in Pathfinder — return list of config_dir / filename for each entry in profile.config_files",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T050 Adversarial scan (R12)' to [x]",
-            "dependencies": [],
-            "phase": 3
+            "completion_handshake": "Upon success, update tasks.md line containing 'T015' to [x]",
+            "dependencies": ["T013"]
           },
           {
-            "task_id": "T051",
+            "task_id": "T016",
             "agent_role": "Developer",
-            "instruction": "T051 Git checkpoint",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T051 Git checkpoint' to [x]",
-            "dependencies": [],
-            "phase": 3
+            "instruction": "T016 [US1] Implement project_agents_dir(slug, start_dir) and project_skills_dir(slug, start_dir) in Pathfinder — search upward from start_dir (default Path.cwd()) for project_config_dir / subdir, stopping at project_search_depth levels or filesystem root. Return None if not found or platform doesn't support project-level",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T016' to [x]",
+            "dependencies": ["T014"]
           },
           {
-            "task_id": "T052",
+            "task_id": "T017",
             "agent_role": "Developer",
-            "instruction": "T052 Create `agent_transfer/compat/__init__.py` package",
-            "file_locks": [
-              "agent_transfer/compat/__init__.py"
-            ],
+            "instruction": "T017 [US1] Implement all_agents_dirs(slug) and all_skills_dirs(slug) in Pathfinder — return List[Tuple[Path, str]] combining user-level and project-level results with scope labels 'user' and 'project'",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T052 Create `agent_transfer/compat/__init__.py` package' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "completion_handshake": "Upon success, update tasks.md line containing 'T017' to [x]",
+            "dependencies": ["T016"]
           },
           {
-            "task_id": "T053",
+            "task_id": "T018",
             "agent_role": "Developer",
-            "instruction": "T053 Create `agent_transfer/compat/matrix.py` \u2014 feature compatibility data for all platform pairs, classifications: `clean_transfer`, `best_effort_shim`, `cannot_transfer`",
-            "file_locks": [
-              "agent_transfer/compat/matrix.py"
-            ],
+            "instruction": "T018 [P] [US1] Implement validate_path(path) and ensure_dir(path) utility methods in Pathfinder",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T053 Create `agent_transfer/compat/matrix.py` \u2014 feature compatibility data for all platform pairs, classifications: `clean_transfer`, `best_effort_shim`, `cannot_transfer`' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "completion_handshake": "Upon success, update tasks.md line containing 'T018' to [x]",
+            "dependencies": ["T013"]
           },
           {
-            "task_id": "T054",
+            "task_id": "T019",
             "agent_role": "Developer",
-            "instruction": "T054 [P] Create `agent_transfer/compat/reporter.py` \u2014 Rich table display with per-feature breakdown and color coding",
-            "file_locks": [
-              "agent_transfer/compat/reporter.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T054 [P] Create `agent_transfer/compat/reporter.py` \u2014 Rich table display with per-feature breakdown and color coding' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "instruction": "T019 [US1] Implement register_profile(profile) on Pathfinder that delegates to registry.register() and clears cache",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R9"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T019' to [x]",
+            "dependencies": ["T013"]
           },
           {
-            "task_id": "T055",
+            "task_id": "T020",
             "agent_role": "Developer",
-            "instruction": "T055 [P] Create `agent_transfer/compat/shims.py` \u2014 instructional shim generation for non-transferable hooks, inject into system prompt",
-            "file_locks": [
-              "agent_transfer/compat/shims.py"
-            ],
+            "instruction": "T020 [US1] [US2] Update __all__ in agent_transfer/utils/pathfinder.py to export PathProfile, PathProfileRegistry, Pathfinder, get_pathfinder",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T055 [P] Create `agent_transfer/compat/shims.py` \u2014 instructional shim generation for non-transferable hooks, inject into system prompt' to [x]",
-            "dependencies": [],
-            "phase": 4
-          },
-          {
-            "task_id": "T056",
-            "agent_role": "Developer",
-            "instruction": "T056 [US3] Add `agent-transfer compat` CLI command in `agent_transfer/cli.py` \u2014 `compat --from <platform> --to <platform>`, Rich table output (R5)",
-            "file_locks": [
-              "agent_transfer/cli.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T056 [US3] Add `agent-transfer compat` CLI command in `agent_transfer/cli.py` \u2014 `compat --from <platform> --to <platform>`, Rich table output (R5)' to [x]",
-            "dependencies": [
-              "T029",
-              "T047"
-            ],
-            "phase": 4
+            "completion_handshake": "Upon success, update tasks.md line containing 'T020' to [x]",
+            "dependencies": ["T019"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 7 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "All core resolution methods implemented"
         }
       },
       {
         "wave_id": 8,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 8 [Phase 4,5]: 8 task(s), max 8/wave",
+        "rationale": "Phase 3 US1+US2 Tests: All test functions for core resolution (same file but independent test functions)",
         "tasks": [
           {
-            "task_id": "T057",
+            "task_id": "T021",
             "agent_role": "Developer",
-            "instruction": "T057 [US1] Wire compat pre-flight into `convert` command \u2014 show compat report before cross-platform conversion",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T057 [US1] Wire compat pre-flight into `convert` command \u2014 show compat report before cross-platform conversion' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "instruction": "T021 [P] [US1] [US2] Write tests for all 5 built-in profiles in tests/test_pathfinder.py — verify config_dir, agents_dir, skills_dir, hooks_dir, config_files for each platform using monkeypatched Path.home()",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T021' to [x]",
+            "dependencies": ["T020"]
           },
           {
-            "task_id": "T058",
+            "task_id": "T022",
             "agent_role": "Developer",
-            "instruction": "T058 [US1] [US2] Create `agent_transfer/ingestors/codex.py` + `agent_transfer/emitters/codex.py` \u2014 hook import policy: incoming hooks become instructional shims (Resolved Q4)",
-            "file_locks": [
-              "agent_transfer/ingestors/codex.py",
-              "agent_transfer/emitters/codex.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T058 [US1] [US2] Create `agent_transfer/ingestors/codex.py` + `agent_transfer/emitters/codex.py` \u2014 hook import policy: incoming hooks become instructional shims (Resolved Q4)' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "instruction": "T022 [P] [US1] Write tests for None returns — hooks_dir('codex'), agents_dir('goose') should return None in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T022' to [x]",
+            "dependencies": ["T020"]
           },
           {
-            "task_id": "T059",
+            "task_id": "T023",
             "agent_role": "Developer",
-            "instruction": "T059 [US1] [US2] Test: Claude Code <-> IR <-> Codex round-trip in `tests/test_codex_roundtrip.py` + `compat/` module tests in `tests/test_compat.py` (R11)",
-            "file_locks": [
-              "tests/test_compat.py",
-              "tests/test_codex_roundtrip.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T059 [US1] [US2] Test: Claude Code <-> IR <-> Codex round-trip in `tests/test_codex_roundtrip.py` + `compat/` module tests in `tests/test_compat.py` (R11)' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "instruction": "T023 [P] [US1] Write tests for project-level resolution in tests/test_pathfinder.py — create .claude/agents/ in tmp_path tree, verify project_agents_dir finds it. Verify returns None when not found",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T023' to [x]",
+            "dependencies": ["T020"]
           },
           {
-            "task_id": "T060",
+            "task_id": "T024",
             "agent_role": "Developer",
-            "instruction": "T060 Adversarial scan \u2014 targeted + general (R12)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T060 Adversarial scan \u2014 targeted + general (R12)' to [x]",
-            "dependencies": [],
-            "phase": 4
+            "instruction": "T024 [P] [US1] Write tests for all_agents_dirs and all_skills_dirs in tests/test_pathfinder.py — verify combined user+project results with scope labels",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T024' to [x]",
+            "dependencies": ["T020"]
           },
           {
-            "task_id": "T061",
+            "task_id": "T025",
             "agent_role": "Developer",
-            "instruction": "T061 Git checkpoint",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T061 Git checkpoint' to [x]",
-            "dependencies": [],
-            "phase": 4
-          },
-          {
-            "task_id": "T062",
-            "agent_role": "Developer",
-            "instruction": "T062 [US1] [US2] Create `agent_transfer/ingestors/goose.py` + `agent_transfer/emitters/goose.py` \u2014 recipe steps map to/from system prompt + shims",
-            "file_locks": [
-              "agent_transfer/emitters/goose.py",
-              "agent_transfer/ingestors/goose.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T062 [US1] [US2] Create `agent_transfer/ingestors/goose.py` + `agent_transfer/emitters/goose.py` \u2014 recipe steps map to/from system prompt + shims' to [x]",
-            "dependencies": [],
-            "phase": 5
-          },
-          {
-            "task_id": "T063",
-            "agent_role": "Developer",
-            "instruction": "T063 [P] [US1] [US2] Create `agent_transfer/ingestors/gemini_cli.py` + `agent_transfer/emitters/gemini_cli.py` \u2014 JSON settings parsing + generation",
-            "file_locks": [
-              "agent_transfer/ingestors/gemini_cli.py",
-              "agent_transfer/emitters/gemini_cli.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T063 [P] [US1] [US2] Create `agent_transfer/ingestors/gemini_cli.py` + `agent_transfer/emitters/gemini_cli.py` \u2014 JSON settings parsing + generation' to [x]",
-            "dependencies": [],
-            "phase": 5
-          },
-          {
-            "task_id": "T064",
-            "agent_role": "Developer",
-            "instruction": "T064 [US1] [US2] Test cross-platform conversions in `tests/test_cross_platform.py`: Claude <-> Goose, Claude <-> Gemini, Goose <-> Gemini (R11)",
-            "file_locks": [
-              "tests/test_cross_platform.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T064 [US1] [US2] Test cross-platform conversions in `tests/test_cross_platform.py`: Claude <-> Goose, Claude <-> Gemini, Goose <-> Gemini (R11)' to [x]",
-            "dependencies": [],
-            "phase": 5
+            "instruction": "T025 [US2] Write test for third-party profile registration in tests/test_pathfinder.py — register a mock profile, verify all resolution methods work for it",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R9", "R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T025' to [x]",
+            "dependencies": ["T020"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 8 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "MVP COMPLETE — Core path resolution for 5 platforms, fully tested",
+          "validation": "pytest tests/test_pathfinder.py passes, all 5 platforms resolve correctly"
         }
       },
       {
         "wave_id": 9,
-        "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 9 [Phase 5,6]: 8 task(s), max 8/wave",
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 4 US6: Executable discovery (depends on core pathfinder)",
         "tasks": [
           {
-            "task_id": "T065",
+            "task_id": "T026",
             "agent_role": "Developer",
-            "instruction": "T065 Update `agent_transfer/compat/matrix.py` with real test results from Goose + Gemini conversions",
-            "file_locks": [
-              "agent_transfer/compat/matrix.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T065 Update `agent_transfer/compat/matrix.py` with real test results from Goose + Gemini conversions' to [x]",
-            "dependencies": [
-              "T053"
-            ],
-            "phase": 5
+            "instruction": "T026 [US6] Implement find_executable(slug) in Pathfinder in agent_transfer/utils/pathfinder.py — ordered search: shutil.which() → env override path → npm global (~/.npm-global/bin/, ~/.local/share/npm/bin/) → npm prefix (npm config get prefix) → nvm paths → virtualenv → conda → system paths (/usr/local/bin/, /usr/bin/) → profile.search_paths. Cache results. Return Optional[Path]",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T026' to [x]",
+            "dependencies": ["T020"]
           },
           {
-            "task_id": "T066",
+            "task_id": "T027",
             "agent_role": "Developer",
-            "instruction": "T066 Adversarial scan (R12)",
-            "file_locks": [],
+            "instruction": "T027 [US6] Add platform-specific search strategy filtering — only run npm/nvm strategies for platforms whose profiles need them (Claude Code, Codex). Skip for Goose, OpenCode, Gemini CLI",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T066 Adversarial scan (R12)' to [x]",
-            "dependencies": [],
-            "phase": 5
-          },
-          {
-            "task_id": "T067",
-            "agent_role": "Developer",
-            "instruction": "T067 Git checkpoint",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T067 Git checkpoint' to [x]",
-            "dependencies": [],
-            "phase": 5
-          },
-          {
-            "task_id": "T068",
-            "agent_role": "Developer",
-            "instruction": "T068 [US1] [US2] Create `agent_transfer/ingestors/opencode.py` + `agent_transfer/emitters/opencode.py`",
-            "file_locks": [
-              "agent_transfer/emitters/opencode.py",
-              "agent_transfer/ingestors/opencode.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T068 [US1] [US2] Create `agent_transfer/ingestors/opencode.py` + `agent_transfer/emitters/opencode.py`' to [x]",
-            "dependencies": [],
-            "phase": 6
-          },
-          {
-            "task_id": "T070",
-            "agent_role": "Developer",
-            "instruction": "T070 [US5] IR portability test in `tests/test_ir_portability.py`: load pre-generated `.aim.yaml` \u2192 emit to each of the 4 non-AIM target platforms (US-5 end-to-end validation)",
-            "file_locks": [
-              ".aim.yaml",
-              "tests/test_ir_portability.py",
-              "aim.yaml"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T070 [US5] IR portability test in `tests/test_ir_portability.py`: load pre-generated `.aim.yaml` \u2192 emit to each of the 4 non-AIM target platforms (US-5 end-to-end validation)' to [x]",
-            "dependencies": [
-              "T036"
-            ],
-            "phase": 6
-          },
-          {
-            "task_id": "T071",
-            "agent_role": "Developer",
-            "instruction": "T071 Create Claude Code skill `/transfer-agent` (wraps US-1/US-3) \u2014 trigger: \"transfer agent to [platform]\"; input: agent name + target; output: converted files + compat report",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T071 Create Claude Code skill `/transfer-agent` (wraps US-1/US-3) \u2014 trigger: \"transfer agent to [platform]\"; input: agent name + target; output: converted files + compat report' to [x]",
-            "dependencies": [],
-            "phase": 6
-          },
-          {
-            "task_id": "T072",
-            "agent_role": "Developer",
-            "instruction": "T072 Create Claude Code skill `/analyze-platform` (wraps US-1/US-3) \u2014 trigger: \"analyze platform compatibility\"; input: optional --from/--to; output: compat matrix table",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T072 Create Claude Code skill `/analyze-platform` (wraps US-1/US-3) \u2014 trigger: \"analyze platform compatibility\"; input: optional --from/--to; output: compat matrix table' to [x]",
-            "dependencies": [],
-            "phase": 6
-          },
-          {
-            "task_id": "T073",
-            "agent_role": "Developer",
-            "instruction": "T073 Register entry_points for all 5 platforms in `pyproject.toml` (R9)",
-            "file_locks": [
-              "pyproject.toml"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T073 Register entry_points for all 5 platforms in `pyproject.toml` (R9)' to [x]",
-            "dependencies": [
-              "T013",
-              "T012",
-              "T030",
-              "T049"
-            ],
-            "phase": 6
+            "completion_handshake": "Upon success, update tasks.md line containing 'T027' to [x]",
+            "dependencies": ["T026"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 9 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "Executable discovery consolidated"
         }
       },
       {
         "wave_id": 10,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Wave 10 [Phase 6]: 4 task(s), max 8/wave",
+        "rationale": "Phase 4 US6 Tests + Phase 5 US3 Implementation + Phase 6 US4 Implementation (independent: different methods, test file vs source file)",
         "tasks": [
           {
-            "task_id": "T069",
+            "task_id": "T028",
             "agent_role": "Developer",
-            "instruction": "T069 Update `agent_transfer/compat/matrix.py` with OpenCode's 4 platform pairs \u2014 verify all 20 pairs present (SC-3)",
-            "file_locks": [
-              "agent_transfer/compat/matrix.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T069 Update `agent_transfer/compat/matrix.py` with OpenCode's 4 platform pairs \u2014 verify all 20 pairs present (SC-3)' to [x]",
-            "dependencies": [
-              "T065",
-              "T053"
-            ],
-            "phase": 6
+            "instruction": "T028 [P] [US6] Write test for find_executable with mocked shutil.which success in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T028' to [x]",
+            "dependencies": ["T027"]
           },
           {
-            "task_id": "T074",
+            "task_id": "T032",
             "agent_role": "Developer",
-            "instruction": "T074 Tests for OpenCode ingestor/emitter + skill behavior in `tests/test_opencode.py` + `tests/test_skills.py` (R11)",
-            "file_locks": [
-              "tests/test_opencode.py",
-              "tests/test_skills.py"
-            ],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T074 Tests for OpenCode ingestor/emitter + skill behavior in `tests/test_opencode.py` + `tests/test_skills.py` (R11)' to [x]",
-            "dependencies": [],
-            "phase": 6
+            "instruction": "T032 [US3] Implement remap_path(path, source_home, target_home) in Pathfinder in agent_transfer/utils/pathfinder.py — string prefix replacement. Return original path if: relative, no source_home prefix, or already matches target_home",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T032' to [x]",
+            "dependencies": ["T020"]
           },
           {
-            "task_id": "T075",
+            "task_id": "T036",
             "agent_role": "Developer",
-            "instruction": "T075 Adversarial scan \u2014 full codebase (R12)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T075 Adversarial scan \u2014 full codebase (R12)' to [x]",
-            "dependencies": [],
-            "phase": 6
-          },
-          {
-            "task_id": "T076",
-            "agent_role": "Developer",
-            "instruction": "T076 Git checkpoint `v2.0.0`",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T076 Git checkpoint `v2.0.0`' to [x]",
-            "dependencies": [],
-            "phase": 6
+            "instruction": "T036 [US4] Update config_dir(slug) in Pathfinder in agent_transfer/utils/pathfinder.py to check os.environ.get(profile.env_override_var) first, fall back to default. Ensure override propagates to all derived methods (agents_dir, skills_dir, etc.) since they call config_dir internally",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T036' to [x]",
+            "dependencies": ["T020"]
           }
         ],
         "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Verify all Wave 10 tasks are marked [x] in tasks.md",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "description": "Executable tests started, remap_path + env override implemented"
+        }
+      },
+      {
+        "wave_id": 11,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "US6 tests + US3 tests + US4 tests + US5 implementation (all independent)",
+        "tasks": [
+          {
+            "task_id": "T029",
+            "agent_role": "Developer",
+            "instruction": "T029 [P] [US6] Write test for find_executable fallback chain — shutil.which fails, falls back to npm global path in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T029' to [x]",
+            "dependencies": ["T028"]
+          },
+          {
+            "task_id": "T030",
+            "agent_role": "Developer",
+            "instruction": "T030 [P] [US6] Write test for find_executable returns None when not found anywhere in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T030' to [x]",
+            "dependencies": ["T028"]
+          },
+          {
+            "task_id": "T031",
+            "agent_role": "Developer",
+            "instruction": "T031 [US6] Write test for executable caching — verify shutil.which called once for repeated lookups, cleared by clear_cache() in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T031' to [x]",
+            "dependencies": ["T028"]
+          },
+          {
+            "task_id": "T033",
+            "agent_role": "Developer",
+            "instruction": "T033 [P] [US3] Write test for successful path remapping in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T033' to [x]",
+            "dependencies": ["T032"]
+          },
+          {
+            "task_id": "T034",
+            "agent_role": "Developer",
+            "instruction": "T034 [P] [US3] Write test for no-op cases: relative path, no prefix match, already-correct path in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T034' to [x]",
+            "dependencies": ["T032"]
+          },
+          {
+            "task_id": "T035",
+            "agent_role": "Developer",
+            "instruction": "T035 [P] [US3] Write test for edge case: source_home embedded in non-prefix position (e.g., /opt/home/alice/...) in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T035' to [x]",
+            "dependencies": ["T032"]
+          },
+          {
+            "task_id": "T037",
+            "agent_role": "Developer",
+            "instruction": "T037 [P] [US4] Write test for env override on config_dir using monkeypatch.setenv in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T037' to [x]",
+            "dependencies": ["T036"]
+          },
+          {
+            "task_id": "T038",
+            "agent_role": "Developer",
+            "instruction": "T038 [P] [US4] Write test for env override propagation to agents_dir, skills_dir, hooks_dir, config_files in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T038' to [x]",
+            "dependencies": ["T036"]
+          },
+          {
+            "task_id": "T039",
+            "agent_role": "Developer",
+            "instruction": "T039 [US4] Write test for fallback when env var is not set in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T039' to [x]",
+            "dependencies": ["T036"]
+          },
+          {
+            "task_id": "T040",
+            "agent_role": "Developer",
+            "instruction": "T040 [US5] Implement translate_path(path, from_platform, to_platform) in Pathfinder in agent_transfer/utils/pathfinder.py — build map of expanded platform dirs, match longest prefix, swap with target platform equivalent. Return (translated_path, warning) tuple. Warning is None on success or descriptive message if path doesn't match any known dir",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T040' to [x]",
+            "dependencies": ["T020"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "All core pathfinder features complete with tests. US3, US4, US5, US6 all implemented and tested."
+        }
+      },
+      {
+        "wave_id": 12,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "US5 tests (depend on T040 implementation)",
+        "tasks": [
+          {
+            "task_id": "T041",
+            "agent_role": "Developer",
+            "instruction": "T041 [P] [US5] Write test for successful translation Claude Code → Goose skills path in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T041' to [x]",
+            "dependencies": ["T040"]
+          },
+          {
+            "task_id": "T042",
+            "agent_role": "Developer",
+            "instruction": "T042 [P] [US5] Write test for translation with unrecognized path — verify warning returned in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T042' to [x]",
+            "dependencies": ["T040"]
+          },
+          {
+            "task_id": "T043",
+            "agent_role": "Developer",
+            "instruction": "T043 [P] [US5] Write test for translation between all 5 platforms for config_dir paths in tests/test_pathfinder.py",
+            "file_locks": ["tests/test_pathfinder.py"],
+            "constitution_rules": ["R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T043' to [x]",
+            "dependencies": ["T040"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "All pathfinder features fully tested. Ready for module refactoring."
+        }
+      },
+      {
+        "wave_id": 13,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Phase 8 Module Refactoring: Independent module refactors (different files, no conflicts)",
+        "tasks": [
+          {
+            "task_id": "T044",
+            "agent_role": "Developer",
+            "instruction": "T044 [US1] Refactor agent_transfer/utils/discovery.py — replace 7 executable search strategies and 4 config location searches with pf.find_executable(), pf.config_dir(), pf.all_agents_dirs(). Keep function signatures unchanged (R4, R5)",
+            "file_locks": ["agent_transfer/utils/discovery.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T044' to [x]",
+            "dependencies": ["T027", "T020"]
+          },
+          {
+            "task_id": "T045",
+            "agent_role": "Developer",
+            "instruction": "T045 [US1] Refactor agent_transfer/utils/config_manager.py — replace Path.home() / '.claude' for mcp.json, settings.json, settings.local.json with pf.config_files(). Replace ad-hoc path remapping with pf.remap_path(). Keep function signatures unchanged",
+            "file_locks": ["agent_transfer/utils/config_manager.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T045' to [x]",
+            "dependencies": ["T032", "T020"]
+          },
+          {
+            "task_id": "T047",
+            "agent_role": "Developer",
+            "instruction": "T047 [P] [US1] Refactor agent_transfer/utils/import_analyzer.py — replace Path.home() / '.claude' / 'agents' with pf.agents_dir() and pf.project_agents_dir(). Keep function signatures unchanged",
+            "file_locks": ["agent_transfer/utils/import_analyzer.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T047' to [x]",
+            "dependencies": ["T020"]
+          },
+          {
+            "task_id": "T048",
+            "agent_role": "Developer",
+            "instruction": "T048 [P] [US1] Refactor agent_transfer/utils/skill_discovery.py — replace Path.home() / '.claude' / 'skills' and recursive cwd search with pf.all_skills_dirs(). Keep function signatures unchanged",
+            "file_locks": ["agent_transfer/utils/skill_discovery.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T048' to [x]",
+            "dependencies": ["T020"]
+          },
+          {
+            "task_id": "T049",
+            "agent_role": "Developer",
+            "instruction": "T049 [P] [US1] Refactor agent_transfer/utils/tool_checker.py — replace 5 MCP config location checks with pf.config_files('claude-code'). Keep function signatures unchanged",
+            "file_locks": ["agent_transfer/utils/tool_checker.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T049' to [x]",
+            "dependencies": ["T020"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "5 of 7 modules refactored"
+        }
+      },
+      {
+        "wave_id": 14,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Phase 8 continued: transfer.py + cli.py refactors (independent files)",
+        "tasks": [
+          {
+            "task_id": "T046",
+            "agent_role": "Developer",
+            "instruction": "T046 [US1] Refactor agent_transfer/utils/transfer.py — replace Path.home() / '.claude' / 'agents', Path.home() / '.claude' / 'skills', and Path.cwd() variants with pf.agents_dir(), pf.skills_dir(), pf.project_agents_dir(), pf.project_skills_dir(). Keep function signatures unchanged",
+            "file_locks": ["agent_transfer/utils/transfer.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T046' to [x]",
+            "dependencies": ["T020"]
+          },
+          {
+            "task_id": "T050",
+            "agent_role": "Developer",
+            "instruction": "T050 [US1] Refactor agent_transfer/cli.py — replace Path.home() / '.claude' / 'skills' and Path.cwd() variants with pf.skills_dir(), pf.project_skills_dir(). Keep function signatures unchanged",
+            "file_locks": ["agent_transfer/cli.py"],
+            "constitution_rules": ["R4", "R5"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T050' to [x]",
+            "dependencies": ["T020"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "All 7 modules refactored"
+        }
+      },
+      {
+        "wave_id": 15,
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 8 Validation: Run test suite and grep verification (must be sequential)",
+        "tasks": [
+          {
+            "task_id": "T051",
+            "agent_role": "Developer",
+            "instruction": "T051 [US1] Run full test suite (pytest tests/) and verify zero regressions — all existing tests pass",
+            "file_locks": [],
+            "constitution_rules": ["R5", "R11"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T051' to [x]",
+            "dependencies": ["T044", "T045", "T046", "T047", "T048", "T049", "T050"]
+          },
+          {
+            "task_id": "T052",
+            "agent_role": "Developer",
+            "instruction": "T052 [US1] Run grep -r 'Path.home().*\\.claude' agent_transfer/ and verify results appear ONLY in pathfinder.py",
+            "file_locks": [],
+            "constitution_rules": ["R6"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T052' to [x]",
+            "dependencies": ["T051"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "Module refactoring COMPLETE — zero scattered paths, all tests pass",
+          "validation": "pytest passes, grep confirms only pathfinder.py has Path.home()/.claude"
+        }
+      },
+      {
+        "wave_id": 16,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Phase 9 Polish: Linting + adversarial scans (independent)",
+        "tasks": [
+          {
+            "task_id": "T053",
+            "agent_role": "Developer",
+            "instruction": "T053 [P] Run ruff linter on agent_transfer/utils/pathfinder.py and fix all findings",
+            "file_locks": ["agent_transfer/utils/pathfinder.py"],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T053' to [x]",
+            "dependencies": ["T052"]
+          },
+          {
+            "task_id": "T054",
+            "agent_role": "Developer",
+            "instruction": "T054 [P] Run ruff linter on all 7 refactored modules and fix all findings",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T054' to [x]",
+            "dependencies": ["T052"]
+          },
+          {
+            "task_id": "T055",
+            "agent_role": "Developer",
+            "instruction": "T055 Adversarial bug hunt — targeted: path traversal in remap_path() and translate_path(), edge cases in project-level search, symlink handling, container edge cases (run adversarial-bug-hunter agent)",
+            "file_locks": [],
+            "constitution_rules": ["R12"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T055' to [x]",
+            "dependencies": ["T052"]
+          },
+          {
+            "task_id": "T056",
+            "agent_role": "Developer",
+            "instruction": "T056 Adversarial bug hunt — general logic scan across pathfinder.py and all refactored modules (run adversarial-bug-hunter agent)",
+            "file_locks": [],
+            "constitution_rules": ["R12"],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T056' to [x]",
+            "dependencies": ["T052"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "Linting clean, adversarial scans pass"
+        }
+      },
+      {
+        "wave_id": 17,
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Phase 9 Final: Quickstart validation + git checkpoint",
+        "tasks": [
+          {
+            "task_id": "T057",
+            "agent_role": "Developer",
+            "instruction": "T057 Validate quickstart.md examples work against actual implementation",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T057' to [x]",
+            "dependencies": ["T053", "T054", "T055", "T056"]
+          },
+          {
+            "task_id": "T058",
+            "agent_role": "Developer",
+            "instruction": "T058 Git checkpoint — commit all changes",
+            "file_locks": [],
+            "constitution_rules": [],
+            "completion_handshake": "Upon success, update tasks.md line containing 'T058' to [x]",
+            "dependencies": ["T057"]
+          }
+        ],
+        "checkpoint_after": {
+          "description": "FEATURE COMPLETE — all tasks done, committed",
+          "validation": "git log shows checkpoint commit, all tests pass, zero scattered paths"
         }
       }
     ]

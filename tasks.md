@@ -1,1 +1,1 @@
-.specify/specs/001-platform-agnostic-transfer/tasks.md
+specs/001-pathfinder-module/tasks.md

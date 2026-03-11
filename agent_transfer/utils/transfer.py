@@ -72,9 +72,7 @@ def export_agents_and_skills(
 
             if not all_agents:
                 console.print("[red]No agents found![/red]")
-                console.print("\n[dim]Checked locations:[/dim]")
-                console.print(f"  - {Path.home() / '.claude' / 'agents'}")
-                console.print(f"  - {Path.cwd() / '.claude' / 'agents'}")
+                console.print("\n[dim]Run 'agent-transfer list-agents --discover' to see search locations[/dim]")
                 raise SystemExit(1)
 
             if interactive:
@@ -97,9 +95,7 @@ def export_agents_and_skills(
 
             if not all_skills and export_type == 'skills-only':
                 console.print("[red]No skills found![/red]")
-                console.print("\n[dim]Checked locations:[/dim]")
-                console.print(f"  - {Path.home() / '.claude' / 'skills'}")
-                console.print(f"  - {Path.cwd() / '.claude' / 'skills'}")
+                console.print("\n[dim]Run 'agent-transfer list-agents --discover' to see search locations[/dim]")
                 raise SystemExit(1)
 
             if all_skills and interactive and interactive_select_skills:
@@ -351,7 +347,11 @@ def import_agents_and_skills(
             if user_agents:
                 console.print(f"\n[blue]Found {len(user_agents)} user-level agent(s)[/blue]")
 
-                user_agents_dir = Path.home() / '.claude' / 'agents'
+                from .pathfinder import get_pathfinder
+                pf = get_pathfinder()
+                user_agents_dir = pf.agents_dir("claude-code")
+                if user_agents_dir is None:
+                    user_agents_dir = pf.config_dir("claude-code") / "agents"
                 user_agents_dir.mkdir(parents=True, exist_ok=True)
 
                 for agent_file in user_agents:
@@ -385,7 +385,9 @@ def import_agents_and_skills(
             if project_agents:
                 console.print(f"\n[blue]Found {len(project_agents)} project-level agent(s)[/blue]")
 
-                project_agents_dir = Path.cwd() / '.claude' / 'agents'
+                from .pathfinder import get_pathfinder
+                pf = get_pathfinder()
+                project_agents_dir = pf.project_agents_dir("claude-code") or (Path.cwd() / '.claude' / 'agents')
 
                 if not project_agents_dir.parent.exists():
                     from rich.prompt import Confirm
@@ -432,7 +434,11 @@ def import_agents_and_skills(
                 if skill_dirs:
                     console.print(f"\n[blue]Found {len(skill_dirs)} user-level skill(s)[/blue]")
 
-                    user_skills_base = Path.home() / '.claude' / 'skills'
+                    from .pathfinder import get_pathfinder
+                    pf = get_pathfinder()
+                    user_skills_base = pf.skills_dir("claude-code")
+                    if user_skills_base is None:
+                        user_skills_base = pf.config_dir("claude-code") / "skills"
                     user_skills_base.mkdir(parents=True, exist_ok=True)
 
                     for skill_dir in skill_dirs:
@@ -474,7 +480,9 @@ def import_agents_and_skills(
                 if skill_dirs:
                     console.print(f"\n[blue]Found {len(skill_dirs)} project-level skill(s)[/blue]")
 
-                    project_skills_base = Path.cwd() / '.claude' / 'skills'
+                    from .pathfinder import get_pathfinder
+                    pf = get_pathfinder()
+                    project_skills_base = pf.project_skills_dir("claude-code") or (Path.cwd() / '.claude' / 'skills')
 
                     if not project_skills_base.parent.exists():
                         from rich.prompt import Confirm
@@ -662,12 +670,17 @@ def import_agents_selective(
             filename = Path(agent.file_path).name
 
             # Determine source and target paths based on agent type
+            from .pathfinder import get_pathfinder
+            pf = get_pathfinder()
+
             if agent.agent_type == "user":
                 source_dir = temp_path / "user-agents"
-                target_dir = Path.home() / ".claude" / "agents"
+                target_dir = pf.agents_dir("claude-code")
+                if target_dir is None:
+                    target_dir = pf.config_dir("claude-code") / "agents"
             else:  # project
                 source_dir = temp_path / "project-agents"
-                target_dir = Path.cwd() / ".claude" / "agents"
+                target_dir = pf.project_agents_dir("claude-code") or (Path.cwd() / ".claude" / "agents")
 
             # Find source file in archive (handle nested structures)
             source_path = None
