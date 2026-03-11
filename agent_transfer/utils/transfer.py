@@ -214,6 +214,31 @@ User Skills: {user_skill_count}
 Project Skills: {project_skill_count}
 """)
         
+        # Generate preflight manifest
+        try:
+            from .preflight.collector import collect_inventory
+            from .preflight.manifest import write_manifest
+
+            agent_paths = [Path(a.file_path) for a in selected_agents if Path(a.file_path).exists()]
+            skill_paths = [Path(s.skill_path) for s in (selected_skills or []) if Path(s.skill_path).exists()]
+            manifest = collect_inventory(
+                agents=agent_paths,
+                skills=skill_paths,
+                hooks=[],
+                configs=[],
+                platform="claude-code",
+            )
+            # Fill contents inventory
+            manifest.contents.agents = [Path(a.file_path).name for a in selected_agents]
+            manifest.contents.skills = [Path(s.skill_path).name for s in (selected_skills or [])]
+
+            manifest_path = temp_path / "manifest.json"
+            write_manifest(manifest, manifest_path)
+            console.print("[dim]Preflight manifest bundled (manifest.json)[/dim]")
+        except Exception as exc:
+            # Non-fatal: export still works without manifest
+            console.print(f"[dim yellow]Preflight manifest skipped: {exc}[/dim yellow]")
+
         # Create archive
         console.print(f"[blue]Creating archive: {output_file}[/blue]")
         with tarfile.open(output_file, 'w:gz') as tar:
