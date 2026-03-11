@@ -21,5 +21,13 @@ __all__ = [
     "export_agents",
     "import_agents",
     "check_claude_code_installed",
+    "get_pathfinder",
 ]
+
+
+def get_pathfinder():
+    """Lazy import to avoid circular dependencies."""
+    from .pathfinder import get_pathfinder as _get_pathfinder
+
+    return _get_pathfinder()
 

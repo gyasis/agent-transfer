@@ -17,9 +17,9 @@
 
 **Purpose**: Create the pathfinder module file and establish test infrastructure
 
-- [ ] T001 Create `agent_transfer/utils/pathfinder.py` with module docstring, `from __future__ import annotations` import, and empty `__all__` list
-- [ ] T002 [P] Create `tests/test_pathfinder.py` with pytest imports, basic fixtures for `tmp_path` home directory mocking, and `_reset_pathfinder()` teardown in autouse fixture
-- [ ] T003 [P] Add `pathfinder` imports to `agent_transfer/utils/__init__.py` (lazy import to avoid circular deps)
+- [x] T001 Create `agent_transfer/utils/pathfinder.py` with module docstring, `from __future__ import annotations` import, and empty `__all__` list
+- [x] T002 [P] Create `tests/test_pathfinder.py` with pytest imports, basic fixtures for `tmp_path` home directory mocking, and `_reset_pathfinder()` teardown in autouse fixture
+- [x] T003 [P] Add `pathfinder` imports to `agent_transfer/utils/__init__.py` (lazy import to avoid circular deps)
 
 **Checkpoint**: Module files exist, test infrastructure ready
 
@@ -31,13 +31,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Implement `PathProfile` dataclass in `agent_transfer/utils/pathfinder.py` with fields: `slug`, `config_dir`, `agents_subdir`, `skills_subdir`, `hooks_subdir`, `config_files`, `executable_names`, `project_level`, `project_config_dir`, `env_override_var`, `search_paths` — all using `Optional` and `List` from typing for Python 3.8 compat
-- [ ] T005 Implement `PathProfileRegistry` class in `agent_transfer/utils/pathfinder.py` with `register()`, `get()`, `list_slugs()` methods and `_profiles` dict storage. `get()` raises `KeyError` with helpful message listing valid slugs
-- [ ] T006 Implement `Pathfinder` class skeleton in `agent_transfer/utils/pathfinder.py` with `__init__(self, project_search_depth=5)` that creates a `PathProfileRegistry` and `_cache` dict. Add `clear_cache()` and `supported_platforms()` methods
-- [ ] T007 Implement `get_pathfinder()` and `_reset_pathfinder()` module-level functions in `agent_transfer/utils/pathfinder.py` using lazy-initialized `_instance` global
-- [ ] T008 Write unit tests for `PathProfile` creation and field defaults in `tests/test_pathfinder.py`
-- [ ] T009 Write unit tests for `PathProfileRegistry` — register, get, list_slugs, KeyError on unknown slug in `tests/test_pathfinder.py`
-- [ ] T010 Write unit tests for `get_pathfinder()` singleton behavior and `_reset_pathfinder()` isolation in `tests/test_pathfinder.py`
+- [x] T004 Implement `PathProfile` dataclass in `agent_transfer/utils/pathfinder.py` with fields: `slug`, `config_dir`, `agents_subdir`, `skills_subdir`, `hooks_subdir`, `config_files`, `executable_names`, `project_level`, `project_config_dir`, `env_override_var`, `search_paths` — all using `Optional` and `List` from typing for Python 3.8 compat
+- [x] T005 Implement `PathProfileRegistry` class in `agent_transfer/utils/pathfinder.py` with `register()`, `get()`, `list_slugs()` methods and `_profiles` dict storage. `get()` raises `KeyError` with helpful message listing valid slugs
+- [x] T006 Implement `Pathfinder` class skeleton in `agent_transfer/utils/pathfinder.py` with `__init__(self, project_search_depth=5)` that creates a `PathProfileRegistry` and `_cache` dict. Add `clear_cache()` and `supported_platforms()` methods
+- [x] T007 Implement `get_pathfinder()` and `_reset_pathfinder()` module-level functions in `agent_transfer/utils/pathfinder.py` using lazy-initialized `_instance` global
+- [x] T008 Write unit tests for `PathProfile` creation and field defaults in `tests/test_pathfinder.py`
+- [x] T009 Write unit tests for `PathProfileRegistry` — register, get, list_slugs, KeyError on unknown slug in `tests/test_pathfinder.py`
+- [x] T010 Write unit tests for `get_pathfinder()` singleton behavior and `_reset_pathfinder()` isolation in `tests/test_pathfinder.py`
 
 **Checkpoint**: Foundation ready — PathProfile, Registry, and Pathfinder skeleton work. All unit tests pass.
 
@@ -51,24 +51,24 @@
 
 ### Implementation
 
-- [ ] T011 [US1] [US2] Define all 5 built-in `PathProfile` instances in `agent_transfer/utils/pathfinder.py`: Claude Code (`.claude`), Codex CLI (`.codex`), Gemini CLI (`.gemini`), Goose (`.config/goose`), OpenCode (`.opencode`) — with correct subdirs, config files, executable names, and env override vars per PRD table 4.1
-- [ ] T012 [US1] [US2] Implement `_load_builtin_profiles()` in `PathProfileRegistry` and call from `__init__`. Also implement `load_entry_points()` to scan `agent_transfer.path_profiles` entry point group (graceful no-op if none found)
-- [ ] T013 [US1] Implement `config_dir(slug)` in `Pathfinder` — resolve `Path.home() / profile.config_dir`, return absolute path. Use `_cache` for results
-- [ ] T014 [P] [US1] Implement `agents_dir(slug)`, `skills_dir(slug)`, `hooks_dir(slug)` in `Pathfinder` — derive from `config_dir()` + profile subdirs. Return `None` if subdir is `None`
-- [ ] T015 [P] [US1] Implement `config_files(slug)` in `Pathfinder` — return list of `config_dir / filename` for each entry in `profile.config_files`
-- [ ] T016 [US1] Implement `project_agents_dir(slug, start_dir)` and `project_skills_dir(slug, start_dir)` in `Pathfinder` — search upward from `start_dir` (default `Path.cwd()`) for `project_config_dir / subdir`, stopping at `project_search_depth` levels or filesystem root. Return `None` if not found or platform doesn't support project-level
-- [ ] T017 [US1] Implement `all_agents_dirs(slug)` and `all_skills_dirs(slug)` in `Pathfinder` — return `List[Tuple[Path, str]]` combining user-level and project-level results with scope labels `"user"` and `"project"`
-- [ ] T018 [P] [US1] Implement `validate_path(path)` and `ensure_dir(path)` utility methods in `Pathfinder`
-- [ ] T019 [US1] Implement `register_profile(profile)` on `Pathfinder` that delegates to `registry.register()` and clears cache
-- [ ] T020 [US1] [US2] Update `__all__` in `agent_transfer/utils/pathfinder.py` to export `PathProfile`, `PathProfileRegistry`, `Pathfinder`, `get_pathfinder`
+- [x] T011 [US1] [US2] Define all 5 built-in `PathProfile` instances in `agent_transfer/utils/pathfinder.py`: Claude Code (`.claude`), Codex CLI (`.codex`), Gemini CLI (`.gemini`), Goose (`.config/goose`), OpenCode (`.opencode`) — with correct subdirs, config files, executable names, and env override vars per PRD table 4.1
+- [x] T012 [US1] [US2] Implement `_load_builtin_profiles()` in `PathProfileRegistry` and call from `__init__`. Also implement `load_entry_points()` to scan `agent_transfer.path_profiles` entry point group (graceful no-op if none found)
+- [x] T013 [US1] Implement `config_dir(slug)` in `Pathfinder` — resolve `Path.home() / profile.config_dir`, return absolute path. Use `_cache` for results
+- [x] T014 [P] [US1] Implement `agents_dir(slug)`, `skills_dir(slug)`, `hooks_dir(slug)` in `Pathfinder` — derive from `config_dir()` + profile subdirs. Return `None` if subdir is `None`
+- [x] T015 [P] [US1] Implement `config_files(slug)` in `Pathfinder` — return list of `config_dir / filename` for each entry in `profile.config_files`
+- [x] T016 [US1] Implement `project_agents_dir(slug, start_dir)` and `project_skills_dir(slug, start_dir)` in `Pathfinder` — search upward from `start_dir` (default `Path.cwd()`) for `project_config_dir / subdir`, stopping at `project_search_depth` levels or filesystem root. Return `None` if not found or platform doesn't support project-level
+- [x] T017 [US1] Implement `all_agents_dirs(slug)` and `all_skills_dirs(slug)` in `Pathfinder` — return `List[Tuple[Path, str]]` combining user-level and project-level results with scope labels `"user"` and `"project"`
+- [x] T018 [P] [US1] Implement `validate_path(path)` and `ensure_dir(path)` utility methods in `Pathfinder`
+- [x] T019 [US1] Implement `register_profile(profile)` on `Pathfinder` that delegates to `registry.register()` and clears cache
+- [x] T020 [US1] [US2] Update `__all__` in `agent_transfer/utils/pathfinder.py` to export `PathProfile`, `PathProfileRegistry`, `Pathfinder`, `get_pathfinder`
 
 ### Tests
 
-- [ ] T021 [P] [US1] [US2] Write tests for all 5 built-in profiles in `tests/test_pathfinder.py` — verify `config_dir`, `agents_dir`, `skills_dir`, `hooks_dir`, `config_files` for each platform using monkeypatched `Path.home()`
-- [ ] T022 [P] [US1] Write tests for `None` returns — `hooks_dir("codex")`, `agents_dir("goose")` should return `None` in `tests/test_pathfinder.py`
-- [ ] T023 [P] [US1] Write tests for project-level resolution in `tests/test_pathfinder.py` — create `.claude/agents/` in tmp_path tree, verify `project_agents_dir` finds it. Verify returns `None` when not found
-- [ ] T024 [P] [US1] Write tests for `all_agents_dirs` and `all_skills_dirs` in `tests/test_pathfinder.py` — verify combined user+project results with scope labels
-- [ ] T025 [US2] Write test for third-party profile registration in `tests/test_pathfinder.py` — register a mock profile, verify all resolution methods work for it
+- [x] T021 [P] [US1] [US2] Write tests for all 5 built-in profiles in `tests/test_pathfinder.py` — verify `config_dir`, `agents_dir`, `skills_dir`, `hooks_dir`, `config_files` for each platform using monkeypatched `Path.home()`
+- [x] T022 [P] [US1] Write tests for `None` returns — `hooks_dir("codex")`, `agents_dir("goose")` should return `None` in `tests/test_pathfinder.py`
+- [x] T023 [P] [US1] Write tests for project-level resolution in `tests/test_pathfinder.py` — create `.claude/agents/` in tmp_path tree, verify `project_agents_dir` finds it. Verify returns `None` when not found
+- [x] T024 [P] [US1] Write tests for `all_agents_dirs` and `all_skills_dirs` in `tests/test_pathfinder.py` — verify combined user+project results with scope labels
+- [x] T025 [US2] Write test for third-party profile registration in `tests/test_pathfinder.py` — register a mock profile, verify all resolution methods work for it
 
 **Checkpoint**: Core pathfinder resolves paths for all 5 platforms. This is the MVP — all consuming modules could start using it.
 
@@ -82,15 +82,15 @@
 
 ### Implementation
 
-- [ ] T026 [US6] Implement `find_executable(slug)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` — ordered search: `shutil.which()` → env override path → npm global (`~/.npm-global/bin/`, `~/.local/share/npm/bin/`) → npm prefix (`npm config get prefix`) → nvm paths → virtualenv → conda → system paths (`/usr/local/bin/`, `/usr/bin/`) → `profile.search_paths`. Cache results. Return `Optional[Path]`
-- [ ] T027 [US6] Add platform-specific search strategy filtering — only run npm/nvm strategies for platforms whose profiles need them (Claude Code, Codex). Skip for Goose, OpenCode, Gemini CLI
+- [x] T026 [US6] Implement `find_executable(slug)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` — ordered search: `shutil.which()` → env override path → npm global (`~/.npm-global/bin/`, `~/.local/share/npm/bin/`) → npm prefix (`npm config get prefix`) → nvm paths → virtualenv → conda → system paths (`/usr/local/bin/`, `/usr/bin/`) → `profile.search_paths`. Cache results. Return `Optional[Path]`
+- [x] T027 [US6] Add platform-specific search strategy filtering — only run npm/nvm strategies for platforms whose profiles need them (Claude Code, Codex). Skip for Goose, OpenCode, Gemini CLI
 
 ### Tests
 
-- [ ] T028 [P] [US6] Write test for `find_executable` with mocked `shutil.which` success in `tests/test_pathfinder.py`
-- [ ] T029 [P] [US6] Write test for `find_executable` fallback chain — `shutil.which` fails, falls back to npm global path in `tests/test_pathfinder.py`
-- [ ] T030 [P] [US6] Write test for `find_executable` returns `None` when not found anywhere in `tests/test_pathfinder.py`
-- [ ] T031 [US6] Write test for executable caching — verify `shutil.which` called once for repeated lookups, cleared by `clear_cache()` in `tests/test_pathfinder.py`
+- [x] T028 [P] [US6] Write test for `find_executable` with mocked `shutil.which` success in `tests/test_pathfinder.py`
+- [x] T029 [P] [US6] Write test for `find_executable` fallback chain — `shutil.which` fails, falls back to npm global path in `tests/test_pathfinder.py`
+- [x] T030 [P] [US6] Write test for `find_executable` returns `None` when not found anywhere in `tests/test_pathfinder.py`
+- [x] T031 [US6] Write test for executable caching — verify `shutil.which` called once for repeated lookups, cleared by `clear_cache()` in `tests/test_pathfinder.py`
 
 **Checkpoint**: Executable discovery consolidated. `discovery.py` can delegate to pathfinder.
 
@@ -104,13 +104,13 @@
 
 ### Implementation
 
-- [ ] T032 [US3] Implement `remap_path(path, source_home, target_home)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` — string prefix replacement. Return original path if: relative, no source_home prefix, or already matches target_home
+- [x] T032 [US3] Implement `remap_path(path, source_home, target_home)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` — string prefix replacement. Return original path if: relative, no source_home prefix, or already matches target_home
 
 ### Tests
 
-- [ ] T033 [P] [US3] Write test for successful path remapping in `tests/test_pathfinder.py`
-- [ ] T034 [P] [US3] Write test for no-op cases: relative path, no prefix match, already-correct path in `tests/test_pathfinder.py`
-- [ ] T035 [P] [US3] Write test for edge case: source_home embedded in non-prefix position (e.g., `/opt/home/alice/...`) in `tests/test_pathfinder.py`
+- [x] T033 [P] [US3] Write test for successful path remapping in `tests/test_pathfinder.py`
+- [x] T034 [P] [US3] Write test for no-op cases: relative path, no prefix match, already-correct path in `tests/test_pathfinder.py`
+- [x] T035 [P] [US3] Write test for edge case: source_home embedded in non-prefix position (e.g., `/opt/home/alice/...`) in `tests/test_pathfinder.py`
 
 **Checkpoint**: Path remapping works. `config_manager.py` can delegate to pathfinder.
 
@@ -124,13 +124,13 @@
 
 ### Implementation
 
-- [ ] T036 [US4] Update `config_dir(slug)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` to check `os.environ.get(profile.env_override_var)` first, fall back to default. Ensure override propagates to all derived methods (`agents_dir`, `skills_dir`, etc.) since they call `config_dir` internally
+- [x] T036 [US4] Update `config_dir(slug)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` to check `os.environ.get(profile.env_override_var)` first, fall back to default. Ensure override propagates to all derived methods (`agents_dir`, `skills_dir`, etc.) since they call `config_dir` internally
 
 ### Tests
 
-- [ ] T037 [P] [US4] Write test for env override on `config_dir` using `monkeypatch.setenv` in `tests/test_pathfinder.py`
-- [ ] T038 [P] [US4] Write test for env override propagation to `agents_dir`, `skills_dir`, `hooks_dir`, `config_files` in `tests/test_pathfinder.py`
-- [ ] T039 [US4] Write test for fallback when env var is not set in `tests/test_pathfinder.py`
+- [x] T037 [P] [US4] Write test for env override on `config_dir` using `monkeypatch.setenv` in `tests/test_pathfinder.py`
+- [x] T038 [P] [US4] Write test for env override propagation to `agents_dir`, `skills_dir`, `hooks_dir`, `config_files` in `tests/test_pathfinder.py`
+- [x] T039 [US4] Write test for fallback when env var is not set in `tests/test_pathfinder.py`
 
 **Checkpoint**: Environment overrides work. Non-standard installations supported.
 
@@ -144,13 +144,13 @@
 
 ### Implementation
 
-- [ ] T040 [US5] Implement `translate_path(path, from_platform, to_platform)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` — build map of expanded platform dirs, match longest prefix, swap with target platform equivalent. Return `(translated_path, warning)` tuple. Warning is `None` on success or descriptive message if path doesn't match any known dir
+- [x] T040 [US5] Implement `translate_path(path, from_platform, to_platform)` in `Pathfinder` in `agent_transfer/utils/pathfinder.py` — build map of expanded platform dirs, match longest prefix, swap with target platform equivalent. Return `(translated_path, warning)` tuple. Warning is `None` on success or descriptive message if path doesn't match any known dir
 
 ### Tests
 
-- [ ] T041 [P] [US5] Write test for successful translation Claude Code → Goose skills path in `tests/test_pathfinder.py`
-- [ ] T042 [P] [US5] Write test for translation with unrecognized path — verify warning returned in `tests/test_pathfinder.py`
-- [ ] T043 [P] [US5] Write test for translation between all 5 platforms for config_dir paths in `tests/test_pathfinder.py`
+- [x] T041 [P] [US5] Write test for successful translation Claude Code → Goose skills path in `tests/test_pathfinder.py`
+- [x] T042 [P] [US5] Write test for translation with unrecognized path — verify warning returned in `tests/test_pathfinder.py`
+- [x] T043 [P] [US5] Write test for translation between all 5 platforms for config_dir paths in `tests/test_pathfinder.py`
 
 **Checkpoint**: Cross-platform translation works. Phase 3+ cross-platform conversion ready.
 
@@ -162,15 +162,15 @@
 
 **⚠️ Depends on**: Phases 3-6 complete (all pathfinder features needed by consuming modules)
 
-- [ ] T044 [US1] Refactor `agent_transfer/utils/discovery.py` — replace 7 executable search strategies and 4 config location searches with `pf.find_executable()`, `pf.config_dir()`, `pf.all_agents_dirs()`. Keep function signatures unchanged (R4, R5)
-- [ ] T045 [US1] Refactor `agent_transfer/utils/config_manager.py` — replace `Path.home() / '.claude'` for mcp.json, settings.json, settings.local.json with `pf.config_files()`. Replace ad-hoc path remapping with `pf.remap_path()`. Keep function signatures unchanged
-- [ ] T046 [US1] Refactor `agent_transfer/utils/transfer.py` — replace `Path.home() / '.claude' / 'agents'`, `Path.home() / '.claude' / 'skills'`, and `Path.cwd()` variants with `pf.agents_dir()`, `pf.skills_dir()`, `pf.project_agents_dir()`, `pf.project_skills_dir()`. Keep function signatures unchanged
-- [ ] T047 [P] [US1] Refactor `agent_transfer/utils/import_analyzer.py` — replace `Path.home() / '.claude' / 'agents'` with `pf.agents_dir()` and `pf.project_agents_dir()`. Keep function signatures unchanged
-- [ ] T048 [P] [US1] Refactor `agent_transfer/utils/skill_discovery.py` — replace `Path.home() / '.claude' / 'skills'` and recursive cwd search with `pf.all_skills_dirs()`. Keep function signatures unchanged
-- [ ] T049 [P] [US1] Refactor `agent_transfer/utils/tool_checker.py` — replace 5 MCP config location checks with `pf.config_files("claude-code")`. Keep function signatures unchanged
-- [ ] T050 [US1] Refactor `agent_transfer/cli.py` — replace `Path.home() / '.claude' / 'skills'` and `Path.cwd()` variants with `pf.skills_dir()`, `pf.project_skills_dir()`. Keep function signatures unchanged
-- [ ] T051 [US1] Run full test suite (`pytest tests/`) and verify zero regressions — all existing tests pass
-- [ ] T052 [US1] Run `grep -r "Path.home().*\.claude" agent_transfer/` and verify results appear ONLY in `pathfinder.py`
+- [x] T044 [US1] Refactor `agent_transfer/utils/discovery.py` — replace 7 executable search strategies and 4 config location searches with `pf.find_executable()`, `pf.config_dir()`, `pf.all_agents_dirs()`. Keep function signatures unchanged (R4, R5)
+- [x] T045 [US1] Refactor `agent_transfer/utils/config_manager.py` — replace `Path.home() / '.claude'` for mcp.json, settings.json, settings.local.json with `pf.config_files()`. Replace ad-hoc path remapping with `pf.remap_path()`. Keep function signatures unchanged
+- [x] T046 [US1] Refactor `agent_transfer/utils/transfer.py` — replace `Path.home() / '.claude' / 'agents'`, `Path.home() / '.claude' / 'skills'`, and `Path.cwd()` variants with `pf.agents_dir()`, `pf.skills_dir()`, `pf.project_agents_dir()`, `pf.project_skills_dir()`. Keep function signatures unchanged
+- [x] T047 [P] [US1] Refactor `agent_transfer/utils/import_analyzer.py` — replace `Path.home() / '.claude' / 'agents'` with `pf.agents_dir()` and `pf.project_agents_dir()`. Keep function signatures unchanged
+- [x] T048 [P] [US1] Refactor `agent_transfer/utils/skill_discovery.py` — replace `Path.home() / '.claude' / 'skills'` and recursive cwd search with `pf.all_skills_dirs()`. Keep function signatures unchanged
+- [x] T049 [P] [US1] Refactor `agent_transfer/utils/tool_checker.py` — replace 5 MCP config location checks with `pf.config_files("claude-code")`. Keep function signatures unchanged
+- [x] T050 [US1] Refactor `agent_transfer/cli.py` — replace `Path.home() / '.claude' / 'skills'` and `Path.cwd()` variants with `pf.skills_dir()`, `pf.project_skills_dir()`. Keep function signatures unchanged
+- [x] T051 [US1] Run full test suite (`pytest tests/`) and verify zero regressions — all existing tests pass
+- [x] T052 [US1] Run `grep -r "Path.home().*\.claude" agent_transfer/` and verify results appear ONLY in `pathfinder.py`
 
 **Checkpoint**: All modules use pathfinder. Zero scattered path construction. All existing tests pass.
 
@@ -180,11 +180,11 @@
 
 **Purpose**: Validation, adversarial testing, and cleanup
 
-- [ ] T053 [P] Run ruff linter on `agent_transfer/utils/pathfinder.py` and fix all findings
-- [ ] T054 [P] Run ruff linter on all 7 refactored modules and fix all findings
-- [ ] T055 Adversarial bug hunt — targeted: path traversal in `remap_path()` and `translate_path()`, edge cases in project-level search, symlink handling, container edge cases (run adversarial-bug-hunter agent)
-- [ ] T056 Adversarial bug hunt — general logic scan across pathfinder.py and all refactored modules (run adversarial-bug-hunter agent)
-- [ ] T057 Validate quickstart.md examples work against actual implementation
+- [x] T053 [P] Run ruff linter on `agent_transfer/utils/pathfinder.py` and fix all findings
+- [x] T054 [P] Run ruff linter on all 7 refactored modules and fix all findings
+- [x] T055 Adversarial bug hunt — targeted: path traversal in `remap_path()` and `translate_path()`, edge cases in project-level search, symlink handling, container edge cases (run adversarial-bug-hunter agent)
+- [x] T056 Adversarial bug hunt — general logic scan across pathfinder.py and all refactored modules (run adversarial-bug-hunter agent)
+- [x] T057 Validate quickstart.md examples work against actual implementation
 - [ ] T058 Git checkpoint — commit all changes
 
 ---

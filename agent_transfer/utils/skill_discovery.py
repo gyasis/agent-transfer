@@ -18,12 +18,15 @@ def find_skill_directories() -> List[Tuple[Path, str]]:
     Returns:
         List of (skill_dir_path, type) where type is 'user' or 'project'
     """
+    from .pathfinder import get_pathfinder
+
+    pf = get_pathfinder()
     skill_dirs = []
     seen_paths = set()
 
-    # User-level skills (in ~/.claude/skills/<skill-name>/)
-    user_skills_base = Path.home() / ".claude" / "skills"
-    if user_skills_base.exists() and user_skills_base.is_dir():
+    # User-level skills
+    user_skills_base = pf.skills_dir("claude-code")
+    if user_skills_base is not None and user_skills_base.exists() and user_skills_base.is_dir():
         for skill_dir in user_skills_base.iterdir():
             if skill_dir.is_dir():
                 skill_md = skill_dir / "SKILL.md"
@@ -33,10 +36,9 @@ def find_skill_directories() -> List[Tuple[Path, str]]:
                         seen_paths.add(resolved_path)
                         skill_dirs.append((skill_dir, "user"))
 
-    # Project-level skills (in .claude/skills/<skill-name>/ relative to current/project directory)
-    # But NOT the user-level ~/.claude/skills directory
+    # Project-level skills — but NOT the user-level directory
     user_skills_resolved = (
-        user_skills_base.resolve() if user_skills_base.exists() else None
+        user_skills_base.resolve() if user_skills_base is not None and user_skills_base.exists() else None
     )
     current_dir = Path.cwd()
 
@@ -47,7 +49,6 @@ def find_skill_directories() -> List[Tuple[Path, str]]:
         if project_skills_base.exists() and project_skills_base.is_dir():
             resolved_base = project_skills_base.resolve()
             if resolved_base != user_skills_resolved:
-                # Iterate through skill directories
                 for skill_dir in project_skills_base.iterdir():
                     if skill_dir.is_dir():
                         skill_md = skill_dir / "SKILL.md"
@@ -57,7 +58,6 @@ def find_skill_directories() -> List[Tuple[Path, str]]:
                                 seen_paths.add(resolved_path)
                                 skill_dirs.append((skill_dir, "project"))
 
-        # Move up one directory level
         current_dir = current_dir.parent
         if current_dir == current_dir.parent:  # Reached root
             break

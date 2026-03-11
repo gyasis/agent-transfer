@@ -12,12 +12,10 @@ import json
 import os
 import re
 import shutil
-import tarfile
-import tempfile
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -73,16 +71,22 @@ def _redact_value(value: str) -> str:
 
 
 def _remap_path(path_str: str, source_home: str, target_home: str) -> str:
-    """Remap absolute paths from source to target home directory."""
-    if source_home and path_str.startswith(source_home):
-        return path_str.replace(source_home, target_home, 1)
-    return path_str
+    """Remap absolute paths from source to target home directory.
+
+    Delegates to Pathfinder.remap_path for consistent cross-module behavior.
+    """
+    from .pathfinder import get_pathfinder
+
+    pf = get_pathfinder()
+    result = pf.remap_path(Path(path_str), source_home, target_home)
+    return str(result)
 
 
 def read_mcp_json(claude_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Read ~/.claude/mcp.json — MCP server definitions."""
     if claude_dir is None:
-        claude_dir = Path.home() / '.claude'
+        from .pathfinder import get_pathfinder
+        claude_dir = get_pathfinder().config_dir("claude-code")
 
     mcp_path = claude_dir / 'mcp.json'
     if not mcp_path.exists():
@@ -95,7 +99,8 @@ def read_mcp_json(claude_dir: Optional[Path] = None) -> Dict[str, Any]:
 def read_settings_json(claude_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Read ~/.claude/settings.json — hooks, env, plugins, etc."""
     if claude_dir is None:
-        claude_dir = Path.home() / '.claude'
+        from .pathfinder import get_pathfinder
+        claude_dir = get_pathfinder().config_dir("claude-code")
 
     settings_path = claude_dir / 'settings.json'
     if not settings_path.exists():
@@ -108,7 +113,8 @@ def read_settings_json(claude_dir: Optional[Path] = None) -> Dict[str, Any]:
 def read_settings_local_json(claude_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Read ~/.claude/settings.local.json — permissions."""
     if claude_dir is None:
-        claude_dir = Path.home() / '.claude'
+        from .pathfinder import get_pathfinder
+        claude_dir = get_pathfinder().config_dir("claude-code")
 
     path = claude_dir / 'settings.local.json'
     if not path.exists():
@@ -239,7 +245,8 @@ def export_config(
     Returns:
         Path to created config file
     """
-    claude_dir = Path.home() / '.claude'
+    from .pathfinder import get_pathfinder
+    claude_dir = get_pathfinder().config_dir("claude-code")
 
     if output_file is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -381,7 +388,8 @@ def import_config(
                 'install_hint': info['install_hint'],
             })
 
-    claude_dir = Path.home() / '.claude'
+    from .pathfinder import get_pathfinder
+    claude_dir = get_pathfinder().config_dir("claude-code")
     claude_dir.mkdir(parents=True, exist_ok=True)
 
     if dry_run:

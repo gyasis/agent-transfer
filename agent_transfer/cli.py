@@ -277,9 +277,7 @@ def list_skills():
 
     if not skills:
         console.print("[yellow]No skills found[/yellow]")
-        console.print("\n[dim]Checked locations:[/dim]")
-        console.print(f"  - {Path.home() / '.claude' / 'skills'}")
-        console.print(f"  - {Path.cwd() / '.claude' / 'skills'}")
+        console.print("\n[dim]Run 'agent-transfer discover' to see search locations[/dim]")
         return
 
     from rich.table import Table
@@ -479,9 +477,7 @@ def validate_skills(verbose, archive, show_env, show_setup):
 
         if not skills:
             console.print("[yellow]No skills found to validate.[/yellow]")
-            console.print("\n[dim]Checked locations:[/dim]")
-            console.print(f"  - {Path.home() / '.claude' / 'skills'}")
-            console.print(f"  - {Path.cwd() / '.claude' / 'skills'}")
+            console.print("\n[dim]Run 'agent-transfer discover' to see search locations[/dim]")
             return
 
         # Validate all skills

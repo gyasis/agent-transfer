@@ -52,7 +52,7 @@ def analyze_import_archive(archive_path: str) -> ImportPreview:
                 tar.extractall(temp_path)
         except tarfile.TarError as e:
             raise RuntimeError(
-                f"Failed to extract archive. File may be corrupted."
+                "Failed to extract archive. File may be corrupted."
             ) from e
 
         # Read metadata if present
@@ -247,14 +247,22 @@ def find_local_agent_path(agent_name: str, agent_type: str) -> Optional[Path]:
     Returns:
         Path to local agent file if it exists, None otherwise
     """
+    from .pathfinder import get_pathfinder
+
+    pf = get_pathfinder()
+
     if agent_type == "user":
-        # User agents live in ~/.claude/agents/
-        user_agents_dir = Path.home() / ".claude" / "agents"
+        user_agents_dir = pf.agents_dir("claude-code")
+        if user_agents_dir is None:
+            return None
         agent_path = user_agents_dir / f"{agent_name}.md"
     elif agent_type == "project":
-        # Project agents live in .claude/agents/ (current directory)
-        project_agents_dir = Path.cwd() / ".claude" / "agents"
-        agent_path = project_agents_dir / f"{agent_name}.md"
+        project_agents_dir = pf.project_agents_dir("claude-code")
+        if project_agents_dir is None:
+            # Fall back to cwd-based path for creation scenarios
+            agent_path = Path.cwd() / ".claude" / "agents" / f"{agent_name}.md"
+        else:
+            agent_path = project_agents_dir / f"{agent_name}.md"
     else:
         return None
 
