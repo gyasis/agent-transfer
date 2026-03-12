@@ -49,7 +49,7 @@
 - [x] T014 [US3] Implement `write_manifest()` and `read_manifest()` JSON serialization in `agent_transfer/utils/preflight/manifest.py`
 - [x] T015 [US3] Implement `read_manifest_from_archive()` — safe tarfile extraction of manifest.json in `agent_transfer/utils/preflight/manifest.py`
 - [x] T016 [US3] Modify `agent_transfer/utils/transfer.py` export flow to call `collect_inventory()` and bundle `manifest.json` in archive
-- [ ] T017 [US3] Implement collector tests — verify manifest generation against fixture agents/skills in `tests/test_preflight_collector.py`
+- [x] T017 [US3] Implement collector tests — verify manifest generation against fixture agents/skills in `tests/test_preflight_collector.py`
 
 **Checkpoint**: `agent-transfer export` produces archives with valid `manifest.json`
 
@@ -63,13 +63,13 @@
 
 ### Implementation
 
-- [ ] T018 [US1] Implement checker logic — check_mcp, check_cli, check_env, check_git_repos, check_binaries, check_skill_trees, check_docker, check_packages, check_sourced_files in `agent_transfer/utils/preflight/checker.py`
-- [ ] T019 [US1] Implement `run_preflight_checks()` public API that orchestrates all checkers in `agent_transfer/utils/preflight/__init__.py`
-- [ ] T020 [US1] Implement Rich readiness report display in `agent_transfer/utils/preflight/report.py`
-- [ ] T021 [US1] Implement `report_to_json()` for --json flag in `agent_transfer/utils/preflight/report.py`
-- [ ] T022 [US1] Add `preflight` CLI command to `agent_transfer/cli.py` — accepts archive path, --json flag
-- [ ] T023 [US1] Handle legacy archives (no manifest) — show warning, exit 0 in `agent_transfer/cli.py`
-- [ ] T024 [US1] Implement checker tests — mock env for GREEN/YELLOW/RED paths in `tests/test_preflight_checker.py`
+- [x] T018 [US1] Implement checker logic — check_mcp, check_cli, check_env, check_git_repos, check_binaries, check_skill_trees, check_docker, check_packages, check_sourced_files in `agent_transfer/utils/preflight/checker.py`
+- [x] T019 [US1] Implement `run_preflight_checks()` public API that orchestrates all checkers in `agent_transfer/utils/preflight/__init__.py`
+- [x] T020 [US1] Implement Rich readiness report display in `agent_transfer/utils/preflight/report.py`
+- [x] T021 [US1] Implement `report_to_json()` for --json flag in `agent_transfer/utils/preflight/report.py`
+- [x] T022 [US1] Add `preflight` CLI command to `agent_transfer/cli.py` — accepts archive path, --json flag
+- [x] T023 [US1] Handle legacy archives (no manifest) — show warning, exit 0 in `agent_transfer/cli.py`
+- [x] T024 [US1] Implement checker tests — mock env for GREEN/YELLOW/RED paths in `tests/test_preflight_checker.py`
 
 **Checkpoint**: `agent-transfer preflight archive.tar.gz` shows color-coded report with remediation hints
 
@@ -83,10 +83,10 @@
 
 ### Implementation
 
-- [ ] T025 [US2] Modify `agent_transfer/cli.py` import command — add --force flag, read manifest before extraction
-- [ ] T026 [US2] Integrate preflight check into import flow — run checks, display report, prompt on RED in `agent_transfer/cli.py`
-- [ ] T027 [US2] Handle legacy archives in import — show "no preflight data" warning, proceed in `agent_transfer/cli.py`
-- [ ] T028 [US2] Implement import gate tests — verify block on RED, warn on YELLOW, pass on GREEN in `tests/test_preflight.py`
+- [x] T025 [US2] Modify `agent_transfer/cli.py` import command — add --force flag, read manifest before extraction
+- [x] T026 [US2] Integrate preflight check into import flow — run checks, display report, prompt on RED in `agent_transfer/cli.py`
+- [x] T027 [US2] Handle legacy archives in import — show "no preflight data" warning, proceed in `agent_transfer/cli.py`
+- [x] T028 [US2] Implement import gate tests — verify block on RED, warn on YELLOW, pass on GREEN in `tests/test_preflight.py`
 
 **Checkpoint**: `agent-transfer import` gates on preflight results. Legacy archives still import. --force bypasses.
 
@@ -100,9 +100,9 @@
 
 ### Implementation
 
-- [ ] T029 [US4] Add --self flag to preflight CLI command — scan local env using pathfinder in `agent_transfer/cli.py`
-- [ ] T030 [US4] Implement self-audit collector path — discover local agents, skills, hooks, configs via pathfinder in `agent_transfer/utils/preflight/collector.py`
-- [ ] T031 [US4] Support --self --json combination for manifest-format output in `agent_transfer/cli.py`
+- [x] T029 [US4] Add --self flag to preflight CLI command — scan local env using pathfinder in `agent_transfer/cli.py`
+- [x] T030 [US4] Implement self-audit collector path — discover local agents, skills, hooks, configs via pathfinder in `agent_transfer/utils/preflight/collector.py`
+- [x] T031 [US4] Support --self --json combination for manifest-format output in `agent_transfer/cli.py`
 
 **Checkpoint**: `agent-transfer preflight --self` produces full dependency inventory of local machine
 

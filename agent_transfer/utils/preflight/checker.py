@@ -114,7 +114,7 @@ def check_cli(dep: CliToolDep) -> CheckResult:
             message=f"CLI tool '{dep.name}' found on PATH",
         )
 
-    hint = dep.install_hint or get_cli_hint(dep.name)
+    hint = dep.install_hint or get_cli_hint(dep.name) or f"Install '{dep.name}' and ensure it is on your PATH"
     if dep.optional:
         return CheckResult(
             dependency=dep,

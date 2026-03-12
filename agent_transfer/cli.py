@@ -105,7 +105,8 @@ def export(output_file, export_all, interactive, export_type, agent_type, discov
 @click.option('--discover', is_flag=True, help='Show Claude Code installation info before import')
 @click.option('--bulk', is_flag=True, help='Skip preview, import all agents (old behavior)')
 @click.option('--agent', type=str, help='Import specific agent by name')
-def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk, agent):
+@click.option('--force', is_flag=True, help='Bypass preflight RED blocks and import anyway')
+def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk, agent, force=False):
     """Import agents from a tar.gz archive.
 
     INPUT_FILE is the path to the backup archive to import.
@@ -129,6 +130,42 @@ def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk
             info = discover_claude_code_info()
             display_discovery_info(info)
             console.print()
+
+        # Preflight gate: check readiness before importing
+        try:
+            from .utils.preflight import run_preflight_checks, read_manifest_from_archive
+            from .utils.preflight.report import display_readiness_report
+
+            manifest = read_manifest_from_archive(Path(input_file))
+            if manifest is None:
+                console.print(
+                    "[yellow]No preflight data — this archive was created "
+                    "before preflight support. Proceeding with import.[/yellow]"
+                )
+                console.print()
+            else:
+                report = run_preflight_checks(manifest)
+                display_readiness_report(report)
+
+                if report.overall_status == "FAIL" and not force:
+                    console.print()
+                    if click.confirm(
+                        "[red]RED items detected.[/red] Continue with import?",
+                        default=False,
+                    ):
+                        console.print("[yellow]Proceeding despite RED items...[/yellow]")
+                    else:
+                        console.print("[dim]Import cancelled. Use --force to bypass.[/dim]")
+                        sys.exit(1)
+                elif report.overall_status == "WARN":
+                    console.print(
+                        "[yellow]YELLOW warnings detected. Proceeding with import.[/yellow]"
+                    )
+                    console.print()
+        except ImportError:
+            pass  # Preflight module not available — proceed without gate
+        except Exception as preflight_err:
+            console.print(f"[dim yellow]Preflight check skipped: {preflight_err}[/dim yellow]")
 
         # Convert string to ConflictMode enum
         mode = ConflictMode(conflict_mode)
@@ -567,6 +604,114 @@ def check_ready(archive, verbose, all_skills):
 
     except Exception as e:
         console.print(f"[red]Error during readiness check: {e}[/red]")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument('archive', required=False, type=click.Path(exists=False))
+@click.option('--json', 'json_output', is_flag=True, help='Machine-readable JSON output')
+@click.option('--self', 'self_audit', is_flag=True, help='Audit local environment (no archive needed)')
+@click.option('--force', is_flag=True, help='Used with import gate — bypass RED blocks')
+def preflight(archive, json_output, self_audit, force):
+    """Check transfer readiness for an archive or local environment.
+
+    Run against an archive:
+        agent-transfer preflight archive.tar.gz
+
+    Audit local machine:
+        agent-transfer preflight --self
+
+    Machine-readable output:
+        agent-transfer preflight archive.tar.gz --json
+    """
+    from .utils.preflight import (
+        run_preflight_checks,
+        read_manifest_from_archive,
+        collect_inventory,
+        TransferManifest,
+    )
+    from .utils.preflight.report import display_readiness_report, report_to_json
+
+    try:
+        manifest = None
+
+        if self_audit:
+            # T029/T030: Self-audit mode — scan local environment
+            from .utils.preflight.collector import collect_inventory as _collect
+            try:
+                from .utils.pathfinder import get_pathfinder
+                pf = get_pathfinder()
+                slug = "claude-code"
+
+                # Discover agents
+                agents_dir = pf.agents_dir(slug)
+                agents = []
+                if agents_dir and agents_dir.is_dir():
+                    agents = list(agents_dir.glob("*.md"))
+
+                # Discover skills
+                skills_dir = pf.skills_dir(slug)
+                skills = []
+                if skills_dir and skills_dir.is_dir():
+                    skills = [d for d in skills_dir.iterdir() if d.is_dir()]
+
+                # Discover MCP configs
+                configs = []
+                mcp_config = pf.config_dir(slug) / "settings.json"
+                if mcp_config.exists():
+                    configs.append(mcp_config)
+            except Exception:
+                agents = []
+                skills = []
+                configs = []
+
+            manifest = _collect(
+                agents=agents,
+                skills=skills,
+                hooks=[],
+                configs=configs,
+                platform="claude-code",
+            )
+        elif archive:
+            archive_path = Path(archive)
+            if not archive_path.exists():
+                console.print(f"[red]Archive not found: {archive}[/red]")
+                sys.exit(1)
+
+            manifest = read_manifest_from_archive(archive_path)
+
+            if manifest is None:
+                # Legacy archive — no manifest
+                console.print(
+                    "[yellow]No manifest.json found — this archive was created "
+                    "before preflight support.[/yellow]"
+                )
+                sys.exit(0)
+        else:
+            console.print("[red]Please provide an archive path or use --self[/red]")
+            console.print("Usage: agent-transfer preflight <archive.tar.gz>")
+            console.print("       agent-transfer preflight --self")
+            sys.exit(1)
+
+        # Run checks
+        report = run_preflight_checks(manifest)
+
+        # Output
+        if json_output:
+            click.echo(report_to_json(report))
+        else:
+            display_readiness_report(report)
+
+        # Exit code: 0 for PASS/WARN, 1 for FAIL
+        if report.overall_status == "FAIL" and not force:
+            sys.exit(1)
+
+    except SystemExit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Preflight check failed: {e}[/red]")
         import traceback
         console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
