@@ -4,7 +4,7 @@ CheckResult and ReadinessReport dataclasses for representing
 the outcome of dependency checks against the local environment.
 """
 
-import importlib
+import importlib.util
 import os
 import platform
 import shutil
@@ -141,7 +141,17 @@ def check_env(dep: EnvVarDep) -> CheckResult:
     GREEN if set. YELLOW if not critical and missing. RED if critical and missing.
     NEVER logs the value (R8 compliance).
     """
-    is_set = os.environ.get(dep.name) is not None
+    value = os.environ.get(dep.name)
+    is_set = value is not None
+
+    # For critical vars, empty string is functionally unset
+    if is_set and dep.critical and value == "":
+        return CheckResult(
+            dependency=dep,
+            status="YELLOW",
+            message=f"Environment variable '{dep.name}' is set but empty",
+            remediation=f"export {dep.name}=<value>",
+        )
 
     if is_set:
         return CheckResult(
@@ -172,6 +182,17 @@ def check_git_repos(dep: GitRepoDep) -> CheckResult:
     GREEN if dir exists with .git. YELLOW if dir exists without .git.
     RED if directory missing.
     """
+    if not dep.local_path:
+        remediation = (
+            f"git clone {dep.repo_url}" if dep.repo_url else "Clone the repository"
+        )
+        return CheckResult(
+            dependency=dep,
+            status="RED",
+            message=f"Git repo '{dep.name}': no local path specified",
+            remediation=remediation,
+        )
+
     repo_path = Path(dep.local_path).expanduser()
 
     if not repo_path.is_dir():
@@ -334,14 +355,15 @@ def check_packages(dep: PackageDep) -> CheckResult:
     if dep.ecosystem == "python":
         # Normalize package name for import (e.g. my-package -> my_package)
         import_name = dep.name.replace("-", "_")
-        try:
-            importlib.import_module(import_name)
+        # Use find_spec to check without executing module-level code
+        spec = importlib.util.find_spec(import_name)
+        if spec is not None:
             return CheckResult(
                 dependency=dep,
                 status="GREEN",
                 message=f"Python package '{dep.name}' is importable",
             )
-        except ImportError:
+        else:
             return CheckResult(
                 dependency=dep,
                 status="RED",

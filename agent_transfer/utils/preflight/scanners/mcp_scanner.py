@@ -146,31 +146,30 @@ def _detect_install_type(
 
     Detection order mirrors the spec priority list.
     """
-    cmd_lower = command.lower()
     cmd_base = os.path.basename(command).lower()
 
     # npx → npm-on-demand
-    if cmd_base == "npx" or "npx" in cmd_lower:
+    if cmd_base == "npx":
         package = _extract_npx_package(args)
         return ("npm-on-demand", package, "node")
 
     # bunx → bun-on-demand
-    if cmd_base == "bunx" or "bunx" in cmd_lower:
+    if cmd_base == "bunx":
         package = args[0] if args else None
         return ("bun-on-demand", package, "node")
 
     # python / uv → git-repo-python-venv or git-repo-uv
-    if "python" in cmd_lower or cmd_base == "uv" or "uv" in cmd_lower:
-        if cmd_base == "uv" or "uv" in cmd_lower:
-            return ("git-repo-uv", None, "python")
+    if cmd_base in ("uv", "uvx"):
+        return ("git-repo-uv", None, "python")
+    if cmd_base in ("python", "python3") or cmd_base.startswith("python3."):
         return ("git-repo-python-venv", None, "python")
 
     # node → git-repo-node
-    if "node" in cmd_lower:
+    if cmd_base in ("node", "nodejs"):
         return ("git-repo-node", None, "node")
 
     # docker
-    if "docker" in cmd_lower:
+    if cmd_base in ("docker", "docker-compose"):
         return ("docker", None, "docker")
 
     # remote SSE endpoint
