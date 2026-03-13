@@ -711,7 +711,7 @@ class TestReadManifestFromLegacyArchive:
 
     def test_returns_none_for_empty_archive(self, tmp_path):
         archive_path = tmp_path / "empty.tar.gz"
-        with tarfile.open(str(archive_path), "w:gz") as tf:
+        with tarfile.open(str(archive_path), "w:gz"):
             pass  # empty archive
 
         result = read_manifest_from_archive(archive_path)

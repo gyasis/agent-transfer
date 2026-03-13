@@ -6,7 +6,6 @@ that gets bundled as manifest.json in export archives.
 
 import json
 import tarfile
-import io
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -188,6 +187,18 @@ def _manifest_to_dict(manifest: TransferManifest) -> Dict[str, Any]:
     return asdict(manifest)
 
 
+def _filter_fields(cls: type, item: Dict[str, Any]) -> Dict[str, Any]:
+    """Filter a dict to only include keys matching dataclass fields.
+
+    Provides forward-compatibility: manifests from newer versions with
+    extra fields won't crash older readers.
+    """
+    import dataclasses
+
+    valid_keys = {f.name for f in dataclasses.fields(cls)}
+    return {k: v for k, v in item.items() if k in valid_keys}
+
+
 def _dict_to_manifest(data: Dict[str, Any]) -> TransferManifest:
     """Reconstruct a TransferManifest from a dict (parsed JSON)."""
     contents_data = data.get("contents", {})
@@ -202,7 +213,11 @@ def _dict_to_manifest(data: Dict[str, Any]) -> TransferManifest:
     dep_kwargs = {}  # type: Dict[str, list]
     for key, cls in _DEP_TYPE_MAP.items():
         items = deps_data.get(key, [])
-        dep_kwargs[key] = [cls(**item) for item in items]
+        dep_kwargs[key] = [
+            cls(**_filter_fields(cls, item))
+            for item in items
+            if isinstance(item, dict)
+        ]
 
     dependencies = DependencyGraph(**dep_kwargs)
 
@@ -249,7 +264,11 @@ def read_manifest_from_archive(archive_path: Path) -> Optional[TransferManifest]
             # Look for manifest.json at any level in the archive
             manifest_member = None
             for member in tf.getmembers():
-                basename = member.name.rsplit("/", 1)[-1] if "/" in member.name else member.name
+                basename = (
+                    member.name.rsplit("/", 1)[-1]
+                    if "/" in member.name
+                    else member.name
+                )
                 if basename == "manifest.json" and member.isfile():
                     manifest_member = member
                     break

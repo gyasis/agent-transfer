@@ -127,14 +127,14 @@
 
 **Purpose**: Quality, security, and robustness
 
-- [ ] T034 [P] Run Ruff linter on all new preflight modules and fix issues
-- [ ] T035 [P] Run Ruff linter on modified cli.py and transfer.py and fix issues
-- [ ] T036 [P] Adversarial bug hunting — targeted scan of manifest serialization and env var handling (R8 compliance)
-- [ ] T037 [P] Adversarial bug hunting — general logic scan across all preflight modules
-- [ ] T038 Ensure env var values are NEVER logged or displayed — security audit of all report paths
-- [ ] T039 Run full existing test suite to verify backward compatibility (R5)
-- [ ] T040 Run quickstart.md test scenarios end-to-end
-- [ ] T041 Git checkpoint — commit all changes
+- [x] T034 [P] Run Ruff linter on all new preflight modules and fix issues
+- [x] T035 [P] Run Ruff linter on modified cli.py and transfer.py and fix issues
+- [x] T036 [P] Adversarial bug hunting — targeted scan of manifest serialization and env var handling (R8 compliance)
+- [x] T037 [P] Adversarial bug hunting — general logic scan across all preflight modules
+- [x] T038 Ensure env var values are NEVER logged or displayed — security audit of all report paths
+- [x] T039 Run full existing test suite to verify backward compatibility (R5)
+- [x] T040 Run quickstart.md test scenarios end-to-end
+- [x] T041 Git checkpoint — commit all changes
 
 ---
 

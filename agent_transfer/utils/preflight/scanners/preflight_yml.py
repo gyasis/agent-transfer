@@ -48,14 +48,10 @@ class PreflightConfig:
     notes: List[str] = field(default_factory=list)
 
 
-def _parse_cli_tools(
-    raw: Any, required_by: str
-) -> List[CliToolDep]:
+def _parse_cli_tools(raw: Any, required_by: str) -> List[CliToolDep]:
     """Parse the cli_tools list from YAML data."""
     if not isinstance(raw, list):
-        logger.warning(
-            ".preflight.yml: dependencies.cli_tools is not a list, skipping"
-        )
+        logger.warning(".preflight.yml: dependencies.cli_tools is not a list, skipping")
         return []
 
     results: List[CliToolDep] = []
@@ -92,14 +88,10 @@ def _parse_cli_tools(
     return results
 
 
-def _parse_env_vars(
-    raw: Any, required_by: str
-) -> List[EnvVarDep]:
+def _parse_env_vars(raw: Any, required_by: str) -> List[EnvVarDep]:
     """Parse the env_vars list from YAML data."""
     if not isinstance(raw, list):
-        logger.warning(
-            ".preflight.yml: dependencies.env_vars is not a list, skipping"
-        )
+        logger.warning(".preflight.yml: dependencies.env_vars is not a list, skipping")
         return []
 
     results: List[EnvVarDep] = []
@@ -134,14 +126,10 @@ def _parse_env_vars(
     return results
 
 
-def _parse_packages(
-    raw: Any, required_by: str
-) -> List[PackageDep]:
+def _parse_packages(raw: Any, required_by: str) -> List[PackageDep]:
     """Parse the packages list from YAML data."""
     if not isinstance(raw, list):
-        logger.warning(
-            ".preflight.yml: dependencies.packages is not a list, skipping"
-        )
+        logger.warning(".preflight.yml: dependencies.packages is not a list, skipping")
         return []
 
     valid_ecosystems = {"python", "node"}
@@ -219,9 +207,7 @@ def _str_or_none(value: Any) -> Optional[str]:
     return str(value)
 
 
-def read_preflight_yml(
-    file_path: Path, required_by: str = ""
-) -> PreflightConfig:
+def read_preflight_yml(file_path: Path, required_by: str = "") -> PreflightConfig:
     """Read and parse a .preflight.yml file.
 
     Args:
@@ -243,9 +229,7 @@ def read_preflight_yml(
     try:
         raw_text = file_path.read_text(encoding="utf-8")
     except OSError as exc:
-        logger.warning(
-            ".preflight.yml: could not read %s: %s", file_path, exc
-        )
+        logger.warning(".preflight.yml: could not read %s: %s", file_path, exc)
         warnings.warn(
             f"Could not read {file_path}: {exc}",
             stacklevel=2,
@@ -255,9 +239,7 @@ def read_preflight_yml(
     try:
         data = yaml.safe_load(raw_text)
     except yaml.YAMLError as exc:
-        logger.warning(
-            ".preflight.yml: malformed YAML in %s: %s", file_path, exc
-        )
+        logger.warning(".preflight.yml: malformed YAML in %s: %s", file_path, exc)
         warnings.warn(
             f"Malformed YAML in {file_path}: {exc}",
             stacklevel=2,

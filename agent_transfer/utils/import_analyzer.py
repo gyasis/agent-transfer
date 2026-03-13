@@ -116,7 +116,7 @@ def analyze_import_archive(archive_path: str) -> ImportPreview:
         project_agents_count=project_count,
         new_count=new_count,
         changed_count=changed_count,
-        identical_count=identical_count
+        identical_count=identical_count,
     )
 
 

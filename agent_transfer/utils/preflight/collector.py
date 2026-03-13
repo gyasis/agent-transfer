@@ -222,7 +222,8 @@ def collect_inventory(
             hook_names.append(label)
 
             script_files = [
-                f for f in _iter_files(hook_path)
+                f
+                for f in _iter_files(hook_path)
                 if f.suffix.lower() in _SCRIPT_SUFFIXES
             ]
             if script_files:
@@ -432,9 +433,7 @@ def _merge_mcp_server(existing: McpServerDep, incoming: McpServerDep) -> None:
     existing.env_vars.sort()
 
 
-def _merge_cli_tools(
-    target: Dict[str, CliToolDep], incoming: List[CliToolDep]
-) -> None:
+def _merge_cli_tools(target: Dict[str, CliToolDep], incoming: List[CliToolDep]) -> None:
     """Merge a list of CLI tool deps into *target* dict, deduplicating by name."""
     for dep in incoming:
         _merge_cli_tool_into(target, dep)
@@ -452,9 +451,7 @@ def _merge_cli_tool_into(target: Dict[str, CliToolDep], dep: CliToolDep) -> None
         target[dep.name] = dep
 
 
-def _merge_env_vars(
-    target: Dict[str, EnvVarDep], incoming: List[EnvVarDep]
-) -> None:
+def _merge_env_vars(target: Dict[str, EnvVarDep], incoming: List[EnvVarDep]) -> None:
     for dep in incoming:
         _merge_env_var_into(target, dep)
 
@@ -470,9 +467,7 @@ def _merge_env_var_into(target: Dict[str, EnvVarDep], dep: EnvVarDep) -> None:
         target[dep.name] = dep
 
 
-def _merge_packages(
-    target: Dict[str, PackageDep], incoming: List[PackageDep]
-) -> None:
+def _merge_packages(target: Dict[str, PackageDep], incoming: List[PackageDep]) -> None:
     for dep in incoming:
         _merge_package_into(target, dep)
 
@@ -592,9 +587,7 @@ def _build_skill_tree(
             break
 
     # Compiled binaries found in the skill.
-    compiled = [
-        bp.name for bp in binary_candidates if is_elf_binary(bp)
-    ]
+    compiled = [bp.name for bp in binary_candidates if is_elf_binary(bp)]
 
     # Env vars from script scan and preflight.yml.
     env_set: List[str] = [dep.name for dep in script_results.get("env_vars", [])]

@@ -75,9 +75,7 @@ def detect_setup_method(repo_path: Path) -> str:
     return "pip"
 
 
-def scan_git_repo(
-    repo_path: Path, required_by: str = ""
-) -> Optional[GitRepoDep]:
+def scan_git_repo(repo_path: Path, required_by: str = "") -> Optional[GitRepoDep]:
     """Scan a directory for git repo info.
 
     Args:
@@ -109,9 +107,7 @@ def scan_git_repo(
     )
 
 
-def scan_git_repos(
-    repo_paths: list, required_by: str = ""
-) -> List[GitRepoDep]:
+def scan_git_repos(repo_paths: list, required_by: str = "") -> List[GitRepoDep]:
     """Scan multiple directories for git repos.
 
     Args:

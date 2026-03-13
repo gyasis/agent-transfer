@@ -5,7 +5,7 @@ import threading
 import time
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Tuple
 import markdown
 from pygments.formatters import HtmlFormatter
 
@@ -14,10 +14,8 @@ from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader
 import uvicorn
 
-from ..models import Agent, Skill
 from .parser import find_all_agents
 from .skill_parser import find_all_skills
-from .discovery import find_agent_directories
 
 app = FastAPI(title="Agent Transfer Viewer")
 
@@ -281,11 +279,11 @@ def start_server(host: str = "127.0.0.1", port: int = 7651, open_browser: bool =
     """Start the web server."""
     url = f"http://{host}:{port}"
     
-    print(f"\n🚀 Starting Agent Transfer Viewer...")
+    print("\n🚀 Starting Agent Transfer Viewer...")
     print(f"📡 Server running at: {url}")
     if open_browser:
-        print(f"🌐 Opening browser...")
-    print(f"\nPress Ctrl+C to stop the server\n")
+        print("🌐 Opening browser...")
+    print("\nPress Ctrl+C to stop the server\n")
     
     if open_browser:
         # Open browser after a short delay

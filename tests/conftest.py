@@ -6,7 +6,6 @@ and temporary directories for isolated testing.
 """
 
 import pytest
-import tempfile
 import tarfile
 from pathlib import Path
 from agent_transfer.models import Agent, AgentComparison, ImportPreview

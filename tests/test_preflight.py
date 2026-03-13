@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import json
 import tarfile
-import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 
 from agent_transfer.utils.preflight import (
     run_preflight_checks,
@@ -19,7 +16,6 @@ from agent_transfer.utils.preflight.manifest import (
     CliToolDep,
     DependencyGraph,
     EnvVarDep,
-    ContentsInventory,
     write_manifest,
 )
 from agent_transfer.utils.preflight.report import report_to_json

@@ -86,7 +86,7 @@ class ImportPreview:
     archive_path: str
     metadata: Dict[str, str]                     # From metadata.txt
     comparisons: List[AgentComparison]           # All agent comparisons
-    skill_comparisons: List[SkillComparison]     # All skill comparisons
+    skill_comparisons: List[SkillComparison] = field(default_factory=list)  # All skill comparisons
     user_agents_count: int = 0
     project_agents_count: int = 0
     new_count: int = 0

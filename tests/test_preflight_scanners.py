@@ -7,9 +7,7 @@ Python >= 3.8 compatible. Only requires pytest (no external test deps).
 """
 
 import struct
-from pathlib import Path
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # 1. MCP Scanner

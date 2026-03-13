@@ -4,7 +4,7 @@ Rich terminal report for human consumption and JSON output for --json flag.
 """
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from rich.console import Console
 from rich.panel import Panel
@@ -61,7 +61,7 @@ def _dep_name(result: CheckResult) -> str:
     return str(dep)
 
 
-def display_readiness_report(report: ReadinessReport) -> None:
+def display_preflight_report(report: ReadinessReport) -> None:
     """Print Rich-formatted readiness report to terminal."""
     console = Console()
 
@@ -72,11 +72,13 @@ def display_readiness_report(report: ReadinessReport) -> None:
     header.append(report.overall_status, style=f"bold {overall_color}")
 
     console.print()
-    console.print(Panel(
-        header,
-        subtitle=f"Target: {report.target_os}/{report.target_arch}",
-        border_style=overall_color,
-    ))
+    console.print(
+        Panel(
+            header,
+            subtitle=f"Target: {report.target_os}/{report.target_arch}",
+            border_style=overall_color,
+        )
+    )
 
     # Summary counts
     console.print(
@@ -131,7 +133,9 @@ def display_readiness_report(report: ReadinessReport) -> None:
     # Source info
     if report.manifest:
         m = report.manifest
-        console.print(f"[dim]Source: {m.source_platform} on {m.source_os}/{m.source_arch}[/dim]")
+        console.print(
+            f"[dim]Source: {m.source_platform} on {m.source_os}/{m.source_arch}[/dim]"
+        )
         if m.contents.agents or m.contents.skills:
             console.print(
                 f"[dim]Contents: {len(m.contents.agents)} agent(s), "
@@ -163,9 +167,7 @@ def report_to_json(report: ReadinessReport) -> str:
     }  # type: Dict[str, Any]
 
     for category, results in report.results.items():
-        data["results"][category] = [
-            _check_result_to_dict(r) for r in results
-        ]
+        data["results"][category] = [_check_result_to_dict(r) for r in results]
 
     if report.manifest:
         data["source"] = {

@@ -11,7 +11,7 @@ import configparser
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from agent_transfer.utils.preflight.manifest import McpServerDep
 
@@ -161,7 +161,6 @@ def _detect_install_type(
 
     # python / uv → git-repo-python-venv or git-repo-uv
     if "python" in cmd_lower or cmd_base == "uv" or "uv" in cmd_lower:
-        local = _detect_local_path(command, args)
         if cmd_base == "uv" or "uv" in cmd_lower:
             return ("git-repo-uv", None, "python")
         return ("git-repo-python-venv", None, "python")
@@ -176,7 +175,6 @@ def _detect_install_type(
 
     # remote SSE endpoint
     if cfg.get("url") or cfg.get("endpoint"):
-        endpoint = cfg.get("url") or cfg.get("endpoint")
         return ("remote-sse", None, "remote")
 
     return ("unknown", None, "node")

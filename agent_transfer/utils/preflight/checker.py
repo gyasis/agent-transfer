@@ -114,7 +114,11 @@ def check_cli(dep: CliToolDep) -> CheckResult:
             message=f"CLI tool '{dep.name}' found on PATH",
         )
 
-    hint = dep.install_hint or get_cli_hint(dep.name) or f"Install '{dep.name}' and ensure it is on your PATH"
+    hint = (
+        dep.install_hint
+        or get_cli_hint(dep.name)
+        or f"Install '{dep.name}' and ensure it is on your PATH"
+    )
     if dep.optional:
         return CheckResult(
             dependency=dep,
@@ -172,7 +176,9 @@ def check_git_repos(dep: GitRepoDep) -> CheckResult:
 
     if not repo_path.is_dir():
         hint = get_setup_hint(dep.setup_method)
-        clone_msg = f"git clone {dep.repo_url} {dep.local_path}" if dep.repo_url else None
+        clone_msg = (
+            f"git clone {dep.repo_url} {dep.local_path}" if dep.repo_url else None
+        )
         remediation = clone_msg or hint
         return CheckResult(
             dependency=dep,
@@ -233,9 +239,8 @@ def check_binaries(dep: BinaryDep) -> CheckResult:
                 status="YELLOW",
                 message=f"Binary '{dep.name}' exists but arch mismatch: "
                 f"binary='{dep.arch}', system='{current_arch}'",
-                remediation=f"Rebuild for {current_arch}" + (
-                    f": {dep.build_command}" if dep.build_command else ""
-                ),
+                remediation=f"Rebuild for {current_arch}"
+                + (f": {dep.build_command}" if dep.build_command else ""),
             )
 
     return CheckResult(
@@ -315,9 +320,8 @@ def check_docker(dep: DockerDep) -> CheckResult:
     return CheckResult(
         dependency=dep,
         status="GREEN",
-        message="Docker is available" + (
-            f" and compose file '{dep.file}' exists" if dep.file else ""
-        ),
+        message="Docker is available"
+        + (f" and compose file '{dep.file}' exists" if dep.file else ""),
     )
 
 

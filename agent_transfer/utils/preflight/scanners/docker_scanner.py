@@ -45,15 +45,29 @@ _FROM_RE = re.compile(
 _DOCKER_RUN_RE = re.compile(r"docker\s+run\s+")
 
 # Short flags that take a separate value argument (e.g. -p 8080:80, -e FOO=bar).
-_SHORT_FLAGS_WITH_VALUE = frozenset(
-    "e h l m p u v w".split()
-)
+_SHORT_FLAGS_WITH_VALUE = frozenset("e h l m p u v w".split())
 # Long flags that take a separate value argument.
-_LONG_FLAGS_WITH_VALUE = frozenset([
-    "--name", "--env", "--volume", "--publish", "--user", "--workdir",
-    "--label", "--network", "--mount", "--cpus", "--memory", "--entrypoint",
-    "--hostname", "--restart", "--pid", "--log-driver", "--log-opt",
-])
+_LONG_FLAGS_WITH_VALUE = frozenset(
+    [
+        "--name",
+        "--env",
+        "--volume",
+        "--publish",
+        "--user",
+        "--workdir",
+        "--label",
+        "--network",
+        "--mount",
+        "--cpus",
+        "--memory",
+        "--entrypoint",
+        "--hostname",
+        "--restart",
+        "--pid",
+        "--log-driver",
+        "--log-opt",
+    ]
+)
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +111,6 @@ def _extract_image_from_docker_run(args_str: str) -> Optional[str]:
     return None
 
 
-
 def _is_dockerfile(path: Path) -> bool:
     """Return True if *path* looks like a Dockerfile."""
     name = path.name
@@ -131,9 +144,7 @@ def _make_required_by(required_by: str) -> List[str]:
 # ---------------------------------------------------------------------------
 
 
-def scan_for_dockerfiles(
-    directory: Path, required_by: str = ""
-) -> List[DockerDep]:
+def scan_for_dockerfiles(directory: Path, required_by: str = "") -> List[DockerDep]:
     """Find Dockerfiles in *directory* and return a list of :class:`DockerDep`.
 
     Each Dockerfile produces one ``DockerDep`` per FROM image found.  If the
@@ -180,9 +191,7 @@ def scan_for_dockerfiles(
     return deps
 
 
-def scan_for_compose(
-    directory: Path, required_by: str = ""
-) -> List[DockerDep]:
+def scan_for_compose(directory: Path, required_by: str = "") -> List[DockerDep]:
     """Find docker-compose files in *directory* and return :class:`DockerDep` items.
 
     When PyYAML is available the ``services`` key is parsed to extract
@@ -240,7 +249,7 @@ def scan_docker_in_scripts(
 
     for match in _DOCKER_RUN_RE.finditer(script_content):
         # Get everything after "docker run " on the same line.
-        rest = script_content[match.end():].split("\n", 1)[0]
+        rest = script_content[match.end() :].split("\n", 1)[0]
         image = _extract_image_from_docker_run(rest)
 
         deps.append(
@@ -288,13 +297,9 @@ def scan_docker(
     if script_files:
         for script_path in script_files:
             try:
-                content = script_path.read_text(
-                    encoding="utf-8", errors="replace"
-                )
+                content = script_path.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            deps.extend(
-                scan_docker_in_scripts(content, required_by=required_by)
-            )
+            deps.extend(scan_docker_in_scripts(content, required_by=required_by))
 
     return deps

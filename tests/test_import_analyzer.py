@@ -6,9 +6,7 @@ and local agent path resolution.
 """
 
 import pytest
-import hashlib
 from pathlib import Path
-from unittest.mock import patch, Mock
 
 from agent_transfer.utils.import_analyzer import (
     analyze_import_archive,
@@ -17,9 +15,10 @@ from agent_transfer.utils.import_analyzer import (
     find_local_agent_path,
     _compute_content_hash,
     _find_agents_in_directory,
-    _parse_metadata_file
+    _parse_metadata_file,
 )
-from agent_transfer.models import Agent, AgentComparison
+from agent_transfer.utils.pathfinder import _reset_pathfinder
+from agent_transfer.models import Agent
 
 
 class TestAnalyzeImportArchive:
@@ -200,6 +199,8 @@ class TestFindLocalAgentPath:
 
     def test_find_local_agent_path_user(self, tmp_path, monkeypatch):
         """Test finding user agent path."""
+        # Reset pathfinder singleton so it picks up mocked Path.home()
+        _reset_pathfinder()
         # Mock home directory
         fake_home = tmp_path / "home"
         fake_home.mkdir()

@@ -11,8 +11,7 @@ so tests are deterministic and fast.
 
 import json
 import os
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -34,7 +33,7 @@ from agent_transfer.utils.preflight.manifest import (
 )
 from agent_transfer.utils.preflight import run_preflight_checks
 from agent_transfer.utils.preflight.report import (
-    display_readiness_report,
+    display_preflight_report,
     report_to_json,
 )
 
@@ -415,15 +414,15 @@ class TestReportToJson:
 
 
 # ---------------------------------------------------------------------------
-# 15: display_readiness_report smoke test
+# 15: display_preflight_report smoke test
 # ---------------------------------------------------------------------------
 
 
 class TestDisplayReadinessReport:
-    """Smoke tests for display_readiness_report()."""
+    """Smoke tests for display_preflight_report()."""
 
     def test_does_not_crash_with_populated_report(self):
-        """15. display_readiness_report does not raise on a populated report."""
+        """15. display_preflight_report does not raise on a populated report."""
         report = ReadinessReport(
             target_os="linux",
             target_arch="x86_64",
@@ -440,25 +439,25 @@ class TestDisplayReadinessReport:
             },
         )
         # Should not raise
-        display_readiness_report(report)
+        display_preflight_report(report)
 
     def test_does_not_crash_with_empty_report(self):
-        """display_readiness_report handles empty report without crashing."""
+        """display_preflight_report handles empty report without crashing."""
         report = ReadinessReport(target_os="linux", target_arch="x86_64")
-        display_readiness_report(report)
+        display_preflight_report(report)
 
     def test_does_not_crash_with_manual_checklist(self):
-        """display_readiness_report renders manual checklist items."""
+        """display_preflight_report renders manual checklist items."""
         report = ReadinessReport(
             target_os="linux",
             target_arch="x86_64",
             overall_status="WARN",
             manual_checklist=["Check SSH keys", "Verify API tokens"],
         )
-        display_readiness_report(report)
+        display_preflight_report(report)
 
     def test_does_not_crash_with_remediation(self):
-        """display_readiness_report renders remediation text."""
+        """display_preflight_report renders remediation text."""
         report = ReadinessReport(
             target_os="linux",
             target_arch="x86_64",
@@ -475,4 +474,4 @@ class TestDisplayReadinessReport:
                 ],
             },
         )
-        display_readiness_report(report)
+        display_preflight_report(report)

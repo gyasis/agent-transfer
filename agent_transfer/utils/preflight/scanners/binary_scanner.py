@@ -161,9 +161,7 @@ def scan_binary(file_path: Path, required_by: str = "") -> Optional[BinaryDep]:
     )
 
 
-def scan_binaries(
-    file_paths: List[Path], required_by: str = ""
-) -> List[BinaryDep]:
+def scan_binaries(file_paths: List[Path], required_by: str = "") -> List[BinaryDep]:
     """Scan multiple files and return ``BinaryDep`` instances for any ELF binaries found.
 
     Non-ELF files and unreadable files are silently skipped.
