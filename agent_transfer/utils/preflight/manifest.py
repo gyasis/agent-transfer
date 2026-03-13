@@ -146,7 +146,7 @@ class DependencyGraph:
     cli_tools: List[CliToolDep] = field(default_factory=list)
     env_vars: List[EnvVarDep] = field(default_factory=list)
     docker: List[DockerDep] = field(default_factory=list)
-    python_packages: List[PackageDep] = field(default_factory=list)
+    packages: List[PackageDep] = field(default_factory=list)
     sourced_files: List[SourcedFileDep] = field(default_factory=list)
 
 
@@ -177,7 +177,7 @@ _DEP_TYPE_MAP: Dict[str, type] = {
     "cli_tools": CliToolDep,
     "env_vars": EnvVarDep,
     "docker": DockerDep,
-    "python_packages": PackageDep,
+    "packages": PackageDep,
     "sourced_files": SourcedFileDep,
 }
 
@@ -214,9 +214,7 @@ def _dict_to_manifest(data: Dict[str, Any]) -> TransferManifest:
     for key, cls in _DEP_TYPE_MAP.items():
         items = deps_data.get(key, [])
         dep_kwargs[key] = [
-            cls(**_filter_fields(cls, item))
-            for item in items
-            if isinstance(item, dict)
+            cls(**_filter_fields(cls, item)) for item in items if isinstance(item, dict)
         ]
 
     dependencies = DependencyGraph(**dep_kwargs)

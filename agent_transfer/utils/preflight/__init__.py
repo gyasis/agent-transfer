@@ -57,7 +57,7 @@ def run_preflight_checks(manifest: TransferManifest) -> ReadinessReport:
         ("compiled_binaries", check_binaries, deps.compiled_binaries),
         ("skill_trees", check_skill_trees, deps.skill_trees),
         ("docker", check_docker, deps.docker),
-        ("packages", check_packages, deps.python_packages),
+        ("packages", check_packages, deps.packages),
         ("sourced_files", check_sourced_files, deps.sourced_files),
     ]
 

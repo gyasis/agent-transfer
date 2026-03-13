@@ -133,8 +133,7 @@ def skill_dir_with_preflight(tmp_path):
     # Also add a simple script so the skill has scannable content
     script = skill / "main.sh"
     script.write_text(
-        "#!/bin/bash\n"
-        "git clone https://example.com/repo.git\n",
+        "#!/bin/bash\ngit clone https://example.com/repo.git\n",
         encoding="utf-8",
     )
 
@@ -189,7 +188,7 @@ def manifest_with_data():
                     required_by=["skill-one"],
                 ),
             ],
-            python_packages=[
+            packages=[
                 PackageDep(
                     name="requests",
                     ecosystem="python",
@@ -216,74 +215,59 @@ class TestCollectInventoryEmpty:
     """collect_inventory() with no agents, skills, hooks, or configs."""
 
     def test_returns_transfer_manifest(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert isinstance(result, TransferManifest)
 
     def test_manifest_version_is_2_0(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.manifest_version == "2.0"
 
     def test_source_platform_defaults_to_claude_code(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.source_platform == "claude-code"
 
     def test_custom_platform_propagates(self):
         result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[],
+            agents=[],
+            skills=[],
+            hooks=[],
+            configs=[],
             platform="windsurf",
         )
         assert result.source_platform == "windsurf"
 
     def test_populates_source_os(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.source_os == platform.system().lower()
 
     def test_populates_source_arch(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.source_arch == platform.machine()
 
     def test_populates_source_home(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.source_home == str(Path.home())
 
     def test_created_at_is_nonempty_iso_timestamp(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.created_at
         # Basic shape check for ISO 8601
         assert "T" in result.created_at
 
     def test_empty_contents_inventory(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         assert result.contents.agents == []
         assert result.contents.skills == []
         assert result.contents.hooks == []
         assert result.contents.configs == []
 
     def test_empty_dependency_graph(self):
-        result = collect_inventory(
-            agents=[], skills=[], hooks=[], configs=[]
-        )
+        result = collect_inventory(agents=[], skills=[], hooks=[], configs=[])
         deps = result.dependencies
         assert deps.mcp_servers == []
         assert deps.cli_tools == []
         assert deps.env_vars == []
-        assert deps.python_packages == []
+        assert deps.packages == []
         assert deps.git_repos == []
         assert deps.compiled_binaries == []
         assert deps.skill_trees == []
@@ -302,7 +286,9 @@ class TestCollectInventoryAgentMcp:
     def test_extracts_mcp_server_ids(self, agent_md_with_mcp):
         result = collect_inventory(
             agents=[agent_md_with_mcp],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         server_ids = {s.id for s in result.dependencies.mcp_servers}
         assert "graphiti" in server_ids
@@ -311,7 +297,9 @@ class TestCollectInventoryAgentMcp:
     def test_extracts_context7_mcp_id(self, agent_md_with_mcp):
         result = collect_inventory(
             agents=[agent_md_with_mcp],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         server_ids = {s.id for s in result.dependencies.mcp_servers}
         assert "context7-mcp" in server_ids
@@ -321,7 +309,9 @@ class TestCollectInventoryAgentMcp:
         produce only one McpServerDep entry."""
         result = collect_inventory(
             agents=[agent_md_with_mcp],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         graphiti_deps = [
             s for s in result.dependencies.mcp_servers if s.id == "graphiti"
@@ -331,7 +321,9 @@ class TestCollectInventoryAgentMcp:
     def test_required_by_tracks_agent_stem(self, agent_md_with_mcp):
         result = collect_inventory(
             agents=[agent_md_with_mcp],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         graphiti = next(
             s for s in result.dependencies.mcp_servers if s.id == "graphiti"
@@ -341,7 +333,9 @@ class TestCollectInventoryAgentMcp:
     def test_agent_name_in_contents(self, agent_md_with_mcp):
         result = collect_inventory(
             agents=[agent_md_with_mcp],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         assert "my-agent.md" in result.contents.agents
 
@@ -349,7 +343,9 @@ class TestCollectInventoryAgentMcp:
         fake_path = tmp_path / "does-not-exist.md"
         result = collect_inventory(
             agents=[fake_path],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         assert result.contents.agents == []
         assert result.dependencies.mcp_servers == []
@@ -364,7 +360,9 @@ class TestCollectInventoryAgentMcp:
 
         result = collect_inventory(
             agents=[agent_a, agent_b],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         graphiti = next(
             s for s in result.dependencies.mcp_servers if s.id == "graphiti"
@@ -383,7 +381,10 @@ class TestCollectInventorySkillScripts:
 
     def test_detects_cli_tools_from_shell_script(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
         cli_names = {t.name for t in result.dependencies.cli_tools}
         assert "jq" in cli_names
@@ -391,25 +392,34 @@ class TestCollectInventorySkillScripts:
 
     def test_detects_env_vars_from_shell_script(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
         env_names = {e.name for e in result.dependencies.env_vars}
         assert "MY_API_KEY" in env_names
         assert "SOME_SECRET" in env_names
 
-    def test_detects_python_packages(self, skill_dir_with_scripts):
+    def test_detects_packages(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
-        pkg_names = {p.name for p in result.dependencies.python_packages}
+        pkg_names = {p.name for p in result.dependencies.packages}
         assert "requests" in pkg_names
         assert "rich" in pkg_names
 
     def test_does_not_include_stdlib_as_packages(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
-        pkg_names = {p.name for p in result.dependencies.python_packages}
+        pkg_names = {p.name for p in result.dependencies.packages}
         # os, json, pathlib are stdlib -- should not appear
         assert "os" not in pkg_names
         assert "json" not in pkg_names
@@ -417,20 +427,29 @@ class TestCollectInventorySkillScripts:
 
     def test_detects_env_vars_from_python_os_environ(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
         env_names = {e.name for e in result.dependencies.env_vars}
         assert "API_TOKEN" in env_names
 
     def test_skill_name_in_contents(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
         assert "my-skill" in result.contents.skills
 
     def test_skill_tree_created(self, skill_dir_with_scripts):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_scripts], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_scripts],
+            hooks=[],
+            configs=[],
         )
         tree_names = {t.name for t in result.dependencies.skill_trees}
         assert "my-skill" in tree_names
@@ -438,7 +457,10 @@ class TestCollectInventorySkillScripts:
     def test_nonexistent_skill_dir_skipped(self, tmp_path):
         fake = tmp_path / "no-such-skill"
         result = collect_inventory(
-            agents=[], skills=[fake], hooks=[], configs=[],
+            agents=[],
+            skills=[fake],
+            hooks=[],
+            configs=[],
         )
         assert result.contents.skills == []
 
@@ -453,7 +475,10 @@ class TestCollectInventoryPreflight:
 
     def test_preflight_cli_tools_detected(self, skill_dir_with_preflight):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_preflight], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_preflight],
+            hooks=[],
+            configs=[],
         )
         cli_names = {t.name for t in result.dependencies.cli_tools}
         assert "ffmpeg" in cli_names
@@ -461,17 +486,21 @@ class TestCollectInventoryPreflight:
 
     def test_preflight_cli_tool_hints_preserved(self, skill_dir_with_preflight):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_preflight], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_preflight],
+            hooks=[],
+            configs=[],
         )
-        ffmpeg = next(
-            t for t in result.dependencies.cli_tools if t.name == "ffmpeg"
-        )
+        ffmpeg = next(t for t in result.dependencies.cli_tools if t.name == "ffmpeg")
         assert ffmpeg.install_hint == "apt install ffmpeg"
         assert ffmpeg.version_hint == ">=5.0"
 
     def test_preflight_env_vars_detected(self, skill_dir_with_preflight):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_preflight], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_preflight],
+            hooks=[],
+            configs=[],
         )
         env_names = {e.name for e in result.dependencies.env_vars}
         assert "OPENAI_API_KEY" in env_names
@@ -479,9 +508,12 @@ class TestCollectInventoryPreflight:
 
     def test_preflight_packages_detected(self, skill_dir_with_preflight):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_preflight], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_preflight],
+            hooks=[],
+            configs=[],
         )
-        pkg_names = {p.name for p in result.dependencies.python_packages}
+        pkg_names = {p.name for p in result.dependencies.packages}
         assert "torch" in pkg_names
         assert "numpy" in pkg_names
 
@@ -489,19 +521,24 @@ class TestCollectInventoryPreflight:
         """Both the script scanner (main.sh -> git) and .preflight.yml (ffmpeg)
         results should appear in the same manifest."""
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_preflight], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_preflight],
+            hooks=[],
+            configs=[],
         )
         cli_names = {t.name for t in result.dependencies.cli_tools}
-        assert "git" in cli_names   # from main.sh
+        assert "git" in cli_names  # from main.sh
         assert "ffmpeg" in cli_names  # from .preflight.yml
 
     def test_skill_tree_includes_system_deps(self, skill_dir_with_preflight):
         result = collect_inventory(
-            agents=[], skills=[skill_dir_with_preflight], hooks=[], configs=[],
+            agents=[],
+            skills=[skill_dir_with_preflight],
+            hooks=[],
+            configs=[],
         )
         tree = next(
-            t for t in result.dependencies.skill_trees
-            if t.name == "preflight-skill"
+            t for t in result.dependencies.skill_trees if t.name == "preflight-skill"
         )
         assert "ffmpeg" in tree.system_deps
         assert "sox" in tree.system_deps
@@ -575,13 +612,13 @@ class TestManifestRoundTrip:
         assert ev.description == "A test secret"
         assert ev.critical is True
 
-    def test_round_trip_preserves_python_packages(self, tmp_path, manifest_with_data):
+    def test_round_trip_preserves_packages(self, tmp_path, manifest_with_data):
         path = tmp_path / "manifest.json"
         write_manifest(manifest_with_data, path)
         loaded = read_manifest(path)
 
-        assert len(loaded.dependencies.python_packages) == 1
-        pkg = loaded.dependencies.python_packages[0]
+        assert len(loaded.dependencies.packages) == 1
+        pkg = loaded.dependencies.packages[0]
         assert pkg.name == "requests"
         assert pkg.ecosystem == "python"
 
@@ -753,7 +790,9 @@ class TestDeduplicateDependencies:
     def test_merges_duplicate_mcp_servers(self):
         graph = DependencyGraph(
             mcp_servers=[
-                McpServerDep(id="graphiti", install_type="unknown", required_by=["agent-a"]),
+                McpServerDep(
+                    id="graphiti", install_type="unknown", required_by=["agent-a"]
+                ),
                 McpServerDep(
                     id="graphiti",
                     install_type="git-repo-python-venv",
@@ -791,7 +830,12 @@ class TestDeduplicateDependencies:
     def test_merges_duplicate_env_vars(self):
         graph = DependencyGraph(
             env_vars=[
-                EnvVarDep(name="API_KEY", description="The key", critical=False, required_by=["a"]),
+                EnvVarDep(
+                    name="API_KEY",
+                    description="The key",
+                    critical=False,
+                    required_by=["a"],
+                ),
                 EnvVarDep(name="API_KEY", critical=True, required_by=["b"]),
             ],
         )
@@ -804,16 +848,16 @@ class TestDeduplicateDependencies:
         assert "a" in ev.required_by
         assert "b" in ev.required_by
 
-    def test_merges_duplicate_python_packages(self):
+    def test_merges_duplicate_packages(self):
         graph = DependencyGraph(
-            python_packages=[
+            packages=[
                 PackageDep(name="requests", ecosystem="python", required_by=["x"]),
                 PackageDep(name="requests", ecosystem="python", required_by=["y"]),
             ],
         )
         result = deduplicate_dependencies(graph)
-        assert len(result.python_packages) == 1
-        pkg = result.python_packages[0]
+        assert len(result.packages) == 1
+        pkg = result.packages[0]
         assert "x" in pkg.required_by
         assert "y" in pkg.required_by
 
@@ -848,7 +892,7 @@ class TestDeduplicateDependencies:
         assert result.mcp_servers == []
         assert result.cli_tools == []
         assert result.env_vars == []
-        assert result.python_packages == []
+        assert result.packages == []
 
     def test_mcp_server_auth_required_propagates(self):
         """If either copy has auth_required=True, the merged result should too."""
@@ -885,7 +929,10 @@ class TestCollectInventoryEdgeCases:
         md = tmp_path / "plain.md"
         md.write_text("# Just a plain agent\nNo tools here.\n")
         result = collect_inventory(
-            agents=[md], skills=[], hooks=[], configs=[],
+            agents=[md],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         assert result.dependencies.mcp_servers == []
         assert "plain.md" in result.contents.agents
@@ -895,7 +942,10 @@ class TestCollectInventoryEdgeCases:
         not_a_dir = tmp_path / "oops.txt"
         not_a_dir.write_text("I am a file")
         result = collect_inventory(
-            agents=[], skills=[not_a_dir], hooks=[], configs=[],
+            agents=[],
+            skills=[not_a_dir],
+            hooks=[],
+            configs=[],
         )
         assert result.contents.skills == []
 
@@ -903,7 +953,9 @@ class TestCollectInventoryEdgeCases:
         """Running deduplicate on already-unique output should not change it."""
         manifest = collect_inventory(
             agents=[agent_md_with_mcp],
-            skills=[], hooks=[], configs=[],
+            skills=[],
+            hooks=[],
+            configs=[],
         )
         deduped = deduplicate_dependencies(manifest.dependencies)
         original_ids = sorted(s.id for s in manifest.dependencies.mcp_servers)

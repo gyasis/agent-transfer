@@ -41,7 +41,10 @@ from agent_transfer.utils.preflight.scanners.mcp_scanner import (
     extract_mcp_server_ids,
     scan_mcp_servers,
 )
-from agent_transfer.utils.preflight.scanners.preflight_yml import read_preflight_yml
+from agent_transfer.utils.preflight.scanners.preflight_yml import (
+    PreflightConfig,
+    read_preflight_yml,
+)
 from agent_transfer.utils.preflight.scanners.script_scanner import scan_scripts
 
 logger = logging.getLogger(__name__)
@@ -196,7 +199,7 @@ def collect_inventory(
             skill_dir,
             label=label,
             script_results=script_results,
-            pf_path=preflight_path,
+            pf_config=pf_config if preflight_path.is_file() else None,
             binary_candidates=binary_candidates,
         )
         skill_trees[label] = skill_tree
@@ -289,10 +292,7 @@ def collect_inventory(
             cli_tools=sorted(cli_tools.values(), key=lambda d: d.name),
             env_vars=sorted(env_vars.values(), key=lambda d: d.name),
             docker=docker_deps,
-            python_packages=sorted(
-                [p for p in packages.values() if p.ecosystem == "python"],
-                key=lambda d: d.name,
-            ),
+            packages=sorted(packages.values(), key=lambda d: d.name),
             sourced_files=sorted(sourced_files.values(), key=lambda d: d.path),
         ),
     )
@@ -359,7 +359,7 @@ def deduplicate_dependencies(graph: DependencyGraph) -> DependencyGraph:
         _merge_env_var_into(env_map, dep)
 
     pkg_map: Dict[str, PackageDep] = {}
-    for dep in graph.python_packages:
+    for dep in graph.packages:
         _merge_package_into(pkg_map, dep)
 
     src_map: Dict[str, SourcedFileDep] = {}
@@ -375,7 +375,7 @@ def deduplicate_dependencies(graph: DependencyGraph) -> DependencyGraph:
         cli_tools=sorted(cli_map.values(), key=lambda d: d.name),
         env_vars=sorted(env_map.values(), key=lambda d: d.name),
         docker=list(graph.docker),
-        python_packages=sorted(pkg_map.values(), key=lambda d: d.name),
+        packages=sorted(pkg_map.values(), key=lambda d: d.name),
         sourced_files=sorted(src_map.values(), key=lambda d: d.path),
     )
 
@@ -575,7 +575,7 @@ def _build_skill_tree(
     skill_dir: Path,
     label: str,
     script_results: Dict[str, list],
-    pf_path: Path,
+    pf_config: Optional["PreflightConfig"],
     binary_candidates: List[Path],
 ) -> SkillTreeDep:
     """Build a :class:`SkillTreeDep` summary for one skill directory."""
@@ -598,11 +598,10 @@ def _build_skill_tree(
     if bin_dir.is_dir():
         path_additions.append(str(bin_dir))
 
-    # System deps from .preflight.yml (if present).
+    # System deps from .preflight.yml (reuse already-parsed config).
     system_deps: List[str] = []
     optional_deps: List[str] = []
-    if pf_path.is_file():
-        pf_config = read_preflight_yml(pf_path, required_by=label)
+    if pf_config is not None:
         system_deps = [t.name for t in pf_config.cli_tools if not t.optional]
         optional_deps = [t.name for t in pf_config.cli_tools if t.optional]
 

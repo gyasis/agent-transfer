@@ -354,12 +354,23 @@ _PYTHON_STDLIB: Set[str] = {
 # ---------------------------------------------------------------------------
 
 
-def _is_real_env_var(name: str) -> bool:
-    """Return True if *name* looks like a genuine env-var dependency."""
+def _is_real_env_var(name: str, from_shell_ref: bool = False) -> bool:
+    """Return True if *name* looks like a genuine env-var dependency.
+
+    For shell ``$VAR`` references (from_shell_ref=True), only ALL_CAPS names
+    are treated as env vars.  Lowercase names like ``$dir``, ``$i``, ``$result``
+    are almost always local variables.
+
+    For explicit env-API calls (os.environ, process.env), any casing is accepted
+    since those are unambiguously env var accesses.
+    """
     if name in _SHELL_INTERNALS:
         return False
     # Single-char names that are shell specials
     if len(name) == 1 and not name.isalpha():
+        return False
+    # Shell $VAR references: require ALL_CAPS (conventional env var casing)
+    if from_shell_ref and not name.isupper():
         return False
     return True
 
@@ -448,7 +459,7 @@ def scan_script_file(file_path: Path, required_by: str = "") -> Dict[str, list]:
     if lang == "sh":
         for m in _RE_ENV_SHELL.finditer(text):
             name = m.group(1)
-            if _is_real_env_var(name):
+            if _is_real_env_var(name, from_shell_ref=True):
                 env_names.add(name)
 
     if lang == "py":
@@ -458,7 +469,7 @@ def scan_script_file(file_path: Path, required_by: str = "") -> Dict[str, list]:
         # Also pick up shell-style expansion in Python f-strings / subprocess
         for m in _RE_ENV_SHELL.finditer(text):
             name = m.group(1)
-            if _is_real_env_var(name):
+            if _is_real_env_var(name, from_shell_ref=True):
                 env_names.add(name)
 
     if lang == "js":
