@@ -5,12 +5,10 @@ Tests the end-to-end selective import functionality including
 conflict resolution, import statistics, and mixed selections.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import patch, Mock, MagicMock
 
 from agent_transfer.utils.import_analyzer import analyze_import_archive
-from agent_transfer.models import Agent, AgentComparison
+from agent_transfer.models import Agent
 
 
 class TestImportNewAgents:

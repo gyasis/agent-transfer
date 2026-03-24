@@ -8,20 +8,27 @@ from rich.console import Console
 
 from . import __version__
 from .utils.parser import find_all_agents
-from .utils.transfer import export_agents_and_skills, import_agents_selective, import_agents_and_skills
+from .utils.transfer import (
+    export_agents_and_skills,
+    import_agents_selective,
+    import_agents_and_skills,
+)
 from .utils.discovery import discover_claude_code_info, display_discovery_info
 from .utils.web_server import start_server
 from .utils.conflict_resolver import ConflictMode
-from .utils.tool_checker import (
-    check_all_agents, display_compatibility_report
-)
+from .utils.tool_checker import check_all_agents, display_compatibility_report
 from .utils.skill_validator import (
-    validate_all_skills, display_skill_validation_report,
-    detect_environment, display_environment_info,
-    get_setup_recommendations, display_setup_recommendations,
-    validate_archive_skills, display_archive_validation_report,
+    validate_all_skills,
+    display_skill_validation_report,
+    detect_environment,
+    display_environment_info,
+    get_setup_recommendations,
+    display_setup_recommendations,
+    validate_archive_skills,
+    display_archive_validation_report,
     get_skills_with_missing_deps,
-    check_system_readiness, display_readiness_report
+    check_system_readiness,
+    display_readiness_report,
 )
 from .utils.discovery import find_agent_directories
 from .utils.import_analyzer import analyze_import_archive
@@ -39,16 +46,35 @@ def cli():
 
 
 @cli.command()
-@click.argument('output_file', required=False)
-@click.option('--all', 'export_all', is_flag=True, help='Export all agents without interactive selection')
-@click.option('--interactive/--no-interactive', default=True, help='Use interactive selection (default: True)')
-@click.option('--type', 'export_type',
-              type=click.Choice(['all', 'agents', 'skills']),
-              default='all',
-              help='What to export: all, agents-only, or skills-only')
-@click.option('--agent-type', 'agent_type', type=click.Choice(['user', 'project', 'all']), default='all',
-              help='Filter by agent type: user, project, or all (default: all)')
-@click.option('--discover', is_flag=True, help='Show Claude Code installation info before export')
+@click.argument("output_file", required=False)
+@click.option(
+    "--all",
+    "export_all",
+    is_flag=True,
+    help="Export all agents without interactive selection",
+)
+@click.option(
+    "--interactive/--no-interactive",
+    default=True,
+    help="Use interactive selection (default: True)",
+)
+@click.option(
+    "--type",
+    "export_type",
+    type=click.Choice(["all", "agents", "skills"]),
+    default="all",
+    help="What to export: all, agents-only, or skills-only",
+)
+@click.option(
+    "--agent-type",
+    "agent_type",
+    type=click.Choice(["user", "project", "all"]),
+    default="all",
+    help="Filter by agent type: user, project, or all (default: all)",
+)
+@click.option(
+    "--discover", is_flag=True, help="Show Claude Code installation info before export"
+)
 def export(output_file, export_all, interactive, export_type, agent_type, discover):
     """Export agents to a tar.gz archive.
 
@@ -68,21 +94,17 @@ def export(output_file, export_all, interactive, export_type, agent_type, discov
             interactive = False
 
         # Convert 'all' to None for the function
-        type_filter = None if agent_type == 'all' else agent_type
+        type_filter = None if agent_type == "all" else agent_type
 
         # Map export_type to the format expected by export_agents_and_skills
-        type_map = {
-            'all': 'all',
-            'agents': 'agents-only',
-            'skills': 'skills-only'
-        }
+        type_map = {"all": "all", "agents": "agents-only", "skills": "skills-only"}
         mapped_type = type_map[export_type]
 
         result_file = export_agents_and_skills(
             output_file=output_file,
             interactive=interactive,
             agent_type_filter=type_filter,
-            export_type=mapped_type
+            export_type=mapped_type,
         )
         console.print(f"\n[green]✓ Successfully exported to: {result_file}[/green]")
     except KeyboardInterrupt:
@@ -94,18 +116,46 @@ def export(output_file, export_all, interactive, export_type, agent_type, discov
 
 
 @cli.command()
-@click.argument('input_file', type=click.Path(exists=True))
-@click.option('--overwrite', is_flag=True, help='Overwrite existing agents without prompting (legacy, use --conflict-mode)')
-@click.option('--conflict-mode', '-c', type=click.Choice(['overwrite', 'keep', 'duplicate', 'diff']),
-              default='diff', help='How to handle conflicts: overwrite, keep, duplicate, or diff (default: diff)')
-@click.option('--type', 'import_type',
-              type=click.Choice(['all', 'agents', 'skills']),
-              default='all',
-              help='What to import: all, agents-only, or skills-only')
-@click.option('--discover', is_flag=True, help='Show Claude Code installation info before import')
-@click.option('--bulk', is_flag=True, help='Skip preview, import all agents (old behavior)')
-@click.option('--agent', type=str, help='Import specific agent by name')
-def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk, agent):
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    help="Overwrite existing agents without prompting (legacy, use --conflict-mode)",
+)
+@click.option(
+    "--conflict-mode",
+    "-c",
+    type=click.Choice(["overwrite", "keep", "duplicate", "diff"]),
+    default="diff",
+    help="How to handle conflicts: overwrite, keep, duplicate, or diff (default: diff)",
+)
+@click.option(
+    "--type",
+    "import_type",
+    type=click.Choice(["all", "agents", "skills"]),
+    default="all",
+    help="What to import: all, agents-only, or skills-only",
+)
+@click.option(
+    "--discover", is_flag=True, help="Show Claude Code installation info before import"
+)
+@click.option(
+    "--bulk", is_flag=True, help="Skip preview, import all agents (old behavior)"
+)
+@click.option("--agent", type=str, help="Import specific agent by name")
+@click.option(
+    "--force", is_flag=True, help="Bypass preflight RED blocks and import anyway"
+)
+def import_cmd(
+    input_file,
+    overwrite,
+    conflict_mode,
+    import_type,
+    discover,
+    bulk,
+    agent,
+    force=False,
+):
     """Import agents from a tar.gz archive.
 
     INPUT_FILE is the path to the backup archive to import.
@@ -130,6 +180,51 @@ def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk
             display_discovery_info(info)
             console.print()
 
+        # Preflight gate: check readiness before importing
+        try:
+            from .utils.preflight import (
+                run_preflight_checks,
+                read_manifest_from_archive,
+            )
+            from .utils.preflight.report import display_preflight_report
+
+            manifest = read_manifest_from_archive(Path(input_file))
+            if manifest is None:
+                console.print(
+                    "[yellow]No preflight data — this archive was created "
+                    "before preflight support. Proceeding with import.[/yellow]"
+                )
+                console.print()
+            else:
+                report = run_preflight_checks(manifest)
+                display_preflight_report(report)
+
+                if report.overall_status == "FAIL" and not force:
+                    console.print()
+                    if click.confirm(
+                        "[red]RED items detected.[/red] Continue with import?",
+                        default=False,
+                    ):
+                        console.print(
+                            "[yellow]Proceeding despite RED items...[/yellow]"
+                        )
+                    else:
+                        console.print(
+                            "[dim]Import cancelled. Use --force to bypass.[/dim]"
+                        )
+                        sys.exit(1)
+                elif report.overall_status == "WARN":
+                    console.print(
+                        "[yellow]YELLOW warnings detected. Proceeding with import.[/yellow]"
+                    )
+                    console.print()
+        except ImportError:
+            pass  # Preflight module not available — proceed without gate
+        except Exception as preflight_err:
+            console.print(
+                f"[dim yellow]Preflight check skipped: {preflight_err}[/dim yellow]"
+            )
+
         # Convert string to ConflictMode enum
         mode = ConflictMode(conflict_mode)
 
@@ -138,17 +233,15 @@ def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk
             mode = ConflictMode.OVERWRITE
 
         # Map import_type to the format expected by import_agents_and_skills
-        type_map = {
-            'all': 'all',
-            'agents': 'agents-only',
-            'skills': 'skills-only'
-        }
+        type_map = {"all": "all", "agents": "agents-only", "skills": "skills-only"}
         mapped_type = type_map[import_type]
 
         # Route based on flags
         if bulk:
             # OLD BEHAVIOR: Import all agents (now with type support)
-            import_agents_and_skills(input_file, conflict_mode=mode, import_type=mapped_type)
+            import_agents_and_skills(
+                input_file, conflict_mode=mode, import_type=mapped_type
+            )
         elif agent:
             # DIRECT IMPORT: Import specific agent by name
             preview = analyze_import_archive(input_file)
@@ -178,19 +271,27 @@ def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk
             preview = analyze_import_archive(input_file)
 
             # Show preview summary
-            console.print(Panel(
-                f"[bold]Archive:[/bold] {input_file}\n"
-                f"[bold]Agents:[/bold] {len(preview.comparisons)} total\n"
-                f"  [green]NEW:[/green] {preview.new_count}\n"
-                f"  [yellow]CHANGED:[/yellow] {preview.changed_count}\n"
-                f"  [dim]IDENTICAL:[/dim] {preview.identical_count}",
-                title="Import Preview",
-                border_style="cyan"
-            ))
+            console.print(
+                Panel(
+                    f"[bold]Archive:[/bold] {input_file}\n"
+                    f"[bold]Agents:[/bold] {len(preview.comparisons)} total\n"
+                    f"  [green]NEW:[/green] {preview.new_count}\n"
+                    f"  [yellow]CHANGED:[/yellow] {preview.changed_count}\n"
+                    f"  [dim]IDENTICAL:[/dim] {preview.identical_count}",
+                    title="Import Preview",
+                    border_style="cyan",
+                )
+            )
 
             # Handle all identical case
-            if preview.new_count == 0 and preview.changed_count == 0 and len(preview.comparisons) > 0:
-                console.print("\n[yellow]All agents are identical to local versions.[/yellow]")
+            if (
+                preview.new_count == 0
+                and preview.changed_count == 0
+                and len(preview.comparisons) > 0
+            ):
+                console.print(
+                    "\n[yellow]All agents are identical to local versions.[/yellow]"
+                )
                 if not Confirm.ask("Show identical agents anyway?", default=False):
                     console.print("[dim]Import cancelled[/dim]")
                     return
@@ -213,71 +314,76 @@ def import_cmd(input_file, overwrite, conflict_mode, import_type, discover, bulk
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         import traceback
+
         console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
 
 
 @cli.command()
-@click.option('--discover', is_flag=True, help='Show Claude Code installation discovery info')
+@click.option(
+    "--discover", is_flag=True, help="Show Claude Code installation discovery info"
+)
 def list_agents(discover):
     """List all available agents."""
     if discover:
         info = discover_claude_code_info()
         display_discovery_info(info)
         return
-    
+
     agents = find_all_agents()
-    
+
     if not agents:
         console.print("[yellow]No agents found![/yellow]")
         console.print("\n[dim]Run with --discover to see search locations[/dim]")
         console.print("  [cyan]agent-transfer list-agents --discover[/cyan]")
         return
-    
+
     from rich.table import Table
     from rich import box
-    
+
     table = Table(title="Available Agents", box=box.ROUNDED, show_header=True)
     table.add_column("#", width=4, justify="right")
     table.add_column("Name", width=25, style="cyan")
     table.add_column("Description", width=50)
     table.add_column("Type", width=8, justify="center")
     table.add_column("Tools", width=20)
-    
+
     for idx, agent in enumerate(agents, 1):
         type_style = "green" if agent.agent_type == "user" else "blue"
         type_text = "User" if agent.agent_type == "user" else "Project"
-        
+
         tools_str = ", ".join(agent.tools[:3])
         if len(agent.tools) > 3:
             tools_str += f" (+{len(agent.tools) - 3})"
         if not tools_str:
             tools_str = "N/A"
-        
+
         desc = agent.description
         if len(desc) > 47:
             desc = desc[:44] + "..."
-        
+
         table.add_row(
             str(idx),
             agent.name,
             desc,
             f"[{type_style}]{type_text}[/{type_style}]",
-            tools_str
+            tools_str,
         )
-    
+
     console.print(table)
     console.print(f"\n[dim]Total: {len(agents)} agent(s)[/dim]")
 
 
-@cli.command('list-skills')
+@cli.command("list-skills")
 def list_skills():
     """List all available Claude Code skills."""
     skills = find_all_skills()
 
     if not skills:
         console.print("[yellow]No skills found[/yellow]")
-        console.print("\n[dim]Run 'agent-transfer discover' to see search locations[/dim]")
+        console.print(
+            "\n[dim]Run 'agent-transfer discover' to see search locations[/dim]"
+        )
         return
 
     from rich.table import Table
@@ -294,29 +400,39 @@ def list_skills():
 
     for skill in skills:
         # Type badge
-        type_badge = "[green]USER[/green]" if skill.skill_type == "user" else "[blue]PROJECT[/blue]"
+        type_badge = (
+            "[green]USER[/green]"
+            if skill.skill_type == "user"
+            else "[blue]PROJECT[/blue]"
+        )
 
         # Size
         size_mb = skill.total_size_bytes / (1024 * 1024)
-        size_str = f"{size_mb:.1f} MB" if size_mb >= 1 else f"{skill.total_size_bytes / 1024:.1f} KB"
+        size_str = (
+            f"{size_mb:.1f} MB"
+            if size_mb >= 1
+            else f"{skill.total_size_bytes / 1024:.1f} KB"
+        )
 
         # Scripts indicator
         scripts = "[green]Yes[/green]" if skill.has_scripts else "[dim]No[/dim]"
 
         # Dependencies indicator
-        deps = "[yellow]Yes[/yellow]" if (skill.has_requirements_txt or skill.has_pyproject_toml) else "[dim]No[/dim]"
+        deps = (
+            "[yellow]Yes[/yellow]"
+            if (skill.has_requirements_txt or skill.has_pyproject_toml)
+            else "[dim]No[/dim]"
+        )
 
         # Truncate description
-        desc = skill.description[:60] + "..." if len(skill.description) > 60 else skill.description
+        desc = (
+            skill.description[:60] + "..."
+            if len(skill.description) > 60
+            else skill.description
+        )
 
         table.add_row(
-            skill.name,
-            type_badge,
-            str(skill.file_count),
-            size_str,
-            scripts,
-            deps,
-            desc
+            skill.name, type_badge, str(skill.file_count), size_str, scripts, deps, desc
         )
 
     console.print(table)
@@ -325,7 +441,7 @@ def list_skills():
 @cli.command()
 def discover():
     """Discover Claude Code installation and agent directories.
-    
+
     Performs a deep search to find Claude Code in:
     - PATH
     - npm global installations
@@ -339,12 +455,12 @@ def discover():
 
 
 @cli.command()
-@click.option('--host', default='127.0.0.1', help='Host to bind to')
-@click.option('--port', default=7651, help='Port to bind to')
-@click.option('--no-browser', is_flag=True, help='Don\'t open browser automatically')
+@click.option("--host", default="127.0.0.1", help="Host to bind to")
+@click.option("--port", default=7651, help="Port to bind to")
+@click.option("--no-browser", is_flag=True, help="Don't open browser automatically")
 def view(host, port, no_browser):
     """Launch web viewer to browse agents with beautiful HTML interface.
-    
+
     Opens a web server with:
     - Sidebar navigation of all agents
     - Beautiful markdown rendering
@@ -364,7 +480,7 @@ def view(host, port, no_browser):
 
 
 @cli.command()
-@click.option('--verbose', '-v', is_flag=True, help='Show detailed tool information')
+@click.option("--verbose", "-v", is_flag=True, help="Show detailed tool information")
 def validate_tools(verbose):
     """Check tool compatibility for all agents.
 
@@ -403,11 +519,20 @@ def validate_tools(verbose):
         sys.exit(1)
 
 
-@cli.command('validate-skills')
-@click.option('--verbose', '-v', is_flag=True, help='Show detailed dependency information')
-@click.option('--archive', '-a', type=click.Path(exists=True), help='Validate skills from archive before import')
-@click.option('--env', 'show_env', is_flag=True, help='Show current Python environment info')
-@click.option('--setup', 'show_setup', is_flag=True, help='Show setup recommendations')
+@cli.command("validate-skills")
+@click.option(
+    "--verbose", "-v", is_flag=True, help="Show detailed dependency information"
+)
+@click.option(
+    "--archive",
+    "-a",
+    type=click.Path(exists=True),
+    help="Validate skills from archive before import",
+)
+@click.option(
+    "--env", "show_env", is_flag=True, help="Show current Python environment info"
+)
+@click.option("--setup", "show_setup", is_flag=True, help="Show setup recommendations")
 def validate_skills(verbose, archive, show_env, show_setup):
     """Check Python dependency availability for skills.
 
@@ -477,7 +602,9 @@ def validate_skills(verbose, archive, show_env, show_setup):
 
         if not skills:
             console.print("[yellow]No skills found to validate.[/yellow]")
-            console.print("\n[dim]Run 'agent-transfer discover' to see search locations[/dim]")
+            console.print(
+                "\n[dim]Run 'agent-transfer discover' to see search locations[/dim]"
+            )
             return
 
         # Validate all skills
@@ -500,15 +627,22 @@ def validate_skills(verbose, archive, show_env, show_setup):
     except Exception as e:
         console.print(f"[red]Error checking skill dependencies: {e}[/red]")
         import traceback
+
         console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
 
 
-@cli.command('check-ready')
-@click.option('--archive', '-a', type=click.Path(exists=True),
-              help='Check readiness for skills in archive before import')
-@click.option('--verbose', '-v', is_flag=True, help='Show detailed information')
-@click.option('--all-skills', is_flag=True, help='Show all skills, not just those with issues')
+@cli.command("check-ready")
+@click.option(
+    "--archive",
+    "-a",
+    type=click.Path(exists=True),
+    help="Check readiness for skills in archive before import",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Show detailed information")
+@click.option(
+    "--all-skills", is_flag=True, help="Show all skills, not just those with issues"
+)
 def check_ready(archive, verbose, all_skills):
     """Comprehensive system readiness check for skill transfer.
 
@@ -540,16 +674,22 @@ def check_ready(archive, verbose, all_skills):
     try:
         # Perform comprehensive readiness check
         if archive:
-            console.print(f"[cyan]Checking system readiness for archive: {archive}[/cyan]\n")
+            console.print(
+                f"[cyan]Checking system readiness for archive: {archive}[/cyan]\n"
+            )
             report, temp_dir = check_system_readiness(archive_path=Path(archive))
         else:
-            console.print("[cyan]Checking system readiness for local skills...[/cyan]\n")
+            console.print(
+                "[cyan]Checking system readiness for local skills...[/cyan]\n"
+            )
             skills = find_all_skills()
             report, temp_dir = check_system_readiness(local_skills=skills)
 
         try:
             # Display the comprehensive report
-            display_readiness_report(report, verbose=verbose, show_all_skills=all_skills)
+            display_readiness_report(
+                report, verbose=verbose, show_all_skills=all_skills
+            )
 
             # Exit with appropriate code
             if not report.is_ready:
@@ -568,6 +708,123 @@ def check_ready(archive, verbose, all_skills):
     except Exception as e:
         console.print(f"[red]Error during readiness check: {e}[/red]")
         import traceback
+
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("archive", required=False, type=click.Path(exists=False))
+@click.option(
+    "--json", "json_output", is_flag=True, help="Machine-readable JSON output"
+)
+@click.option(
+    "--self",
+    "self_audit",
+    is_flag=True,
+    help="Audit local environment (no archive needed)",
+)
+@click.option("--force", is_flag=True, help="Used with import gate — bypass RED blocks")
+def preflight(archive, json_output, self_audit, force):
+    """Check transfer readiness for an archive or local environment.
+
+    Run against an archive:
+        agent-transfer preflight archive.tar.gz
+
+    Audit local machine:
+        agent-transfer preflight --self
+
+    Machine-readable output:
+        agent-transfer preflight archive.tar.gz --json
+    """
+    from .utils.preflight import (
+        run_preflight_checks,
+        read_manifest_from_archive,
+    )
+    from .utils.preflight.report import display_preflight_report, report_to_json
+
+    try:
+        manifest = None
+
+        if self_audit:
+            # T029/T030: Self-audit mode — scan local environment
+            from .utils.preflight.collector import collect_inventory as _collect
+
+            try:
+                from .utils.pathfinder import get_pathfinder
+
+                pf = get_pathfinder()
+                slug = "claude-code"
+
+                # Discover agents
+                agents_dir = pf.agents_dir(slug)
+                agents = []
+                if agents_dir and agents_dir.is_dir():
+                    agents = list(agents_dir.glob("*.md"))
+
+                # Discover skills
+                skills_dir = pf.skills_dir(slug)
+                skills = []
+                if skills_dir and skills_dir.is_dir():
+                    skills = [d for d in skills_dir.iterdir() if d.is_dir()]
+
+                # Discover MCP configs
+                configs = []
+                mcp_config = pf.config_dir(slug) / "settings.json"
+                if mcp_config.exists():
+                    configs.append(mcp_config)
+            except Exception:
+                agents = []
+                skills = []
+                configs = []
+
+            manifest = _collect(
+                agents=agents,
+                skills=skills,
+                hooks=[],
+                configs=configs,
+                platform="claude-code",
+            )
+        elif archive:
+            archive_path = Path(archive)
+            if not archive_path.exists():
+                console.print(f"[red]Archive not found: {archive}[/red]")
+                sys.exit(1)
+
+            manifest = read_manifest_from_archive(archive_path)
+
+            if manifest is None:
+                # Legacy archive — no manifest
+                console.print(
+                    "[yellow]No manifest.json found — this archive was created "
+                    "before preflight support.[/yellow]"
+                )
+                sys.exit(0)
+        else:
+            console.print("[red]Please provide an archive path or use --self[/red]")
+            console.print("Usage: agent-transfer preflight <archive.tar.gz>")
+            console.print("       agent-transfer preflight --self")
+            sys.exit(1)
+
+        # Run checks
+        report = run_preflight_checks(manifest)
+
+        # Output
+        if json_output:
+            click.echo(report_to_json(report))
+        else:
+            display_preflight_report(report)
+
+        # Exit code: 0 for PASS/WARN, 1 for FAIL
+        if report.overall_status == "FAIL" and not force:
+            sys.exit(1)
+
+    except SystemExit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Preflight check failed: {e}[/red]")
+        import traceback
+
         console.print(f"[dim]{traceback.format_exc()}[/dim]")
         sys.exit(1)
 
@@ -577,6 +834,5 @@ def main():
     cli()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

@@ -62,7 +62,7 @@ def parse_agent_file(file_path: Path) -> Optional[Agent]:
             model=metadata.get('model'),
             full_content=content
         )
-    except Exception as e:
+    except Exception:
         return None
 
 

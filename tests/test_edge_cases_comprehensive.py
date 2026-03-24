@@ -6,12 +6,10 @@ Tests error handling, invalid inputs, corner cases, and boundary conditions.
 
 import pytest
 from pathlib import Path
-from unittest.mock import patch, Mock
 
 from agent_transfer.utils.import_analyzer import (
     analyze_import_archive,
-    compare_agents,
-    find_local_agent_path
+    compare_agents
 )
 from agent_transfer.models import Agent, AgentComparison
 

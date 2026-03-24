@@ -1,1 +1,1 @@
-specs/001-pathfinder-module/tasks.md
+specs/002-preflight-check/tasks.md

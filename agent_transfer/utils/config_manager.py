@@ -185,7 +185,6 @@ def detect_runtimes(servers: Dict[str, Dict]) -> Dict[str, Dict[str, Any]]:
 
     # Check availability
     for runtime in runtimes:
-        check_cmd = RUNTIME_INFO.get(runtime, {}).get('check', f'which {runtime}')
         runtimes[runtime]['available'] = shutil.which(runtime) is not None
 
     return runtimes
@@ -253,7 +252,6 @@ def export_config(
         output_file = f"claude-config-export_{timestamp}.json"
 
     # Gather data
-    mcp_data = read_mcp_json(claude_dir)
     settings_data = read_settings_json(claude_dir)
     servers = get_all_mcp_servers(claude_dir)
 

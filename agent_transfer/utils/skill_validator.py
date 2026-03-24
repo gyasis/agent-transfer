@@ -11,7 +11,7 @@ import tempfile
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Set, Dict, Any, Tuple
+from typing import List, Optional, Set, Any, Tuple
 
 from rich.console import Console
 from rich.table import Table
@@ -1045,7 +1045,7 @@ def display_readiness_report(
 
         # venv
         if env.is_in_venv:
-            env_items.append(f"[green]venv active[/green]")
+            env_items.append("[green]venv active[/green]")
         else:
             env_items.append("[dim]no venv[/dim]")
 
