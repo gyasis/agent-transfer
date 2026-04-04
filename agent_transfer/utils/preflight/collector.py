@@ -247,6 +247,11 @@ def collect_inventory(
             logger.warning("Config path is not a file, skipping: %s", config_path)
             continue
 
+        # Only parse JSON files — skip .md, .yaml, and other non-JSON configs
+        if config_path.suffix.lower() not in (".json",):
+            logger.debug("Skipping non-JSON config file: %s", config_path)
+            continue
+
         config_names.append(config_path.name)
         label = config_path.stem
 
