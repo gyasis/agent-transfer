@@ -33,7 +33,10 @@ class PathProfile:
     agents_subdir: Optional[str] = None  # Relative to config_dir
     skills_subdir: Optional[str] = None
     hooks_subdir: Optional[str] = None
+    rules_subdir: Optional[str] = None  # e.g. "rules" -> ~/.claude/rules/
     config_files: List[str] = field(default_factory=list)
+    home_root_configs: List[str] = field(default_factory=list)  # Files at ~/ root
+    instruction_files: List[str] = field(default_factory=list)  # e.g. ["CLAUDE.md"]
     executable_names: List[str] = field(default_factory=list)
     project_level: bool = False
     project_config_dir: Optional[str] = None
@@ -50,7 +53,11 @@ BUILTIN_PROFILES: List[PathProfile] = [
         agents_subdir="agents",
         skills_subdir="skills",
         hooks_subdir="hooks",
-        config_files=["mcp.json", "settings.json", "settings.local.json"],
+        rules_subdir="rules",
+        config_files=["mcp.json", "settings.json", "settings.local.json",
+                       "keybindings.json"],
+        home_root_configs=[".claude.json"],
+        instruction_files=["CLAUDE.md"],
         executable_names=["claude"],
         project_level=True,
         project_config_dir=".claude",
@@ -203,10 +210,46 @@ class Pathfinder:
             return None
         return self.config_dir(slug) / profile.hooks_subdir
 
+    def rules_dir(self, slug: str) -> Optional[Path]:
+        profile = self.registry.get(slug)
+        if profile.rules_subdir is None:
+            return None
+        return self.config_dir(slug) / profile.rules_subdir
+
     def config_files(self, slug: str) -> List[Path]:
         profile = self.registry.get(slug)
         base = self.config_dir(slug)
         return [base / f for f in profile.config_files]
+
+    def home_root_config_files(self, slug: str) -> List[Path]:
+        """Return config files that live at ~/ root (not inside config_dir)."""
+        profile = self.registry.get(slug)
+        return [Path.home() / f for f in profile.home_root_configs]
+
+    def instruction_files(self, slug: str) -> List[Path]:
+        """Return instruction files (e.g. CLAUDE.md) inside config_dir."""
+        profile = self.registry.get(slug)
+        base = self.config_dir(slug)
+        return [base / f for f in profile.instruction_files]
+
+    def project_instruction_file(
+        self, slug: str, start_dir: Optional[Path] = None
+    ) -> Optional[Path]:
+        """Find project-level instruction file (e.g. <project>/CLAUDE.md)."""
+        profile = self.registry.get(slug)
+        if not profile.instruction_files:
+            return None
+        current = (start_dir or Path.cwd()).resolve()
+        for _ in range(self.project_search_depth):
+            for fname in profile.instruction_files:
+                candidate = current / fname
+                if candidate.is_file():
+                    return candidate
+            parent = current.parent
+            if parent == current:
+                break
+            current = parent
+        return None
 
     # ── Project-level resolution ────────────────────────────────────
 
@@ -467,6 +510,8 @@ class Pathfinder:
             dirs.append((os.path.join(base, profile.skills_subdir), "skills"))
         if profile.hooks_subdir:
             dirs.append((os.path.join(base, profile.hooks_subdir), "hooks"))
+        if profile.rules_subdir:
+            dirs.append((os.path.join(base, profile.rules_subdir), "rules"))
 
         return dirs
 
@@ -484,6 +529,8 @@ class Pathfinder:
             return os.path.join(base, profile.skills_subdir)
         if dir_type == "hooks" and profile.hooks_subdir:
             return os.path.join(base, profile.hooks_subdir)
+        if dir_type == "rules" and profile.rules_subdir:
+            return os.path.join(base, profile.rules_subdir)
         return None
 
     # ── Utilities ───────────────────────────────────────────────────

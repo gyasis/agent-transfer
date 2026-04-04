@@ -53,9 +53,10 @@ Homepage = "https://github.com/promptchain/agent-transfer"
 Documentation = "https://github.com/promptchain/agent-transfer#readme"
 Repository = "https://github.com/promptchain/agent-transfer"
 
-[tool.setuptools]
-packages = ["agent_transfer"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_transfer*"]
 
 [tool.setuptools.package-data]
-agent_transfer = ["*.md"]
+agent_transfer = ["*.md", "templates/*.html"]
 

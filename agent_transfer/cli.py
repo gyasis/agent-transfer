@@ -75,7 +75,12 @@ def cli():
 @click.option(
     "--discover", is_flag=True, help="Show Claude Code installation info before export"
 )
-def export(output_file, export_all, interactive, export_type, agent_type, discover):
+@click.option(
+    "--include-config/--no-config",
+    default=True,
+    help="Include rules, hooks, CLAUDE.md, settings, MCP config (default: True)",
+)
+def export(output_file, export_all, interactive, export_type, agent_type, discover, include_config):
     """Export agents to a tar.gz archive.
 
     If OUTPUT_FILE is not provided, a timestamped filename will be used.
@@ -105,6 +110,7 @@ def export(output_file, export_all, interactive, export_type, agent_type, discov
             interactive=interactive,
             agent_type_filter=type_filter,
             export_type=mapped_type,
+            include_config=include_config,
         )
         console.print(f"\n[green]✓ Successfully exported to: {result_file}[/green]")
     except KeyboardInterrupt:

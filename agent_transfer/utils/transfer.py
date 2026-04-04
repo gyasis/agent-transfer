@@ -35,8 +35,9 @@ def export_agents_and_skills(
     interactive: bool = True,
     agent_type_filter: Optional[str] = None,
     export_type: str = "all",
+    include_config: bool = True,
 ) -> str:
-    """Export agents and/or skills to a tar.gz archive.
+    """Export agents, skills, and config to a tar.gz archive.
 
     Args:
         output_file: Output filename (auto-generated if None)
@@ -45,6 +46,7 @@ def export_agents_and_skills(
         interactive: Use interactive selection UI
         agent_type_filter: Filter by type: 'user', 'project', or None for all
         export_type: 'all', 'agents-only', or 'skills-only'
+        include_config: Include rules, hooks, CLAUDE.md, settings, MCP config
     """
     from .selector import interactive_select_agents
 
@@ -200,6 +202,91 @@ def export_agents_and_skills(
                     shutil.copytree(skill_path, target_dir, ignore=ignore_patterns)
                     project_skill_count += 1
 
+        # ── Export config artifacts (rules, hooks, CLAUDE.md, configs) ──
+        config_counts: Dict[str, int] = {
+            "rules": 0, "hooks": 0, "instruction_files": 0, "config_files": 0,
+        }
+        if include_config:
+            from .pathfinder import get_pathfinder
+            pf = get_pathfinder()
+            slug = "claude-code"
+
+            # Define ignore patterns for hook/rule directory copying
+            def _ignore_dev_artifacts(_directory, files):
+                ignore_list = [
+                    ".venv", "__pycache__", ".pyc", ".git",
+                    ".DS_Store", "node_modules",
+                ]
+                return [f for f in files if any(p in f for p in ignore_list)]
+
+            # 1. Rules directory (~/.claude/rules/)
+            rules_src = pf.rules_dir(slug)
+            if rules_src and rules_src.is_dir():
+                rules_dst = temp_path / "rules"
+                shutil.copytree(rules_src, rules_dst, ignore=_ignore_dev_artifacts)
+                config_counts["rules"] = sum(
+                    1 for _ in rules_dst.rglob("*.md")
+                )
+                console.print(
+                    f"[dim]Rules: {config_counts['rules']} file(s) collected[/dim]"
+                )
+
+            # 2. Hooks directory (~/.claude/hooks/)
+            hooks_src = pf.hooks_dir(slug)
+            if hooks_src and hooks_src.is_dir():
+                hooks_dst = temp_path / "hooks"
+                shutil.copytree(hooks_src, hooks_dst, ignore=_ignore_dev_artifacts)
+                config_counts["hooks"] = sum(
+                    1 for _ in hooks_dst.rglob("*") if _.is_file()
+                )
+                console.print(
+                    f"[dim]Hooks: {config_counts['hooks']} file(s) collected[/dim]"
+                )
+
+            # 3. Instruction files (CLAUDE.md — global + project)
+            for instr_file in pf.instruction_files(slug):
+                if instr_file.is_file():
+                    instr_dst = temp_path / "config" / "global"
+                    instr_dst.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(instr_file, instr_dst / instr_file.name)
+                    config_counts["instruction_files"] += 1
+                    console.print(
+                        f"[dim]Global {instr_file.name} collected[/dim]"
+                    )
+
+            # Project-level CLAUDE.md
+            proj_instr = pf.project_instruction_file(slug)
+            if proj_instr and proj_instr.is_file():
+                proj_dst = temp_path / "config" / "project"
+                proj_dst.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(proj_instr, proj_dst / proj_instr.name)
+                config_counts["instruction_files"] += 1
+                console.print(
+                    f"[dim]Project {proj_instr.name} collected[/dim]"
+                )
+
+            # 4. Config files (~/.claude/settings.json, mcp.json, keybindings.json etc)
+            config_dst = temp_path / "config" / "global"
+            config_dst.mkdir(parents=True, exist_ok=True)
+            for cfg_file in pf.config_files(slug):
+                if cfg_file.is_file():
+                    shutil.copy2(cfg_file, config_dst / cfg_file.name)
+                    config_counts["config_files"] += 1
+
+            # 5. Home-root config files (~/.claude.json)
+            for hr_file in pf.home_root_config_files(slug):
+                if hr_file.is_file():
+                    shutil.copy2(hr_file, config_dst / hr_file.name)
+                    config_counts["config_files"] += 1
+                    console.print(
+                        f"[dim]Home root config {hr_file.name} collected[/dim]"
+                    )
+
+            if config_counts["config_files"]:
+                console.print(
+                    f"[dim]Config files: {config_counts['config_files']} collected[/dim]"
+                )
+
         # Create metadata
         metadata = temp_path / "metadata.txt"
         system_name = "Unknown"
@@ -224,7 +311,7 @@ def export_agents_and_skills(
         with open(metadata, "w") as f:
             f.write(f"""Claude Code Agents and Skills Backup
 Created: {datetime.now().isoformat()}
-Export Version: 1.1
+Export Version: 1.2
 System: {system_name}
 User: {username}
 Home Directory: {Path.home()}
@@ -232,6 +319,10 @@ User Agents: {user_agent_count}
 Project Agents: {project_agent_count}
 User Skills: {user_skill_count}
 Project Skills: {project_skill_count}
+Rules Files: {config_counts.get('rules', 0)}
+Hook Files: {config_counts.get('hooks', 0)}
+Instruction Files: {config_counts.get('instruction_files', 0)}
+Config Files: {config_counts.get('config_files', 0)}
 """)
 
         # Generate preflight manifest
@@ -247,11 +338,23 @@ Project Skills: {project_skill_count}
                 for s in (selected_skills or [])
                 if Path(s.skill_path).exists()
             ]
+            # Gather hook paths for preflight
+            hook_paths = []
+            _hooks_src = temp_path / "hooks"
+            if _hooks_src.is_dir():
+                hook_paths = [p for p in _hooks_src.rglob("*") if p.is_file()]
+
+            # Gather config file paths for preflight
+            _cfg_src = temp_path / "config" / "global"
+            cfg_paths = []
+            if _cfg_src.is_dir():
+                cfg_paths = [p for p in _cfg_src.iterdir() if p.is_file()]
+
             manifest = collect_inventory(
                 agents=agent_paths,
                 skills=skill_paths,
-                hooks=[],
-                configs=[],
+                hooks=hook_paths,
+                configs=cfg_paths,
                 platform="claude-code",
             )
             # Fill contents inventory
@@ -631,6 +734,161 @@ def import_agents_and_skills(
                             f"[green]Project-level skills directory: {project_skills_base}[/green]"
                         )
 
+        # ── Import config artifacts (rules, hooks, CLAUDE.md, configs) ──
+        rules_source = temp_path / "rules"
+        hooks_source = temp_path / "hooks"
+        config_source = temp_path / "config" / "global"
+        project_config_source = temp_path / "config" / "project"
+
+        from .pathfinder import get_pathfinder
+        pf = get_pathfinder()
+        slug = "claude-code"
+
+        def _ignore_dev_artifacts(_directory, files):
+            ignore_list = [".venv", "__pycache__", ".pyc", ".git",
+                           ".DS_Store", "node_modules"]
+            return [f for f in files if any(p in f for p in ignore_list)]
+
+        config_imported: Dict[str, int] = {
+            "rules": 0, "hooks": 0, "instruction_files": 0, "config_files": 0,
+        }
+
+        # 1. Rules
+        if rules_source.is_dir():
+            rules_target = pf.rules_dir(slug)
+            if rules_target:
+                if rules_target.exists():
+                    # Merge: copy new files, skip existing
+                    for src_file in rules_source.rglob("*"):
+                        if src_file.is_file():
+                            rel = src_file.relative_to(rules_source)
+                            dst = rules_target / rel
+                            dst.parent.mkdir(parents=True, exist_ok=True)
+                            if not dst.exists():
+                                shutil.copy2(src_file, dst)
+                                config_imported["rules"] += 1
+                                console.print(f"[green]Imported rule: {rel}[/green]")
+                            else:
+                                console.print(f"[dim]Rule exists, skipped: {rel}[/dim]")
+                else:
+                    shutil.copytree(rules_source, rules_target,
+                                    ignore=_ignore_dev_artifacts)
+                    config_imported["rules"] = sum(
+                        1 for _ in rules_target.rglob("*.md")
+                    )
+                    console.print(
+                        f"[green]Imported {config_imported['rules']} rule(s)[/green]"
+                    )
+
+        # 2. Hooks
+        if hooks_source.is_dir():
+            hooks_target = pf.hooks_dir(slug)
+            if hooks_target:
+                if hooks_target.exists():
+                    # Merge: copy new hook dirs, skip existing
+                    for src_item in hooks_source.iterdir():
+                        dst_item = hooks_target / src_item.name
+                        if src_item.is_dir():
+                            if not dst_item.exists():
+                                shutil.copytree(src_item, dst_item,
+                                                ignore=_ignore_dev_artifacts)
+                                # Restore executable permissions on shell scripts
+                                for sh_file in dst_item.rglob("*.sh"):
+                                    sh_file.chmod(sh_file.stat().st_mode | 0o755)
+                                config_imported["hooks"] += 1
+                                console.print(
+                                    f"[green]Imported hook: {src_item.name}[/green]"
+                                )
+                            else:
+                                console.print(
+                                    f"[dim]Hook exists, skipped: {src_item.name}[/dim]"
+                                )
+                        elif src_item.is_file() and not dst_item.exists():
+                            shutil.copy2(src_item, dst_item)
+                            if src_item.suffix == ".sh":
+                                dst_item.chmod(dst_item.stat().st_mode | 0o755)
+                            config_imported["hooks"] += 1
+                else:
+                    shutil.copytree(hooks_source, hooks_target,
+                                    ignore=_ignore_dev_artifacts)
+                    # Restore executable permissions
+                    for sh_file in hooks_target.rglob("*.sh"):
+                        sh_file.chmod(sh_file.stat().st_mode | 0o755)
+                    config_imported["hooks"] = sum(
+                        1 for d in hooks_target.iterdir() if d.is_dir()
+                    )
+                    console.print(
+                        f"[green]Imported {config_imported['hooks']} hook(s)[/green]"
+                    )
+
+        # 3. Global instruction files (CLAUDE.md)
+        if config_source and config_source.is_dir():
+            config_dir = pf.config_dir(slug)
+            for instr_name in pf.registry.get(slug).instruction_files:
+                src = config_source / instr_name
+                if src.is_file():
+                    dst = config_dir / instr_name
+                    if not dst.exists():
+                        shutil.copy2(src, dst)
+                        config_imported["instruction_files"] += 1
+                        console.print(
+                            f"[green]Imported global {instr_name}[/green]"
+                        )
+                    else:
+                        console.print(
+                            f"[dim]Global {instr_name} exists, skipped[/dim]"
+                        )
+
+            # Config files (settings.json, mcp.json, keybindings.json)
+            profile = pf.registry.get(slug)
+            for cfg_name in profile.config_files:
+                src = config_source / cfg_name
+                if src.is_file():
+                    dst = config_dir / cfg_name
+                    if not dst.exists():
+                        shutil.copy2(src, dst)
+                        config_imported["config_files"] += 1
+                        console.print(
+                            f"[green]Imported config: {cfg_name}[/green]"
+                        )
+                    else:
+                        console.print(
+                            f"[dim]Config exists, skipped: {cfg_name}[/dim]"
+                        )
+
+            # Home-root configs (~/.claude.json)
+            for hr_name in profile.home_root_configs:
+                src = config_source / hr_name
+                if src.is_file():
+                    dst = Path.home() / hr_name
+                    if not dst.exists():
+                        shutil.copy2(src, dst)
+                        config_imported["config_files"] += 1
+                        console.print(
+                            f"[green]Imported home config: {hr_name}[/green]"
+                        )
+                    else:
+                        console.print(
+                            f"[dim]Home config exists, skipped: {hr_name}[/dim]"
+                        )
+
+        # 4. Project-level instruction file
+        if project_config_source and project_config_source.is_dir():
+            for instr_name in pf.registry.get(slug).instruction_files:
+                src = project_config_source / instr_name
+                if src.is_file():
+                    dst = Path.cwd() / instr_name
+                    if not dst.exists():
+                        shutil.copy2(src, dst)
+                        config_imported["instruction_files"] += 1
+                        console.print(
+                            f"[green]Imported project {instr_name}[/green]"
+                        )
+                    else:
+                        console.print(
+                            f"[dim]Project {instr_name} exists, skipped[/dim]"
+                        )
+
     # Summary
     console.print()
 
@@ -647,6 +905,19 @@ def import_agents_and_skills(
             summary_lines.append("")  # Add blank line between agents and skills
         summary_lines.append(f"Skills Imported: [green]{skills_imported}[/green]")
         summary_lines.append(f"Skills Skipped: [dim]{skills_skipped}[/dim]")
+
+    # Config artifact counts
+    total_config = sum(config_imported.values())
+    if total_config > 0:
+        summary_lines.append("")
+        summary_lines.append(f"Rules: [green]{config_imported['rules']}[/green]")
+        summary_lines.append(f"Hooks: [green]{config_imported['hooks']}[/green]")
+        summary_lines.append(
+            f"Instruction Files: [green]{config_imported['instruction_files']}[/green]"
+        )
+        summary_lines.append(
+            f"Config Files: [green]{config_imported['config_files']}[/green]"
+        )
 
     console.print(
         Panel("\n".join(summary_lines), title="Summary", border_style="green")

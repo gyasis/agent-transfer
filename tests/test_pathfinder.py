@@ -151,13 +151,25 @@ class TestBuiltinProfiles:
         assert pf.agents_dir("claude-code") == fake_home / ".claude" / "agents"
         assert pf.skills_dir("claude-code") == fake_home / ".claude" / "skills"
         assert pf.hooks_dir("claude-code") == fake_home / ".claude" / "hooks"
+        assert pf.rules_dir("claude-code") == fake_home / ".claude" / "rules"
+
+    def test_claude_code_home_root_configs(self, pf, fake_home):
+        files = pf.home_root_config_files("claude-code")
+        assert len(files) == 1
+        assert fake_home / ".claude.json" in files
+
+    def test_claude_code_instruction_files(self, pf, fake_home):
+        files = pf.instruction_files("claude-code")
+        assert len(files) == 1
+        assert fake_home / ".claude" / "CLAUDE.md" in files
 
     def test_claude_code_config_files(self, pf, fake_home):
         files = pf.config_files("claude-code")
-        assert len(files) == 3
+        assert len(files) == 4
         assert fake_home / ".claude" / "mcp.json" in files
         assert fake_home / ".claude" / "settings.json" in files
         assert fake_home / ".claude" / "settings.local.json" in files
+        assert fake_home / ".claude" / "keybindings.json" in files
 
     def test_codex_dirs(self, pf, fake_home):
         assert pf.config_dir("codex") == fake_home / ".codex"
