@@ -502,7 +502,7 @@ def import_agents_and_skills(
 
         # Import user-level agents (skip if skills-only)
         user_agents_source = temp_path / "user-agents"
-        if user_agents_source.exists() and import_type != "skills-only":
+        if user_agents_source.exists() and import_type not in ("skills-only", "config-only"):
             user_agents = list(user_agents_source.glob("*.md"))
             if user_agents:
                 console.print(
@@ -545,7 +545,7 @@ def import_agents_and_skills(
 
         # Import project-level agents (skip if skills-only)
         project_agents_source = temp_path / "project-agents"
-        if project_agents_source.exists() and import_type != "skills-only":
+        if project_agents_source.exists() and import_type not in ("skills-only", "config-only"):
             project_agents = list(project_agents_source.rglob("*.md"))
             if project_agents:
                 console.print(

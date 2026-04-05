@@ -41,7 +41,45 @@ console = Console()
 @click.group()
 @click.version_option(version=__version__)
 def cli():
-    """Transfer Claude Code agents between systems with interactive selection."""
+    """Transfer Claude Code agents, skills, and configuration between systems.
+
+    \b
+    QUICK START:
+      agent-transfer export --all          Export everything to a .tar.gz archive
+      agent-transfer import backup.tar.gz  Import from an archive (interactive)
+      agent-transfer preflight --self      Audit what's on this machine
+
+    \b
+    WHAT GETS TRANSFERRED:
+      Agents      ~/.claude/agents/*.md and <project>/.claude/agents/*.md
+      Skills      ~/.claude/skills/*/ and <project>/.claude/skills/*/
+      Rules       ~/.claude/rules/tools/*.md and rules/domains/*.md
+      Hooks       ~/.claude/hooks/ (all hook scripts and directories)
+      CLAUDE.md   ~/.claude/CLAUDE.md (global) and <project>/CLAUDE.md
+      Settings    ~/.claude/settings.json, settings.local.json, keybindings.json
+      MCP Config  ~/.claude.json (home root) and ~/.claude/mcp.json
+
+    \b
+    PIECEMEAL USAGE:
+      Use --type to export/import specific artifact types:
+        --type all       Everything (default)
+        --type agents    Only agent definitions
+        --type skills    Only skill directories
+        --type config    Only rules, hooks, CLAUDE.md, settings, MCP config
+
+    \b
+    COMMANDS OVERVIEW:
+      export           Create a portable archive of agents, skills, and config
+      import           Restore from an archive with conflict handling
+      preflight        Check transfer readiness (archive or local --self audit)
+      discover         Show Claude Code installation paths and versions
+      list-agents      List all discovered agent definitions
+      list-skills      List all discovered skill directories
+      validate-tools   Check agent tool compatibility (MCP servers, built-ins)
+      validate-skills  Check skill Python/Node dependency availability
+      check-ready      Comprehensive system readiness score (0-100%)
+      view             Launch web UI to browse agents with rendered markdown
+    """
     pass
 
 
@@ -61,9 +99,9 @@ def cli():
 @click.option(
     "--type",
     "export_type",
-    type=click.Choice(["all", "agents", "skills"]),
+    type=click.Choice(["all", "agents", "skills", "config"]),
     default="all",
-    help="What to export: all, agents-only, or skills-only",
+    help="What to export: all, agents, skills, or config-only",
 )
 @click.option(
     "--agent-type",
@@ -81,13 +119,38 @@ def cli():
     help="Include rules, hooks, CLAUDE.md, settings, MCP config (default: True)",
 )
 def export(output_file, export_all, interactive, export_type, agent_type, discover, include_config):
-    """Export agents to a tar.gz archive.
+    """Export Claude Code agents, skills, and configuration to a tar.gz archive.
 
-    If OUTPUT_FILE is not provided, a timestamped filename will be used.
+    Creates a portable archive containing any combination of your Claude Code
+    setup for transfer to another machine or backup.
 
-    Use --type to choose what to export (agents, skills, or all).
-    Use --agent-type to filter by agent type (user agents are in ~/.claude/agents,
-    project agents are in .claude/agents within project directories).
+    \b
+    ARTIFACT TYPES:
+      agents   Agent definitions (~/.claude/agents/*.md, <project>/.claude/agents/)
+      skills   Skill directories (~/.claude/skills/*/, <project>/.claude/skills/)
+      config   Full configuration tree:
+                 - Rules:        ~/.claude/rules/tools/*.md, rules/domains/*.md
+                 - Hooks:        ~/.claude/hooks/ (batch-guard, playwright-guard, etc.)
+                 - CLAUDE.md:    ~/.claude/CLAUDE.md (global) + <project>/CLAUDE.md
+                 - Settings:     ~/.claude/settings.json, settings.local.json
+                 - MCP config:   ~/.claude.json (home root) + ~/.claude/mcp.json
+                 - Keybindings:  ~/.claude/keybindings.json
+
+    \b
+    PIECEMEAL USAGE:
+      Export everything:           agent-transfer export --all
+      Only agents:                 agent-transfer export --all --type agents
+      Only skills:                 agent-transfer export --all --type skills
+      Only config (no agents):     agent-transfer export --type config
+      Agents+skills, no config:    agent-transfer export --all --no-config
+      Only user-level agents:      agent-transfer export --all --agent-type user
+      Interactive selection:        agent-transfer export  (default)
+
+    \b
+    OUTPUT:
+      If OUTPUT_FILE is not provided, a timestamped filename is generated.
+      The archive includes a manifest.json with dependency metadata for
+      preflight validation on the target machine.
     """
     try:
         if discover:
@@ -97,6 +160,20 @@ def export(output_file, export_all, interactive, export_type, agent_type, discov
 
         if export_all:
             interactive = False
+
+        # Handle config-only export
+        if export_type == "config":
+            # Config-only: no agents/skills, just config artifacts
+            result_file = export_agents_and_skills(
+                output_file=output_file,
+                selected_agents=[],
+                selected_skills=[],
+                interactive=False,
+                export_type="skills-only",  # no agents
+                include_config=True,
+            )
+            console.print(f"\n[green]✓ Successfully exported config to: {result_file}[/green]")
+            return
 
         # Convert 'all' to None for the function
         type_filter = None if agent_type == "all" else agent_type
@@ -138,9 +215,9 @@ def export(output_file, export_all, interactive, export_type, agent_type, discov
 @click.option(
     "--type",
     "import_type",
-    type=click.Choice(["all", "agents", "skills"]),
+    type=click.Choice(["all", "agents", "skills", "config"]),
     default="all",
-    help="What to import: all, agents-only, or skills-only",
+    help="What to import: all, agents, skills, or config-only",
 )
 @click.option(
     "--discover", is_flag=True, help="Show Claude Code installation info before import"
@@ -162,23 +239,54 @@ def import_cmd(
     agent,
     force=False,
 ):
-    """Import agents from a tar.gz archive.
+    """Import Claude Code agents, skills, and configuration from a tar.gz archive.
 
-    INPUT_FILE is the path to the backup archive to import.
+    INPUT_FILE is the path to the backup archive created by 'agent-transfer export'.
 
-    By default, shows an interactive preview where you can select which
-    agents to import. Use --bulk to import all agents without preview.
+    \b
+    IMPORT TYPES:
+      all      Import everything in the archive (default)
+      agents   Import only agent definitions
+      skills   Import only skill directories
+      config   Import only configuration (rules, hooks, CLAUDE.md, settings, MCP)
 
-    Conflict handling modes:
-      - diff: Interactive diff/merge (default) - view changes and choose what to keep
-      - overwrite: Replace existing files with incoming
-      - keep: Skip conflicts, keep existing files
-      - duplicate: Save incoming as filename_1.md, filename_2.md, etc.
+    \b
+    CONFLICT HANDLING:
+      diff       Interactive side-by-side diff (default) — view changes, choose what to keep
+      overwrite  Replace existing files with incoming versions
+      keep       Skip conflicts, preserve existing files untouched
+      duplicate  Save incoming as filename_1.md, filename_2.md, etc.
 
-    Examples:
-      agent-transfer import backup.tar.gz              # Interactive preview
-      agent-transfer import backup.tar.gz --bulk       # Import all
-      agent-transfer import backup.tar.gz --agent data-analyst  # Import one
+    \b
+    CONFIG IMPORT BEHAVIOR:
+      Config artifacts (rules, hooks, CLAUDE.md, settings) use merge-by-default:
+      existing files are never overwritten. Only new files are added. This is safe
+      for importing onto a machine that already has its own configuration.
+
+    \b
+    IMPORT TARGETS:
+      Agents      -> ~/.claude/agents/ (user) or .claude/agents/ (project)
+      Skills      -> ~/.claude/skills/ (user) or .claude/skills/ (project)
+      Rules       -> ~/.claude/rules/tools/*.md, ~/.claude/rules/domains/*.md
+      Hooks       -> ~/.claude/hooks/ (with executable permissions restored)
+      CLAUDE.md   -> ~/.claude/CLAUDE.md (global) or ./CLAUDE.md (project)
+      Settings    -> ~/.claude/settings.json, settings.local.json, keybindings.json
+      MCP config  -> ~/.claude.json (home root), ~/.claude/mcp.json
+
+    \b
+    EXAMPLES:
+      agent-transfer import backup.tar.gz                        # Interactive preview
+      agent-transfer import backup.tar.gz --bulk                 # Import everything
+      agent-transfer import backup.tar.gz --type config          # Config only
+      agent-transfer import backup.tar.gz --type agents          # Agents only
+      agent-transfer import backup.tar.gz --agent data-analyst   # Single agent
+      agent-transfer import backup.tar.gz -c overwrite           # Overwrite conflicts
+
+    \b
+    PREFLIGHT:
+      Before importing, a preflight check runs automatically against the archive's
+      manifest.json to warn about missing runtimes, env vars, or dependencies.
+      Use --force to bypass RED blocks if you want to import anyway.
     """
     try:
         if discover:
@@ -239,7 +347,12 @@ def import_cmd(
             mode = ConflictMode.OVERWRITE
 
         # Map import_type to the format expected by import_agents_and_skills
-        type_map = {"all": "all", "agents": "agents-only", "skills": "skills-only"}
+        type_map = {
+            "all": "all",
+            "agents": "agents-only",
+            "skills": "skills-only",
+            "config": "config-only",
+        }
         mapped_type = type_map[import_type]
 
         # Route based on flags
@@ -330,7 +443,18 @@ def import_cmd(
     "--discover", is_flag=True, help="Show Claude Code installation discovery info"
 )
 def list_agents(discover):
-    """List all available agents."""
+    """List all discovered agent definitions in a table.
+
+    \b
+    Shows each agent's name, description, type (user/project), and declared tools.
+    Searches both user-level (~/.claude/agents/) and project-level (.claude/agents/)
+    directories.
+
+    \b
+    EXAMPLES:
+      agent-transfer list-agents              # Show agent table
+      agent-transfer list-agents --discover   # Show search paths and installation info
+    """
     if discover:
         info = discover_claude_code_info()
         display_discovery_info(info)
@@ -382,7 +506,17 @@ def list_agents(discover):
 
 @cli.command("list-skills")
 def list_skills():
-    """List all available Claude Code skills."""
+    """List all discovered Claude Code skill directories in a table.
+
+    \b
+    Shows each skill's name, type (user/project), file count, size, whether it
+    has executable scripts, dependency files, and a description.
+    Searches both user-level (~/.claude/skills/) and project-level (.claude/skills/).
+
+    \b
+    EXAMPLES:
+      agent-transfer list-skills
+    """
     skills = find_all_skills()
 
     if not skills:
@@ -732,16 +866,36 @@ def check_ready(archive, verbose, all_skills):
 )
 @click.option("--force", is_flag=True, help="Used with import gate — bypass RED blocks")
 def preflight(archive, json_output, self_audit, force):
-    """Check transfer readiness for an archive or local environment.
+    """Check transfer readiness for an archive or the local environment.
 
-    Run against an archive:
-        agent-transfer preflight archive.tar.gz
+    Analyzes the manifest.json bundled in export archives and validates that
+    the target machine has the required runtimes, env vars, packages, and
+    system dependencies to run the imported agents, skills, and MCP servers.
 
-    Audit local machine:
-        agent-transfer preflight --self
+    \b
+    WHAT IT CHECKS:
+      MCP servers      Runtime available (npx, uv, node, docker), env vars, auth
+      CLI tools        On PATH with correct version (snowsql, claude, uv, etc.)
+      Env vars         API keys and config vars set on target (never exposes values)
+      Git repos        Local paths exist or need cloning for MCP servers
+      Binaries         Architecture match (x86 vs ARM) for compiled dependencies
+      Docker           Docker installed, images/compose files available
+      Packages         Python/Node packages installed with version match
+      Sourced files    Scripts that source/import external files
+      Skill trees      Install scripts present, system dependencies met
 
-    Machine-readable output:
-        agent-transfer preflight archive.tar.gz --json
+    \b
+    MODES:
+      Archive check:     agent-transfer preflight backup.tar.gz
+      Local self-audit:  agent-transfer preflight --self
+      JSON output:       agent-transfer preflight backup.tar.gz --json
+      Force bypass:      agent-transfer preflight backup.tar.gz --force
+
+    \b
+    STATUS LEVELS:
+      GREEN   All dependencies met — safe to import
+      YELLOW  Warnings — import will work but some features may be degraded
+      RED     Blockers — import will likely fail without fixing dependencies first
     """
     from .utils.preflight import (
         run_preflight_checks,
@@ -774,20 +928,30 @@ def preflight(archive, json_output, self_audit, force):
                 if skills_dir and skills_dir.is_dir():
                     skills = [d for d in skills_dir.iterdir() if d.is_dir()]
 
-                # Discover MCP configs
+                # Discover hooks
+                hooks = []
+                hooks_dir = pf.hooks_dir(slug)
+                if hooks_dir and hooks_dir.is_dir():
+                    hooks = [p for p in hooks_dir.rglob("*") if p.is_file()]
+
+                # Discover MCP configs (JSON files only)
                 configs = []
-                mcp_config = pf.config_dir(slug) / "settings.json"
-                if mcp_config.exists():
-                    configs.append(mcp_config)
+                for cfg in pf.config_files(slug):
+                    if cfg.exists() and cfg.suffix == ".json":
+                        configs.append(cfg)
+                for hr_cfg in pf.home_root_config_files(slug):
+                    if hr_cfg.exists() and hr_cfg.suffix == ".json":
+                        configs.append(hr_cfg)
             except Exception:
                 agents = []
                 skills = []
+                hooks = []
                 configs = []
 
             manifest = _collect(
                 agents=agents,
                 skills=skills,
-                hooks=[],
+                hooks=hooks,
                 configs=configs,
                 platform="claude-code",
             )
