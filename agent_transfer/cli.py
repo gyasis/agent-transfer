@@ -999,6 +999,106 @@ def preflight(archive, json_output, self_audit, force):
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--capability", required=True, help="Free-text capability name (e.g. 'cascade-memory').")
+@click.option("--out", default=None, type=click.Path(), help="Output bundle directory (default: ./bundle-<capability>-<ts>).")
+@click.option("--description", default=None, help="One-sentence description (default: auto).")
+@click.option("--intent", default=None, help="Why-it-exists narrative (default: auto).")
+@click.option("--drop", multiple=True, help="dest_path of a COMPANIONS asset to opt-out (repeat).")
+@click.option("--add", multiple=True, help="dest_path of a CONTEXT asset to opt-in (repeat).")
+@click.option("--yes", "auto_yes", is_flag=True, help="Skip prompts; auto-confirm Yellow/Red (CI / tests).")
+@click.option("--no-bundle", is_flag=True, help="Stop after preview; do not write bundle.")
+def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle):
+    """Bundle a named capability for transfer to another machine.
+
+    Pipeline: graph walk -> 3-tier selection matrix -> briefing render ->
+    Briefing Preview UI (with y/n on Yellow/Red) -> seal bundle with
+    rollback tarball + manifest + briefing.
+    """
+    from datetime import datetime as _dt
+    import json
+    import shutil
+    from agent_transfer.bridge.compose import compose as _compose
+    from agent_transfer.bridge.selection_matrix import present
+    from agent_transfer.bridge.briefing import render as _render, render_sections
+    from agent_transfer.bridge.preview import preview_and_confirm, RedDeclinedError
+    from agent_transfer.bridge.rollback import snapshot as _rollback_snapshot
+    from agent_transfer.bridge.secrets import scan as _secret_scan
+    from agent_transfer.bridge.models import ManifestModel
+
+    bundle_root = (
+        Path(out) if out
+        else Path.cwd() / f"bundle-{capability}-{_dt.utcnow().strftime('%Y%m%dT%H%M%S')}"
+    )
+    bundle_root.mkdir(parents=True, exist_ok=True)
+
+    try:
+        cap = _compose(capability, description=description, intent=intent)
+    except ValueError as e:
+        console.print(f"[red]compose failed:[/red] {e}")
+        sys.exit(2)
+
+    cap = present(
+        cap, interactive=not auto_yes,
+        drop_companions=list(drop), add_contexts=list(add),
+    )
+
+    if no_bundle:
+        console.print("[yellow]--no-bundle: stopping before preview/seal[/yellow]")
+        return
+
+    try:
+        cap = preview_and_confirm(cap, bundle_root, interactive=not auto_yes, auto_yes=auto_yes)
+    except RedDeclinedError as e:
+        console.print(f"[red]Sealing aborted:[/red] {e}")
+        sys.exit(3)
+
+    manifest = ManifestModel(
+        generated_at=_dt.utcnow(),
+        source_machine_hint="linux-wsl2",
+        capability=cap,
+        briefing_sections=[],
+        confirmations=cap.confirmations,
+    )
+    manifest = manifest.model_copy(update={"briefing_sections": render_sections(manifest)})
+
+    briefing_md = _render(manifest)
+    payload_blobs = [manifest.model_dump_json(), briefing_md]
+    findings = []
+    for blob in payload_blobs:
+        findings.extend(_secret_scan(blob))
+    if findings:
+        for f in findings[:5]:
+            console.print(f"[red]secret detected:[/red] {f.pattern} {f.match[:24]}...")
+        console.print("[red]Refusing to seal: bundle contains potential secrets.[/red]")
+        sys.exit(4)
+
+    (bundle_root / "manifest.json").write_text(
+        json.dumps(json.loads(manifest.model_dump_json()), indent=2)
+    )
+    (bundle_root / "BRIEFING.md").write_text(briefing_md)
+
+    target_dest_paths = [a.dest_path for a in cap.assets]
+    _rollback_snapshot(target_dest_paths, bundle_root, home=Path.home())
+
+    asset_root = bundle_root / "bundle"
+    asset_root.mkdir(exist_ok=True)
+    for a in cap.assets:
+        if a.dest_path.startswith("~/"):
+            src = Path.home() / a.dest_path[2:]
+        else:
+            src = Path(a.dest_path)
+        if not src.exists():
+            console.print(f"[yellow]skip (missing on source):[/yellow] {a.dest_path}")
+            continue
+        dst = asset_root / a.path
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+
+    console.print(f"[green]Bundle sealed:[/green] {bundle_root}")
+    console.print("  manifest.json, BRIEFING.md, bundle/, rollback.tar.gz, rollback.sh")
+
+
 def main():
     """Main entry point."""
     cli()
