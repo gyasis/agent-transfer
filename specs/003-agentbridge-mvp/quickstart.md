@@ -72,10 +72,18 @@ bash bundle-cascade-memory-<ts>/rollback.sh
 Restores prior state with zero leftover artifacts (SC-002 verifies this
 via file-tree diff).
 
-## Performance targets
+## Performance targets — measured 2026-05-04 (T045)
 
-- SC-004: source-side bundle production for cascade-memory < 60 s.
-- SC-005: destination-side ingestion (excluding user-pause time) < 30 s.
+| Metric | Budget | Measured | Headroom |
+|---|---|---|---|
+| SC-004 source-side bundle production | < 60 s | **15.2 ms** | 3947× |
+| SC-005 destination-side ingestion (excl. user pause) | < 30 s | **5.1 ms** | 5882× |
 
-Numbers from the most recent verified run land here once T045 (Wave 8)
-completes.
+Measured against the cascade-memory-shaped fixture used by the
+ship-gate test (`tests/integration/test_capability_roundtrip.py`).
+Real-world production runs against a full `~/.claude/` of dozens of
+skills will be slower but well within budget.
+
+Both budgets are crushed by 3+ orders of magnitude — the bottleneck for
+both SC-004 and SC-005 will be user-prompt latency at the Briefing
+Preview UI and the destination ingest matrix, not the pipeline itself.

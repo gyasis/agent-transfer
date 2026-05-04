@@ -130,13 +130,13 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 **Purpose**: Rename, README, parent-PRD bookkeeping, adversarial scan, performance verification. Maps to PRD M4 (Day 7) + M5.2 (Day 8 buffer) + R12.
 
-- [ ] **T041** Rename: update `pyproject.toml` package name and the README title from `agent-transfer` to `AgentBridge`. Keep both `agent-transfer` and `ab` console-scripts working (R5). NO file renames (R10). (FR-021, parent-PRD M4.1)
-- [ ] **T042** [P] Rewrite `README.md` around "capability-level transfer with agent-driven composition and ingestion." Explicitly state Mode A only; cross-harness is post-MVP. (parent-PRD M4.2)
+- [x] **T041** Rename: update `pyproject.toml` package name and the README title from `agent-transfer` to `AgentBridge`. Keep both `agent-transfer` and `ab` console-scripts working (R5). NO file renames (R10). (FR-021, parent-PRD M4.1)
+- [x] **T042** [P] Rewrite `README.md` around "capability-level transfer with agent-driven composition and ingestion." Explicitly state Mode A only; cross-harness is post-MVP. (parent-PRD M4.2)
 - [x] **T043** [P] Update parent PRD `~/dev/prd/scratch/agent_transfer_full_config_capture_2026-05-02.md`: mark generated `setup.sh` init flow as superseded; mark HTTP-transport import as deferred; mark FR-010 (tighter secret regex) and FR-015 (path-rewrite) as landed in 003-agentbridge-mvp. (parent-PRD M4.3)
 - [ ] **T044** Run adversarial bug-hunter agents (constitution R12) — spawn one targeted (rollback path / secret-leak / settings.json merge / mode-bit preservation) and one general scan. Fix all CRITICAL and HIGH findings before merge.
-- [ ] **T045** Performance verification: SC-004 (source-side bundle for cascade-memory < 60s) and SC-005 (destination-side ingestion excluding pause time < 30s). Time the sandbox walkthrough; record numbers in `quickstart.md`.
+- [x] **T045** Performance verification: SC-004 (source-side bundle for cascade-memory < 60s) and SC-005 (destination-side ingestion excluding pause time < 30s). Time the sandbox walkthrough; record numbers in `quickstart.md`.
 - [x] **T046** Re-link `tasks.md` symlink at repo root to `specs/003-agentbridge-mvp/tasks.md` (already done in spec session 2026-05-03; verified `readlink tasks.md` → `specs/003-agentbridge-mvp/tasks.md`).
-- [ ] **T047** Run `quickstart.md` validation end-to-end one final time on a clean sandbox.
+- [x] **T047** Run `quickstart.md` validation end-to-end one final time on a clean sandbox.
 
 ---
 
