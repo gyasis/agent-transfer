@@ -44,7 +44,7 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 ### Phase 0/1 design artifacts
 
 - [x] **T006** Write `specs/003-agentbridge-mvp/research.md` covering the 6 questions in plan.md Phase 0 (capability-graph heuristics, briefing format, risk-tag classification, conflict-policy defaults, rollback snapshot scope, smoke-test prompts).
-- [ ] **T007** Write `specs/003-agentbridge-mvp/data-model.md` defining `ManifestModel`, `Capability`, `AssetEntry`, `RiskTag`, `ConflictPolicy`, `BriefingSection`, `Confirmation` (per plan.md Phase 1).
+- [x] **T007** Write `specs/003-agentbridge-mvp/data-model.md` defining `ManifestModel`, `Capability`, `AssetEntry`, `RiskTag`, `ConflictPolicy`, `BriefingSection`, `Confirmation` (per plan.md Phase 1).
 - [x] **T008** [P] Write `specs/003-agentbridge-mvp/contracts/manifest.schema.json` JSON Schema for `ManifestModel`.
 - [x] **T009** [P] Write `specs/003-agentbridge-mvp/contracts/briefing.template.md` Markdown template for "Dear Receiving Claude" with 7 section slots (Identity, Capability Description, Inventory, Build Instructions, Ingest Instructions, Verification, Rollback).
 - [x] **T010** [P] Write `specs/003-agentbridge-mvp/quickstart.md` user-facing walkthrough.
@@ -64,7 +64,7 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 - [x] **T018** [P] Contract test `tests/contract/test_briefing_sections.py`: render briefing → assert all 7 required sections present, each non-empty.
 - [x] **T019** [P] Unit test `tests/unit/test_secret_redaction.py`: positive + negative cases for Bearer / sk- / ghp_ / xox* / generic, including the 2 real Bitbucket app-password patterns the existing classifier caught.
 - [x] **T020** [P] Unit test `tests/unit/test_risk_tagging.py`: classify a known fixture set of skills, hooks, rules, bin scripts; assert exact Green/Yellow/Red tags per asset type rules from research.md.
-- [ ] **T021** [P] Integration test `tests/integration/test_path_rewrite_mcp.py`: import a bundle whose `~/.claude.json` references `/home/source-user/...` paths into a sandbox HOME at `/tmp/...`; assert all mcpServers paths now point inside the sandbox.
+- [x] **T021** [P] Integration test `tests/integration/test_path_rewrite_mcp.py`: import a bundle whose `~/.claude.json` references `/home/source-user/...` paths into a sandbox HOME at `/tmp/...`; assert all mcpServers paths now point inside the sandbox.
 
 **Checkpoint**: Foundation ready. Existing `agent-transfer` round-trip tests still pass. T012, T013, T021 verify the carry-overs. User-story work can begin.
 
@@ -79,17 +79,17 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 ### Tests for User Story 1 (write FIRST, must FAIL before implementation)
 
 - [x] **T022** [P] [US1] Integration test `tests/integration/test_capability_roundtrip.py::test_cascade_memory_roundtrip` — SC-001 ship gate. Sets up fresh sandbox HOME, runs full pipeline, asserts: bundle has 14 expected assets, briefing has all 7 sections, sandbox `session-search foo` runs cleanly returning "no matches", all 7 dependent skills present, both hooks fire on triggering events, all 5 rule files inject correctly.
-- [ ] **T023** [P] [US1] Integration test `tests/integration/test_rollback_diff.py::test_cascade_memory_rollback` — SC-002. File-tree diff before vs after install→rollback shows zero leftover artifacts.
-- [ ] **T024** [P] [US1] Unit test `tests/unit/test_compose_graph.py::test_cascade_memory_graph` — given `~/.claude/` fixture mirroring source machine, `compose("cascade-memory")` returns the expected 14-asset graph with correct CORE/COMPANIONS/CONTEXT tier assignments.
-- [ ] **T025** [P] [US1] Unit test `tests/unit/test_selection_matrix.py` — 3-tier matrix renders correctly; user trim of a COMPANIONS asset removes it from the export set; trim of a CORE asset is rejected with clear error.
+- [x] **T023** [P] [US1] Integration test `tests/integration/test_rollback_diff.py::test_cascade_memory_rollback` — SC-002. File-tree diff before vs after install→rollback shows zero leftover artifacts.
+- [x] **T024** [P] [US1] Unit test `tests/unit/test_compose_graph.py::test_cascade_memory_graph` — given `~/.claude/` fixture mirroring source machine, `compose("cascade-memory")` returns the expected 14-asset graph with correct CORE/COMPANIONS/CONTEXT tier assignments.
+- [x] **T025** [P] [US1] Unit test `tests/unit/test_selection_matrix.py` — 3-tier matrix renders correctly; user trim of a COMPANIONS asset removes it from the export set; trim of a CORE asset is rejected with clear error.
 
 ### Implementation for User Story 1
 
 #### Source-side composition
 
-- [ ] **T026** [US1] Implement `agent_transfer/bridge/compose.py::compose(capability_name) -> Capability`: deterministic dependency-graph walk per research.md heuristics. Reads `~/.claude/skills/`, `~/.claude/hooks/`, `~/.claude/rules/`, `~/bin/`, follows cross-references (skill→bin, hook→rule, rule→skill). (FR-003, FR-004) Depends on T011, T015, T016.
-- [ ] **T027** [US1] Implement `agent_transfer/bridge/selection_matrix.py`: Rich-based 3-tier UI (CORE always-included, COMPANIONS opt-out, CONTEXT opt-in). Returns the trimmed `Capability` after user confirmation. (FR-005) Depends on T011.
-- [ ] **T028** [US1] Implement `agent_transfer/bridge/briefing.py::render(manifest) -> str`: emits BRIEFING.md from `contracts/briefing.template.md` with all 7 sections populated from the manifest. (FR-007) Depends on T011, T009.
+- [x] **T026** [US1] Implement `agent_transfer/bridge/compose.py::compose(capability_name) -> Capability`: deterministic dependency-graph walk per research.md heuristics. Reads `~/.claude/skills/`, `~/.claude/hooks/`, `~/.claude/rules/`, `~/bin/`, follows cross-references (skill→bin, hook→rule, rule→skill). (FR-003, FR-004) Depends on T011, T015, T016.
+- [x] **T027** [US1] Implement `agent_transfer/bridge/selection_matrix.py`: Rich-based 3-tier UI (CORE always-included, COMPANIONS opt-out, CONTEXT opt-in). Returns the trimmed `Capability` after user confirmation. (FR-005) Depends on T011.
+- [x] **T028** [US1] Implement `agent_transfer/bridge/briefing.py::render(manifest) -> str`: emits BRIEFING.md from `contracts/briefing.template.md` with all 7 sections populated from the manifest. (FR-007) Depends on T011, T009.
 - [ ] **T029** [US1] Implement `agent_transfer/bridge/preview.py`: Briefing Preview UI (Rich) — per-asset preview with risk tags; enforces `y/n` on every Yellow and Red asset; refuses to seal on declined Red. Writes `confirmations.log` to bundle root. (FR-009, FR-018, SC-007) Depends on T027.
 - [ ] **T030** [US1] Implement `agent_transfer/bridge/rollback.py::snapshot(targets) -> (rollback_tar, rollback_sh)`: snapshots union of (every dest path the bundle will touch, `~/.claude.json`, `~/.claude/settings.json`). All-or-nothing tarball + shell script. (FR-016) Depends on T011.
 - [ ] **T031** [US1] Wire `ab compose --capability <name>` Click command in `agent_transfer/cli.py` invoking T026 → T027 → T028 → preview → existing `mcp_source_bundler` to seal. (FR-001) Depends on T026, T027, T028, T029, T030. Pre-seal secret scan (T012). Post-seal scan asserts SC-006.
@@ -98,7 +98,7 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 #### Destination-side ingestion
 
 - [ ] **T033** [US1] Implement `agent_transfer/bridge/ingest.py::ingest(bundle_path)`: reads BRIEFING.md, validates manifest, invokes selection_matrix again (for destination-side trim), prompts on every Yellow/Red, walks inventory, applies per-asset conflict policy (skip/merge/overwrite/ask), preserves mode bits, performs settings.json + ~/.claude.json idempotent merge. (FR-012, FR-013, FR-014, FR-011) Depends on T011, T013, T027, T030.
-- [ ] **T034** [US1] Implement `agent_transfer/bridge/smoke_test.py::run(manifest)`: post-install self-interrogation — checks each declared asset is present at its declared path with declared mode, runs `session-search foo` on empty corpus, validates "who are you" against manifest. Flags drift. (FR-017)
+- [x] **T034** [US1] Implement `agent_transfer/bridge/smoke_test.py::run(manifest)`: post-install self-interrogation — checks each declared asset is present at its declared path with declared mode, runs `session-search foo` on empty corpus, validates "who are you" against manifest. Flags drift. (FR-017)
 - [ ] **T035** [US1] Wire `ab ingest <bundle>` Click command in `agent_transfer/cli.py` invoking rollback snapshot → T033 → T034. Failures trigger `rollback.sh` invocation hint. (FR-019 — additive only; existing 9 commands untouched).
 - [ ] **T036** [US1] Author `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` content: trigger ("Install this AgentBridge bundle"), behavior (invoke `ab ingest`), conflict-policy guidance, smoke-test interpretation. (FR-012) Depends on T035.
 - [ ] **T037** [US1] Add settings.json idempotent-merge integration test `tests/integration/test_settings_merge_idempotent.py::test_re_running_ingest_does_not_duplicate_hooks` — FR-014. Assert running ingestion twice produces exactly one set of hook entries.
