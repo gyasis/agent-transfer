@@ -119,8 +119,8 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 ### Implementation for User Story 2
 
-- [ ] **T039** [US2] No new code required if Phase 3 is correct — Phase 3's general ingestion handles `prd`'s asset mix (binary + skill + hook + settings.json fragment + companion skills + rule). Run T038 to confirm. If gaps found, file targeted fixes here.
-- [ ] **T040** [US2] If T039 surfaces issues, implement targeted fixes (most likely: settings.json fragment merge edge cases, Red-tier hook confirmation flow). All fixes MUST keep T022 (US1 ship gate) green.
+- [x] **T039** [US2] No new code required if Phase 3 is correct — Phase 3's general ingestion handles `prd`'s asset mix (binary + skill + hook + settings.json fragment + companion skills + rule). Run T038 to confirm. If gaps found, file targeted fixes here.
+- [x] **T040** [US2] If T039 surfaces issues, implement targeted fixes (most likely: settings.json fragment merge edge cases, Red-tier hook confirmation flow). All fixes MUST keep T022 (US1 ship gate) green.
 
 **Checkpoint**: User Story 2 validated. Architecture extension to Red-tier hooks + settings.json wiring is proven. Commit.
 
