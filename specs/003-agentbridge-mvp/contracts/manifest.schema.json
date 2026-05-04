@@ -1,0 +1,245 @@
+{
+  "$defs": {
+    "AssetEntry": {
+      "description": "A single concrete file the bundle ships.",
+      "properties": {
+        "path": {
+          "description": "Path inside the bundle (relative to bundle/)",
+          "title": "Path",
+          "type": "string"
+        },
+        "dest_path": {
+          "description": "Destination path on receiving machine, with ~ expansion deferred to ingest time",
+          "title": "Dest Path",
+          "type": "string"
+        },
+        "risk": {
+          "description": "Green / Yellow / Red",
+          "enum": [
+            "green",
+            "yellow",
+            "red"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "conflict": {
+          "description": "Per-asset conflict resolution policy",
+          "enum": [
+            "skip",
+            "merge",
+            "overwrite",
+            "ask"
+          ],
+          "title": "Conflict",
+          "type": "string"
+        },
+        "sha256": {
+          "description": "Hex digest of asset bytes \u2014 verified on ingest",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "mode_bits": {
+          "description": "POSIX mode bits to restore on ingest (executable bit etc.)",
+          "minimum": 0,
+          "title": "Mode Bits",
+          "type": "integer"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional human-readable note shown in Briefing Preview",
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "path",
+        "dest_path",
+        "risk",
+        "conflict",
+        "sha256",
+        "mode_bits"
+      ],
+      "title": "AssetEntry",
+      "type": "object"
+    },
+    "BriefingSection": {
+      "description": "One section of the 'Dear Receiving Claude' briefing.",
+      "properties": {
+        "name": {
+          "enum": [
+            "identity",
+            "capability_description",
+            "inventory",
+            "build_instructions",
+            "ingest_instructions",
+            "verification",
+            "rollback"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "content_md": {
+          "description": "Rendered Markdown content for this section",
+          "title": "Content Md",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "content_md"
+      ],
+      "title": "BriefingSection",
+      "type": "object"
+    },
+    "Capability": {
+      "description": "A named bundle of intent + behavior, composed of one or more assets.",
+      "properties": {
+        "name": {
+          "description": "User-facing capability name, e.g. 'cascade-memory'",
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "description": "One-sentence what-it-does",
+          "title": "Description",
+          "type": "string"
+        },
+        "intent": {
+          "description": "Why-it-exists, in user's words where possible",
+          "title": "Intent",
+          "type": "string"
+        },
+        "assets": {
+          "items": {
+            "$ref": "#/$defs/AssetEntry"
+          },
+          "title": "Assets",
+          "type": "array"
+        },
+        "dependencies": {
+          "description": "Names of OS-level binaries the destination must have (e.g. ripgrep)",
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "intent"
+      ],
+      "title": "Capability",
+      "type": "object"
+    },
+    "Confirmation": {
+      "description": "One user y/n decision recorded in confirmations.log.",
+      "properties": {
+        "asset_path": {
+          "title": "Asset Path",
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "green",
+            "yellow",
+            "red"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "decided_at": {
+          "format": "date-time",
+          "title": "Decided At",
+          "type": "string"
+        },
+        "user_choice": {
+          "enum": [
+            "yes",
+            "no"
+          ],
+          "title": "User Choice",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_path",
+        "risk",
+        "decided_at",
+        "user_choice"
+      ],
+      "title": "Confirmation",
+      "type": "object"
+    }
+  },
+  "description": "Top-level manifest \u2014 authoritative on the source side.\n\nShipped at bundle root as `manifest.json`. Consumed by the receiving\n`agentbridge-ingest` skill alongside BRIEFING.md.",
+  "examples": [
+    {
+      "briefing_sections": [],
+      "capability": {
+        "assets": [],
+        "dependencies": [
+          "ripgrep"
+        ],
+        "description": "L1.5 anchor for past-session search",
+        "intent": "Recover prior context across compactions",
+        "name": "cascade-memory"
+      },
+      "confirmations": [],
+      "generated_at": "2026-05-04T10:00:00Z",
+      "schema_version": "1.0.0",
+      "source_machine_hint": "linux-wsl2-claude-code-v2.x"
+    }
+  ],
+  "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "source_machine_hint": {
+      "description": "Non-identifying hint, e.g. 'linux-wsl2-claude-code-v2.x'",
+      "title": "Source Machine Hint",
+      "type": "string"
+    },
+    "capability": {
+      "$ref": "#/$defs/Capability"
+    },
+    "briefing_sections": {
+      "items": {
+        "$ref": "#/$defs/BriefingSection"
+      },
+      "title": "Briefing Sections",
+      "type": "array"
+    },
+    "confirmations": {
+      "description": "User Y/N decisions captured by Briefing Preview UI (FR-009, SC-007)",
+      "items": {
+        "$ref": "#/$defs/Confirmation"
+      },
+      "title": "Confirmations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "generated_at",
+    "source_machine_hint",
+    "capability"
+  ],
+  "title": "ManifestModel",
+  "type": "object"
+}

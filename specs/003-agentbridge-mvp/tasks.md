@@ -27,11 +27,11 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 **Purpose**: Scaffold the new `bridge/` subpackage and the new shipped skills.
 
-- [ ] **T001** Create `agent_transfer/bridge/__init__.py` and empty stubs for `models.py`, `compose.py`, `briefing.py`, `selection_matrix.py`, `preview.py`, `rollback.py`, `ingest.py`, `smoke_test.py`, `secrets.py` per plan.md "Source Code" tree.
-- [ ] **T002** [P] Create `agent_transfer/templates/skills/agentbridge-compose/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T032).
-- [ ] **T003** [P] Create `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T040).
-- [ ] **T004** [P] Add Pydantic to project dependencies if not already transitively present. Verify import in fresh `uv` env.
-- [ ] **T005** [P] Add `ab` console-script entry point in `pyproject.toml` alongside existing `agent-transfer` entry point. Both must work post-install (R5).
+- [x] **T001** Create `agent_transfer/bridge/__init__.py` and empty stubs for `models.py`, `compose.py`, `briefing.py`, `selection_matrix.py`, `preview.py`, `rollback.py`, `ingest.py`, `smoke_test.py`, `secrets.py` per plan.md "Source Code" tree.
+- [x] **T002** [P] Create `agent_transfer/templates/skills/agentbridge-compose/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T032).
+- [x] **T003** [P] Create `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T040).
+- [x] **T004** [P] Add Pydantic to project dependencies if not already transitively present. Verify import in fresh `uv` env.
+- [x] **T005** [P] Add `ab` console-script entry point in `pyproject.toml` alongside existing `agent-transfer` entry point. Both must work post-install (R5).
 
 ---
 
@@ -45,14 +45,14 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 - [ ] **T006** Write `specs/003-agentbridge-mvp/research.md` covering the 6 questions in plan.md Phase 0 (capability-graph heuristics, briefing format, risk-tag classification, conflict-policy defaults, rollback snapshot scope, smoke-test prompts).
 - [ ] **T007** Write `specs/003-agentbridge-mvp/data-model.md` defining `ManifestModel`, `Capability`, `AssetEntry`, `RiskTag`, `ConflictPolicy`, `BriefingSection`, `Confirmation` (per plan.md Phase 1).
-- [ ] **T008** [P] Write `specs/003-agentbridge-mvp/contracts/manifest.schema.json` JSON Schema for `ManifestModel`.
-- [ ] **T009** [P] Write `specs/003-agentbridge-mvp/contracts/briefing.template.md` Markdown template for "Dear Receiving Claude" with 7 section slots (Identity, Capability Description, Inventory, Build Instructions, Ingest Instructions, Verification, Rollback).
-- [ ] **T010** [P] Write `specs/003-agentbridge-mvp/quickstart.md` user-facing walkthrough.
+- [x] **T008** [P] Write `specs/003-agentbridge-mvp/contracts/manifest.schema.json` JSON Schema for `ManifestModel`.
+- [x] **T009** [P] Write `specs/003-agentbridge-mvp/contracts/briefing.template.md` Markdown template for "Dear Receiving Claude" with 7 section slots (Identity, Capability Description, Inventory, Build Instructions, Ingest Instructions, Verification, Rollback).
+- [x] **T010** [P] Write `specs/003-agentbridge-mvp/quickstart.md` user-facing walkthrough.
 
 ### Foundational implementation
 
-- [ ] **T011** Implement `agent_transfer/bridge/models.py`: Pydantic `ManifestModel`, `Capability`, `AssetEntry { path, dest_path, risk, conflict, sha256, mode_bits }`, `RiskTag` (Literal Green/Yellow/Red), `ConflictPolicy` (Literal skip/merge/overwrite/ask), `BriefingSection`, `Confirmation { asset_path, risk, decided_at, user_choice }`. Re-export from `agent_transfer/models.py`.
-- [ ] **T012** [US1][US2] Implement `agent_transfer/bridge/secrets.py`: merged regex (Bearer / `sk-` / `ghp_` / `xox*` / generic). Single `scan(text) -> list[SecretFinding]` function used pre-seal AND post-seal. (FR-010, SC-006, parent-PRD M1.3)
+- [x] **T011** Implement `agent_transfer/bridge/models.py`: Pydantic `ManifestModel`, `Capability`, `AssetEntry { path, dest_path, risk, conflict, sha256, mode_bits }`, `RiskTag` (Literal Green/Yellow/Red), `ConflictPolicy` (Literal skip/merge/overwrite/ask), `BriefingSection`, `Confirmation { asset_path, risk, decided_at, user_choice }`. Re-export from `agent_transfer/models.py`.
+- [x] **T012** [US1][US2] Implement `agent_transfer/bridge/secrets.py`: merged regex (Bearer / `sk-` / `ghp_` / `xox*` / generic). Single `scan(text) -> list[SecretFinding]` function used pre-seal AND post-seal. (FR-010, SC-006, parent-PRD M1.3)
 - [ ] **T013** [US1][US2] Extend `agent_transfer/utils/transfer.py` import path to perform `~/.claude.json` mcpServers path-rewrite using `_classification.config_after_install`. (FR-015, parent-PRD M1.2). Existing same-platform round-trip MUST still pass (R1).
 - [ ] **T014** [P] Extend `agent_transfer/utils/mcp_classifier.py` to emit a `risk_tag` field (Green/Yellow/Red) per entry. Default rule: any server with auth → Yellow; any state-writing hook reference → Red. (FR-008)
 - [ ] **T015** [P] Extend `agent_transfer/utils/script_discovery.py` to emit `risk_tag` per discovered script. Heuristic: read-only (grep / find / cat / curl GET) = Yellow; state-writing (write / push / delete / chmod / install) = Red. (FR-008)
