@@ -287,6 +287,68 @@ def export_agents_and_skills(
                     f"[dim]Config files: {config_counts['config_files']} collected[/dim]"
                 )
 
+            # 6. Referenced user scripts (~/bin, ~/.local/bin)
+            # Skills/rules/recipes shell out to user scripts (session-search, prd,
+            # bb, hhdev, etc.). Without these, the corresponding skills break on
+            # the destination machine. Discovery is two-pass (strict path + lenient
+            # bare-command) with size cap and exclusion lists.
+            try:
+                import json as _json
+                from .script_discovery import (
+                    discover_referenced_scripts,
+                    bundle_scripts_to,
+                )
+                scripts = discover_referenced_scripts()
+                if scripts:
+                    bin_dst = temp_path / "bin-scripts"
+                    bundle_manifest = bundle_scripts_to(scripts, bin_dst)
+                    config_counts["bin_scripts"] = bundle_manifest["bundled_count"]
+                    # Persist manifest so import-side knows what to drop in ~/bin
+                    with open(temp_path / "bin-scripts-manifest.json", "w") as f:
+                        _json.dump(bundle_manifest, f, indent=2, default=str)
+                    console.print(
+                        f"[dim]Bin scripts: {bundle_manifest['bundled_count']} bundled, "
+                        f"{bundle_manifest['oversized_count']} skipped (oversized)[/dim]"
+                    )
+            except Exception as exc:
+                console.print(
+                    f"[yellow]Bin script discovery skipped: {exc}[/yellow]"
+                )
+
+            # 7. Local MCP server source repos
+            # Many MCP servers are local repos invoked via absolute paths
+            # (gemini-mcp, tableau-mcp, athena-lightrag, etc.). Without bundling
+            # the source, destination machine can't run the server. Uses the same
+            # classifier output that drives _classification in the export JSON.
+            try:
+                import json as _json
+                from dataclasses import asdict as _asdict
+                from .config_manager import get_all_mcp_servers
+                from .mcp_classifier import classify_servers
+                from .mcp_source_bundler import bundle_mcp_sources
+
+                servers = get_all_mcp_servers()
+                if servers:
+                    classifications = {
+                        c.name: _asdict(c) for c in classify_servers(servers)
+                    }
+                    src_dst = temp_path / "mcp-sources"
+                    src_manifest = bundle_mcp_sources(classifications, src_dst)
+                    config_counts["mcp_sources"] = src_manifest["bundled_count"]
+                    with open(temp_path / "mcp-sources-manifest.json", "w") as f:
+                        _json.dump(src_manifest, f, indent=2, default=str)
+                    total_mb = src_manifest["total_bundle_bytes"] / 1024 / 1024
+                    console.print(
+                        f"[dim]MCP sources: {src_manifest['bundled_count']} bundled "
+                        f"({total_mb:.1f} MiB), "
+                        f"{src_manifest['skipped_count']} skipped (oversized), "
+                        f"{src_manifest['unresolved_count']} unresolved[/dim]"
+                    )
+            except Exception as exc:
+                console.print(
+                    f"[yellow]MCP source bundling skipped: {exc}[/yellow]"
+                )
+
         # Create metadata
         metadata = temp_path / "metadata.txt"
         system_name = "Unknown"
@@ -872,6 +934,82 @@ def import_agents_and_skills(
                             f"[dim]Home config exists, skipped: {hr_name}[/dim]"
                         )
 
+        # ── Import bin scripts (~/bin) ──
+        # Counterpart to export step 6. Bundle was placed at temp_path/bin-scripts/
+        # with manifest at temp_path/bin-scripts-manifest.json.
+        bin_source = temp_path / "bin-scripts"
+        bin_manifest = temp_path / "bin-scripts-manifest.json"
+        config_imported["bin_scripts"] = 0
+        config_imported["bin_scripts_skipped"] = 0
+        if bin_source.is_dir():
+            target_bin = Path.home() / "bin"
+            target_bin.mkdir(parents=True, exist_ok=True)
+            for src in sorted(bin_source.iterdir()):
+                if not src.is_file():
+                    continue
+                dst = target_bin / src.name
+                if dst.exists():
+                    config_imported["bin_scripts_skipped"] += 1
+                    console.print(
+                        f"[dim]Bin script exists, skipped: {src.name} "
+                        f"(remove first to update)[/dim]"
+                    )
+                    continue
+                shutil.copy2(src, dst)
+                # Re-mark executable (tar should preserve, but be defensive)
+                dst.chmod(dst.stat().st_mode | 0o755)
+                config_imported["bin_scripts"] += 1
+                console.print(f"[green]Imported bin script: {src.name}[/green]")
+            # PATH advisory
+            path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+            if str(target_bin) not in path_dirs and str(target_bin.resolve()) not in path_dirs:
+                console.print(
+                    f"[yellow]⚠️  {target_bin} is not on your PATH. "
+                    f"Add to your shell rc:  export PATH=\"$HOME/bin:$PATH\"[/yellow]"
+                )
+
+        # ── Import MCP server source repos ──
+        # Counterpart to export step 7. Each <name>.tar.gz is extracted to
+        # ~/.claude-imported/mcp-sources/<name>/ by default; importer can move
+        # to their preferred dev folder afterwards. We do NOT auto-rewrite
+        # ~/.claude.json paths — that is the init flow's job, deferred to a
+        # follow-up step so the importer can review where things live first.
+        src_archive_dir = temp_path / "mcp-sources"
+        src_manifest = temp_path / "mcp-sources-manifest.json"
+        config_imported["mcp_sources"] = 0
+        config_imported["mcp_sources_skipped"] = 0
+        if src_archive_dir.is_dir():
+            import tarfile as _tarfile
+            mcp_target_base = Path.home() / ".claude-imported" / "mcp-sources"
+            mcp_target_base.mkdir(parents=True, exist_ok=True)
+            for archive in sorted(src_archive_dir.glob("*.tar.gz")):
+                name = archive.name[:-len(".tar.gz")]
+                target_dir = mcp_target_base / name
+                if target_dir.exists():
+                    config_imported["mcp_sources_skipped"] += 1
+                    console.print(
+                        f"[dim]MCP source exists, skipped: {name} "
+                        f"(remove {target_dir} to re-extract)[/dim]"
+                    )
+                    continue
+                try:
+                    with _tarfile.open(archive, "r:gz") as tar:
+                        tar.extractall(mcp_target_base)
+                    config_imported["mcp_sources"] += 1
+                    console.print(
+                        f"[green]Extracted MCP source: {name} → {target_dir}[/green]"
+                    )
+                except Exception as exc:
+                    console.print(
+                        f"[red]Failed to extract {name}: {exc}[/red]"
+                    )
+            if config_imported["mcp_sources"]:
+                console.print(
+                    f"[yellow]⚠️  MCP sources extracted to {mcp_target_base}. "
+                    f"Run `agent-transfer init` (coming) to rewrite ~/.claude.json "
+                    f"paths and run install steps.[/yellow]"
+                )
+
         # 4. Project-level instruction file
         if project_config_source and project_config_source.is_dir():
             for instr_name in pf.registry.get(slug).instruction_files:
@@ -1133,3 +1271,77 @@ def import_agents_selective(
         "identical_skipped": identical_skipped,
         "not_selected": not_selected,
     }
+
+
+# ============================================================================
+# AgentBridge MVP (003) — T013 / FR-015 / parent-PRD M1.2
+# ============================================================================
+# Path-rewrite for ~/.claude.json mcpServers entries on import. Uses the
+# classifier's `config_after_install` data so source-machine-absolute paths
+# (nvm shims, project worktrees, etc.) become destination-machine paths.
+#
+# Existing same-platform round-trip (R1) is preserved: this function is
+# called by the new agentbridge-ingest path (T033) only. The legacy
+# import_config() in config_manager.py keeps using its existing remap_paths()
+# helper unchanged.
+
+from typing import Mapping  # noqa: E402  (intentional late import — keep diff small)
+
+
+def rewrite_mcp_servers_for_target_home(
+    servers: Mapping[str, dict],
+    classifications: Mapping[str, dict],
+    target_home: str,
+    source_home: str | None = None,
+) -> dict[str, dict]:
+    """Return a new mcpServers dict with paths rewritten for the destination.
+
+    Args:
+        servers: Source-side mcpServers entries (name -> raw cfg).
+        classifications: Per-server classification metadata, keyed by name.
+            Each value is the classifier's ClassificationResult serialized to
+            a dict (must include `config_after_install`).
+        target_home: Destination home directory (typically str(Path.home())).
+        source_home: Source home for fallback string substitution. Optional.
+
+    Returns:
+        New dict; input is not mutated.
+
+    Behavior:
+        1. If a classification entry has `config_after_install`, use it
+           verbatim (already in destination-relative form).
+        2. Else if source_home is provided, do best-effort string substitution
+           on string values.
+        3. Else copy the entry unchanged.
+    """
+    out: dict[str, dict] = {}
+    for name, src_cfg in servers.items():
+        cls = classifications.get(name) or {}
+        post = cls.get("config_after_install")
+        if post:
+            # Trust the classifier's post-install shape verbatim.
+            out[name] = dict(post)
+            continue
+
+        # Fallback: best-effort string substitution.
+        if source_home and source_home != target_home:
+            new_cfg: dict = {}
+            for k, v in src_cfg.items():
+                if isinstance(v, str):
+                    new_cfg[k] = v.replace(source_home, target_home)
+                elif isinstance(v, list):
+                    new_cfg[k] = [
+                        item.replace(source_home, target_home) if isinstance(item, str) else item
+                        for item in v
+                    ]
+                elif isinstance(v, dict):
+                    new_cfg[k] = {
+                        kk: (vv.replace(source_home, target_home) if isinstance(vv, str) else vv)
+                        for kk, vv in v.items()
+                    }
+                else:
+                    new_cfg[k] = v
+            out[name] = new_cfg
+        else:
+            out[name] = dict(src_cfg)
+    return out

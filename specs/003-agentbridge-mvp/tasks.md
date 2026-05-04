@@ -43,7 +43,7 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 ### Phase 0/1 design artifacts
 
-- [ ] **T006** Write `specs/003-agentbridge-mvp/research.md` covering the 6 questions in plan.md Phase 0 (capability-graph heuristics, briefing format, risk-tag classification, conflict-policy defaults, rollback snapshot scope, smoke-test prompts).
+- [x] **T006** Write `specs/003-agentbridge-mvp/research.md` covering the 6 questions in plan.md Phase 0 (capability-graph heuristics, briefing format, risk-tag classification, conflict-policy defaults, rollback snapshot scope, smoke-test prompts).
 - [ ] **T007** Write `specs/003-agentbridge-mvp/data-model.md` defining `ManifestModel`, `Capability`, `AssetEntry`, `RiskTag`, `ConflictPolicy`, `BriefingSection`, `Confirmation` (per plan.md Phase 1).
 - [x] **T008** [P] Write `specs/003-agentbridge-mvp/contracts/manifest.schema.json` JSON Schema for `ManifestModel`.
 - [x] **T009** [P] Write `specs/003-agentbridge-mvp/contracts/briefing.template.md` Markdown template for "Dear Receiving Claude" with 7 section slots (Identity, Capability Description, Inventory, Build Instructions, Ingest Instructions, Verification, Rollback).
@@ -53,17 +53,17 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 - [x] **T011** Implement `agent_transfer/bridge/models.py`: Pydantic `ManifestModel`, `Capability`, `AssetEntry { path, dest_path, risk, conflict, sha256, mode_bits }`, `RiskTag` (Literal Green/Yellow/Red), `ConflictPolicy` (Literal skip/merge/overwrite/ask), `BriefingSection`, `Confirmation { asset_path, risk, decided_at, user_choice }`. Re-export from `agent_transfer/models.py`.
 - [x] **T012** [US1][US2] Implement `agent_transfer/bridge/secrets.py`: merged regex (Bearer / `sk-` / `ghp_` / `xox*` / generic). Single `scan(text) -> list[SecretFinding]` function used pre-seal AND post-seal. (FR-010, SC-006, parent-PRD M1.3)
-- [ ] **T013** [US1][US2] Extend `agent_transfer/utils/transfer.py` import path to perform `~/.claude.json` mcpServers path-rewrite using `_classification.config_after_install`. (FR-015, parent-PRD M1.2). Existing same-platform round-trip MUST still pass (R1).
-- [ ] **T014** [P] Extend `agent_transfer/utils/mcp_classifier.py` to emit a `risk_tag` field (Green/Yellow/Red) per entry. Default rule: any server with auth → Yellow; any state-writing hook reference → Red. (FR-008)
-- [ ] **T015** [P] Extend `agent_transfer/utils/script_discovery.py` to emit `risk_tag` per discovered script. Heuristic: read-only (grep / find / cat / curl GET) = Yellow; state-writing (write / push / delete / chmod / install) = Red. (FR-008)
-- [ ] **T016** [P] Extend `agent_transfer/utils/config_manager.py` to additionally emit a capability-shaped output (a list of `AssetEntry`) alongside its current output. Existing callers MUST keep working (R5).
+- [x] **T013** [US1][US2] Extend `agent_transfer/utils/transfer.py` import path to perform `~/.claude.json` mcpServers path-rewrite using `_classification.config_after_install`. (FR-015, parent-PRD M1.2). Existing same-platform round-trip MUST still pass (R1).
+- [x] **T014** [P] Extend `agent_transfer/utils/mcp_classifier.py` to emit a `risk_tag` field (Green/Yellow/Red) per entry. Default rule: any server with auth → Yellow; any state-writing hook reference → Red. (FR-008)
+- [x] **T015** [P] Extend `agent_transfer/utils/script_discovery.py` to emit `risk_tag` per discovered script. Heuristic: read-only (grep / find / cat / curl GET) = Yellow; state-writing (write / push / delete / chmod / install) = Red. (FR-008)
+- [x] **T016** [P] Extend `agent_transfer/utils/config_manager.py` to additionally emit a capability-shaped output (a list of `AssetEntry`) alongside its current output. Existing callers MUST keep working (R5).
 
 ### Foundational tests
 
-- [ ] **T017** [P] Contract test `tests/contract/test_manifest_schema.py`: round-trip `ManifestModel` ↔ `manifest.schema.json`.
-- [ ] **T018** [P] Contract test `tests/contract/test_briefing_sections.py`: render briefing → assert all 7 required sections present, each non-empty.
-- [ ] **T019** [P] Unit test `tests/unit/test_secret_redaction.py`: positive + negative cases for Bearer / sk- / ghp_ / xox* / generic, including the 2 real Bitbucket app-password patterns the existing classifier caught.
-- [ ] **T020** [P] Unit test `tests/unit/test_risk_tagging.py`: classify a known fixture set of skills, hooks, rules, bin scripts; assert exact Green/Yellow/Red tags per asset type rules from research.md.
+- [x] **T017** [P] Contract test `tests/contract/test_manifest_schema.py`: round-trip `ManifestModel` ↔ `manifest.schema.json`.
+- [x] **T018** [P] Contract test `tests/contract/test_briefing_sections.py`: render briefing → assert all 7 required sections present, each non-empty.
+- [x] **T019** [P] Unit test `tests/unit/test_secret_redaction.py`: positive + negative cases for Bearer / sk- / ghp_ / xox* / generic, including the 2 real Bitbucket app-password patterns the existing classifier caught.
+- [x] **T020** [P] Unit test `tests/unit/test_risk_tagging.py`: classify a known fixture set of skills, hooks, rules, bin scripts; assert exact Green/Yellow/Red tags per asset type rules from research.md.
 - [ ] **T021** [P] Integration test `tests/integration/test_path_rewrite_mcp.py`: import a bundle whose `~/.claude.json` references `/home/source-user/...` paths into a sandbox HOME at `/tmp/...`; assert all mcpServers paths now point inside the sandbox.
 
 **Checkpoint**: Foundation ready. Existing `agent-transfer` round-trip tests still pass. T012, T013, T021 verify the carry-overs. User-story work can begin.
@@ -78,7 +78,7 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 ### Tests for User Story 1 (write FIRST, must FAIL before implementation)
 
-- [ ] **T022** [P] [US1] Integration test `tests/integration/test_capability_roundtrip.py::test_cascade_memory_roundtrip` — SC-001 ship gate. Sets up fresh sandbox HOME, runs full pipeline, asserts: bundle has 14 expected assets, briefing has all 7 sections, sandbox `session-search foo` runs cleanly returning "no matches", all 7 dependent skills present, both hooks fire on triggering events, all 5 rule files inject correctly.
+- [x] **T022** [P] [US1] Integration test `tests/integration/test_capability_roundtrip.py::test_cascade_memory_roundtrip` — SC-001 ship gate. Sets up fresh sandbox HOME, runs full pipeline, asserts: bundle has 14 expected assets, briefing has all 7 sections, sandbox `session-search foo` runs cleanly returning "no matches", all 7 dependent skills present, both hooks fire on triggering events, all 5 rule files inject correctly.
 - [ ] **T023** [P] [US1] Integration test `tests/integration/test_rollback_diff.py::test_cascade_memory_rollback` — SC-002. File-tree diff before vs after install→rollback shows zero leftover artifacts.
 - [ ] **T024** [P] [US1] Unit test `tests/unit/test_compose_graph.py::test_cascade_memory_graph` — given `~/.claude/` fixture mirroring source machine, `compose("cascade-memory")` returns the expected 14-asset graph with correct CORE/COMPANIONS/CONTEXT tier assignments.
 - [ ] **T025** [P] [US1] Unit test `tests/unit/test_selection_matrix.py` — 3-tier matrix renders correctly; user trim of a COMPANIONS asset removes it from the export set; trim of a CORE asset is rejected with clear error.
