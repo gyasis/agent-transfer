@@ -1,491 +1,1190 @@
 {
   "execution_plan": {
-    "phase_id": "Preflight Check Implementation",
+    "phase_id": "AgentBridge MVP Implementation",
     "waves": [
       {
         "wave_id": 1,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Phase 1 Setup: Create package structure and all dataclasses. T001 creates dirs, T002-T004 create independent files.",
+        "rationale": "Wave 1: 10 independent task(s) with no file conflicts",
         "tasks": [
           {
             "task_id": "T001",
             "agent_role": "Developer",
-            "instruction": "T001 Create preflight subpackage structure: `agent_transfer/utils/preflight/__init__.py`, `agent_transfer/utils/preflight/scanners/__init__.py`",
-            "file_locks": ["agent_transfer/utils/preflight/__init__.py", "agent_transfer/utils/preflight/scanners/__init__.py"],
+            "instruction": "**T001** Create `agent_transfer/bridge/__init__.py` and empty stubs for `models.py`, `compose.py`, `briefing.py`, `selection_matrix.py`, `preview.py`, `rollback.py`, `ingest.py`, `smoke_test.py`, `secrets.py` per plan.md \"Source Code\" tree.",
+            "file_locks": [
+              "agent_transfer/bridge/__init__.py",
+              "briefing.py",
+              "selection_matrix.py",
+              "ingest.py",
+              "preview.py",
+              "smoke_test.py",
+              "compose.py",
+              "plan.md",
+              "rollback.py",
+              "models.py",
+              "secrets.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T001' to [x]",
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T001** Create `agent_transfer/bridge/__init__.py` and empty stubs for `models.py`, `compose.py`, `briefing.py`, `selection_matrix.py`, `preview.py`, `rollback.py`, `ingest.py`, `smoke_test.py`, `secrets.py` per plan.md \"Source Code\" tree.' to [x]",
             "dependencies": []
           },
           {
             "task_id": "T002",
             "agent_role": "Developer",
-            "instruction": "T002 Implement manifest data models (TransferManifest, DependencyGraph, all Dep dataclasses) in `agent_transfer/utils/preflight/manifest.py`",
-            "file_locks": ["agent_transfer/utils/preflight/manifest.py"],
+            "instruction": "**T002** [P] Create `agent_transfer/templates/skills/agentbridge-compose/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T032).",
+            "file_locks": [
+              "agent_transfer/templates/skills/agentbridge-compose/SKILL.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T002' to [x]",
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T002** [P] Create `agent_transfer/templates/skills/agentbridge-compose/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T032).' to [x]",
             "dependencies": []
           },
           {
             "task_id": "T003",
             "agent_role": "Developer",
-            "instruction": "T003 Implement CheckResult and ReadinessReport dataclasses in `agent_transfer/utils/preflight/checker.py` (dataclasses only, no logic yet)",
-            "file_locks": ["agent_transfer/utils/preflight/checker.py"],
+            "instruction": "**T003** [P] Create `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T040).",
+            "file_locks": [
+              "agent_transfer/templates/skills/agentbridge-ingest/SKILL.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T003' to [x]",
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T003** [P] Create `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` skeleton (frontmatter + 1-line description; full content lands in T040).' to [x]",
             "dependencies": []
           },
           {
             "task_id": "T004",
             "agent_role": "Developer",
-            "instruction": "T004 [P] Implement remediation hint database in `agent_transfer/utils/preflight/remediation.py`",
-            "file_locks": ["agent_transfer/utils/preflight/remediation.py"],
+            "instruction": "**T004** [P] Add Pydantic to project dependencies if not already transitively present. Verify import in fresh `uv` env.",
+            "file_locks": [],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T004' to [x]",
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T004** [P] Add Pydantic to project dependencies if not already transitively present. Verify import in fresh `uv` env.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T005",
+            "agent_role": "Developer",
+            "instruction": "**T005** [P] Add `ab` console-script entry point in `pyproject.toml` alongside existing `agent-transfer` entry point. Both must work post-install (R5).",
+            "file_locks": [
+              "pyproject.toml"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T005** [P] Add `ab` console-script entry point in `pyproject.toml` alongside existing `agent-transfer` entry point. Both must work post-install (R5).' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T008",
+            "agent_role": "Developer",
+            "instruction": "**T008** [P] Write `specs/003-agentbridge-mvp/contracts/manifest.schema.json` JSON Schema for `ManifestModel`.",
+            "file_locks": [
+              "specs/003-agentbridge-mvp/contracts/manifest.schema.json"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T008** [P] Write `specs/003-agentbridge-mvp/contracts/manifest.schema.json` JSON Schema for `ManifestModel`.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T009",
+            "agent_role": "Developer",
+            "instruction": "**T009** [P] Write `specs/003-agentbridge-mvp/contracts/briefing.template.md` Markdown template for \"Dear Receiving Claude\" with 7 section slots (Identity, Capability Description, Inventory, Build Instructions, Ingest Instructions, Verification, Rollback).",
+            "file_locks": [
+              "specs/003-agentbridge-mvp/contracts/briefing.template.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T009** [P] Write `specs/003-agentbridge-mvp/contracts/briefing.template.md` Markdown template for \"Dear Receiving Claude\" with 7 section slots (Identity, Capability Description, Inventory, Build Instructions, Ingest Instructions, Verification, Rollback).' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T010",
+            "agent_role": "Developer",
+            "instruction": "**T010** [P] Write `specs/003-agentbridge-mvp/quickstart.md` user-facing walkthrough.",
+            "file_locks": [
+              "specs/003-agentbridge-mvp/quickstart.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T010** [P] Write `specs/003-agentbridge-mvp/quickstart.md` user-facing walkthrough.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T011",
+            "agent_role": "Developer",
+            "instruction": "**T011** Implement `agent_transfer/bridge/models.py`: Pydantic `ManifestModel`, `Capability`, `AssetEntry { path, dest_path, risk, conflict, sha256, mode_bits }`, `RiskTag` (Literal Green/Yellow/Red), `ConflictPolicy` (Literal skip/merge/overwrite/ask), `BriefingSection`, `Confirmation { asset_path, risk, decided_at, user_choice }`. Re-export from `agent_transfer/models.py`.",
+            "file_locks": [
+              "agent_transfer/bridge/models.py",
+              "agent_transfer/models.py"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T011** Implement `agent_transfer/bridge/models.py`: Pydantic `ManifestModel`, `Capability`, `AssetEntry { path, dest_path, risk, conflict, sha256, mode_bits }`, `RiskTag` (Literal Green/Yellow/Red), `ConflictPolicy` (Literal skip/merge/overwrite/ask), `BriefingSection`, `Confirmation { asset_path, risk, decided_at, user_choice }`. Re-export from `agent_transfer/models.py`.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T012",
+            "agent_role": "Developer",
+            "instruction": "**T012** [US1][US2] Implement `agent_transfer/bridge/secrets.py`: merged regex (Bearer / `sk-` / `ghp_` / `xox*` / generic). Single `scan(text) -> list[SecretFinding]` function used pre-seal AND post-seal. (FR-010, SC-006, parent-PRD M1.3)",
+            "file_locks": [
+              "agent_transfer/bridge/secrets.py"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 1,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T012** [US1][US2] Implement `agent_transfer/bridge/secrets.py`: merged regex (Bearer / `sk-` / `ghp_` / `xox*` / generic). Single `scan(text) -> list[SecretFinding]` function used pre-seal AND post-seal. (FR-010, SC-006, parent-PRD M1.3)' to [x]",
             "dependencies": []
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "Package importable, all dataclasses instantiable. Verify: python -c 'from agent_transfer.utils.preflight import manifest, checker, remediation'",
+          "verification_criteria": "Verify all Wave 1 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "memory_bank_agent": "project-bank-keeper"
         }
       },
       {
         "wave_id": 2,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Phase 2 Scanners: All 6 scanners are independent modules in separate files. Max parallelism.",
+        "rationale": "Wave 2: 10 independent task(s) with no file conflicts",
         "tasks": [
-          {
-            "task_id": "T005",
-            "agent_role": "Developer",
-            "instruction": "T005 [P] Implement MCP scanner — extract server IDs from agent tools, detect install type from config command+args, resolve git URLs in `agent_transfer/utils/preflight/scanners/mcp_scanner.py`",
-            "file_locks": ["agent_transfer/utils/preflight/scanners/mcp_scanner.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T005' to [x]",
-            "dependencies": ["T001", "T002"]
-          },
           {
             "task_id": "T006",
             "agent_role": "Developer",
-            "instruction": "T006 [P] Implement script scanner — regex-based CLI tool and env var extraction from .sh/.py/.js files in `agent_transfer/utils/preflight/scanners/script_scanner.py`",
-            "file_locks": ["agent_transfer/utils/preflight/scanners/script_scanner.py"],
+            "instruction": "**T006** Write `specs/003-agentbridge-mvp/research.md` covering the 6 questions in plan.md Phase 0 (capability-graph heuristics, briefing format, risk-tag classification, conflict-policy defaults, rollback snapshot scope, smoke-test prompts).",
+            "file_locks": [
+              "plan.md",
+              "specs/003-agentbridge-mvp/research.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T006' to [x]",
-            "dependencies": ["T001", "T002"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T001"
+              ],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T006** Write `specs/003-agentbridge-mvp/research.md` covering the 6 questions in plan.md Phase 0 (capability-graph heuristics, briefing format, risk-tag classification, conflict-policy defaults, rollback snapshot scope, smoke-test prompts).' to [x]",
+            "dependencies": [
+              "T001"
+            ]
           },
           {
-            "task_id": "T007",
+            "task_id": "T013",
             "agent_role": "Developer",
-            "instruction": "T007 [P] Implement binary scanner — ELF magic byte detection, architecture extraction via struct in `agent_transfer/utils/preflight/scanners/binary_scanner.py`",
-            "file_locks": ["agent_transfer/utils/preflight/scanners/binary_scanner.py"],
+            "instruction": "**T013** [US1][US2] Extend `agent_transfer/utils/transfer.py` import path to perform `~/.claude.json` mcpServers path-rewrite using `_classification.config_after_install`. (FR-015, parent-PRD M1.2). Existing same-platform round-trip MUST still pass (R1).",
+            "file_locks": [
+              "~/.claude.json",
+              "agent_transfer/utils/transfer.py",
+              "claude.json"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T007' to [x]",
-            "dependencies": ["T001", "T002"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T013** [US1][US2] Extend `agent_transfer/utils/transfer.py` import path to perform `~/.claude.json` mcpServers path-rewrite using `_classification.config_after_install`. (FR-015, parent-PRD M1.2). Existing same-platform round-trip MUST still pass (R1).' to [x]",
+            "dependencies": []
           },
           {
-            "task_id": "T008",
+            "task_id": "T014",
             "agent_role": "Developer",
-            "instruction": "T008 [P] Implement git scanner — configparser-based remote URL extraction from `.git/config` in `agent_transfer/utils/preflight/scanners/git_scanner.py`",
-            "file_locks": ["agent_transfer/utils/preflight/scanners/git_scanner.py"],
+            "instruction": "**T014** [P] Extend `agent_transfer/utils/mcp_classifier.py` to emit a `risk_tag` field (Green/Yellow/Red) per entry. Default rule: any server with auth \u2192 Yellow; any state-writing hook reference \u2192 Red. (FR-008)",
+            "file_locks": [
+              "agent_transfer/utils/mcp_classifier.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T008' to [x]",
-            "dependencies": ["T001", "T002"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T014** [P] Extend `agent_transfer/utils/mcp_classifier.py` to emit a `risk_tag` field (Green/Yellow/Red) per entry. Default rule: any server with auth \u2192 Yellow; any state-writing hook reference \u2192 Red. (FR-008)' to [x]",
+            "dependencies": []
           },
           {
-            "task_id": "T009",
+            "task_id": "T015",
             "agent_role": "Developer",
-            "instruction": "T009 [P] Implement Docker scanner — detect Dockerfiles, compose files, `docker run` in scripts in `agent_transfer/utils/preflight/scanners/docker_scanner.py`",
-            "file_locks": ["agent_transfer/utils/preflight/scanners/docker_scanner.py"],
+            "instruction": "**T015** [P] Extend `agent_transfer/utils/script_discovery.py` to emit `risk_tag` per discovered script. Heuristic: read-only (grep / find / cat / curl GET) = Yellow; state-writing (write / push / delete / chmod / install) = Red. (FR-008)",
+            "file_locks": [
+              "agent_transfer/utils/script_discovery.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T009' to [x]",
-            "dependencies": ["T001", "T002"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T015** [P] Extend `agent_transfer/utils/script_discovery.py` to emit `risk_tag` per discovered script. Heuristic: read-only (grep / find / cat / curl GET) = Yellow; state-writing (write / push / delete / chmod / install) = Red. (FR-008)' to [x]",
+            "dependencies": []
           },
           {
-            "task_id": "T010",
+            "task_id": "T016",
             "agent_role": "Developer",
-            "instruction": "T010 [P] Implement .preflight.yml reader — YAML parsing with graceful error handling in `agent_transfer/utils/preflight/scanners/preflight_yml.py`",
-            "file_locks": ["agent_transfer/utils/preflight/scanners/preflight_yml.py"],
+            "instruction": "**T016** [P] Extend `agent_transfer/utils/config_manager.py` to additionally emit a capability-shaped output (a list of `AssetEntry`) alongside its current output. Existing callers MUST keep working (R5).",
+            "file_locks": [
+              "agent_transfer/utils/config_manager.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T010' to [x]",
-            "dependencies": ["T001", "T002"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T016** [P] Extend `agent_transfer/utils/config_manager.py` to additionally emit a capability-shaped output (a list of `AssetEntry`) alongside its current output. Existing callers MUST keep working (R5).' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T017",
+            "agent_role": "Developer",
+            "instruction": "**T017** [P] Contract test `tests/contract/test_manifest_schema.py`: round-trip `ManifestModel` \u2194 `manifest.schema.json`.",
+            "file_locks": [
+              "tests/contract/test_manifest_schema.py",
+              "manifest.schema.json"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T017** [P] Contract test `tests/contract/test_manifest_schema.py`: round-trip `ManifestModel` \u2194 `manifest.schema.json`.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T018",
+            "agent_role": "Developer",
+            "instruction": "**T018** [P] Contract test `tests/contract/test_briefing_sections.py`: render briefing \u2192 assert all 7 required sections present, each non-empty.",
+            "file_locks": [
+              "tests/contract/test_briefing_sections.py"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T018** [P] Contract test `tests/contract/test_briefing_sections.py`: render briefing \u2192 assert all 7 required sections present, each non-empty.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T019",
+            "agent_role": "Developer",
+            "instruction": "**T019** [P] Unit test `tests/unit/test_secret_redaction.py`: positive + negative cases for Bearer / sk- / ghp_ / xox* / generic, including the 2 real Bitbucket app-password patterns the existing classifier caught.",
+            "file_locks": [
+              "tests/unit/test_secret_redaction.py"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T019** [P] Unit test `tests/unit/test_secret_redaction.py`: positive + negative cases for Bearer / sk- / ghp_ / xox* / generic, including the 2 real Bitbucket app-password patterns the existing classifier caught.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T020",
+            "agent_role": "Developer",
+            "instruction": "**T020** [P] Unit test `tests/unit/test_risk_tagging.py`: classify a known fixture set of skills, hooks, rules, bin scripts; assert exact Green/Yellow/Red tags per asset type rules from research.md.",
+            "file_locks": [
+              "tests/unit/test_risk_tagging.py",
+              "research.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T020** [P] Unit test `tests/unit/test_risk_tagging.py`: classify a known fixture set of skills, hooks, rules, bin scripts; assert exact Green/Yellow/Red tags per asset type rules from research.md.' to [x]",
+            "dependencies": []
+          },
+          {
+            "task_id": "T022",
+            "agent_role": "Developer",
+            "instruction": "**T022** [P] [US1] Integration test `tests/integration/test_capability_roundtrip.py::test_cascade_memory_roundtrip` \u2014 SC-001 ship gate. Sets up fresh sandbox HOME, runs full pipeline, asserts: bundle has 14 expected assets, briefing has all 7 sections, sandbox `session-search foo` runs cleanly returning \"no matches\", all 7 dependent skills present, both hooks fire on triggering events, all 5 rule files inject correctly.",
+            "file_locks": [
+              "tests/integration/test_capability_roundtrip.py"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 2,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T022** [P] [US1] Integration test `tests/integration/test_capability_roundtrip.py::test_cascade_memory_roundtrip` \u2014 SC-001 ship gate. Sets up fresh sandbox HOME, runs full pipeline, asserts: bundle has 14 expected assets, briefing has all 7 sections, sandbox `session-search foo` runs cleanly returning \"no matches\", all 7 dependent skills present, both hooks fire on triggering events, all 5 rule files inject correctly.' to [x]",
+            "dependencies": []
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "All 6 scanners importable and have scan functions. Verify: python -c 'from agent_transfer.utils.preflight.scanners import mcp_scanner, script_scanner, binary_scanner, git_scanner, docker_scanner, preflight_yml'",
+          "verification_criteria": "Verify all Wave 2 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "memory_bank_agent": "project-bank-keeper"
         }
       },
       {
         "wave_id": 3,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Phase 2 cont: Scanner tests + Phase 3 start: Collector composes scanners. Different files, can run in parallel.",
+        "rationale": "Wave 3: 10 independent task(s) with no file conflicts",
         "tasks": [
           {
-            "task_id": "T011",
+            "task_id": "T007",
             "agent_role": "Developer",
-            "instruction": "T011 [P] Implement scanner tests — unit tests for each scanner with fixture data in `tests/test_preflight_scanners.py`",
-            "file_locks": ["tests/test_preflight_scanners.py"],
+            "instruction": "**T007** Write `specs/003-agentbridge-mvp/data-model.md` defining `ManifestModel`, `Capability`, `AssetEntry`, `RiskTag`, `ConflictPolicy`, `BriefingSection`, `Confirmation` (per plan.md Phase 1).",
+            "file_locks": [
+              "plan.md",
+              "specs/003-agentbridge-mvp/data-model.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T011' to [x]",
-            "dependencies": ["T005", "T006", "T007", "T008", "T009", "T010"]
-          },
-          {
-            "task_id": "T012",
-            "agent_role": "Developer",
-            "instruction": "T012 [US3] Implement inventory collector — compose all scanners, scan agents/skills/hooks/configs in `agent_transfer/utils/preflight/collector.py`",
-            "file_locks": ["agent_transfer/utils/preflight/collector.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T012' to [x]",
-            "dependencies": ["T005", "T006", "T007", "T008", "T009", "T010"]
-          }
-        ],
-        "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "All 6 scanners pass unit tests independently. Collector imports and composes scanners.",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
-        }
-      },
-      {
-        "wave_id": 4,
-        "strategy": "SEQUENTIAL_MERGE",
-        "rationale": "Phase 3 US3 Export: collect_inventory API → manifest I/O → archive read → export integration → collector tests. Sequential chain.",
-        "tasks": [
-          {
-            "task_id": "T013",
-            "agent_role": "Developer",
-            "instruction": "T013 [US3] Implement `collect_inventory()` public API function in `agent_transfer/utils/preflight/__init__.py`",
-            "file_locks": ["agent_transfer/utils/preflight/__init__.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T013' to [x]",
-            "dependencies": ["T012"]
-          },
-          {
-            "task_id": "T014",
-            "agent_role": "Developer",
-            "instruction": "T014 [US3] Implement `write_manifest()` and `read_manifest()` JSON serialization in `agent_transfer/utils/preflight/manifest.py`",
-            "file_locks": ["agent_transfer/utils/preflight/manifest.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T014' to [x]",
-            "dependencies": ["T002"]
-          },
-          {
-            "task_id": "T015",
-            "agent_role": "Developer",
-            "instruction": "T015 [US3] Implement `read_manifest_from_archive()` — safe tarfile extraction of manifest.json in `agent_transfer/utils/preflight/manifest.py`",
-            "file_locks": ["agent_transfer/utils/preflight/manifest.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T015' to [x]",
-            "dependencies": ["T014"]
-          },
-          {
-            "task_id": "T016",
-            "agent_role": "Developer",
-            "instruction": "T016 [US3] Modify `agent_transfer/utils/transfer.py` export flow to call `collect_inventory()` and bundle `manifest.json` in archive",
-            "file_locks": ["agent_transfer/utils/transfer.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T016' to [x]",
-            "dependencies": ["T013", "T014"]
-          },
-          {
-            "task_id": "T017",
-            "agent_role": "Developer",
-            "instruction": "T017 [US3] Implement collector tests — verify manifest generation against fixture agents/skills in `tests/test_preflight_collector.py`",
-            "file_locks": ["tests/test_preflight_collector.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T017' to [x]",
-            "dependencies": ["T013", "T014"]
-          }
-        ],
-        "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "Export produces archives with valid manifest.json. Collector tests pass. Verify: python -m pytest tests/test_preflight_collector.py -v",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
-        }
-      },
-      {
-        "wave_id": 5,
-        "strategy": "SEQUENTIAL_MERGE",
-        "rationale": "Phase 4 US1 Preflight: checker logic → run_preflight_checks API → report display + JSON (parallel pair) → CLI command + legacy handling (parallel pair) → checker tests.",
-        "tasks": [
-          {
-            "task_id": "T018",
-            "agent_role": "Developer",
-            "instruction": "T018 [US1] Implement checker logic — check_mcp, check_cli, check_env, check_git_repos, check_binaries, check_skill_trees, check_docker, check_packages, check_sourced_files in `agent_transfer/utils/preflight/checker.py`",
-            "file_locks": ["agent_transfer/utils/preflight/checker.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T018' to [x]",
-            "dependencies": ["T003", "T002", "T004"]
-          },
-          {
-            "task_id": "T019",
-            "agent_role": "Developer",
-            "instruction": "T019 [US1] Implement `run_preflight_checks()` public API that orchestrates all checkers in `agent_transfer/utils/preflight/__init__.py`",
-            "file_locks": ["agent_transfer/utils/preflight/__init__.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T019' to [x]",
-            "dependencies": ["T018", "T013"]
-          },
-          {
-            "task_id": "T020",
-            "agent_role": "Developer",
-            "instruction": "T020 [US1] Implement Rich readiness report display in `agent_transfer/utils/preflight/report.py`",
-            "file_locks": ["agent_transfer/utils/preflight/report.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T020' to [x]",
-            "dependencies": ["T003"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T006",
+                "T001"
+              ],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T007** Write `specs/003-agentbridge-mvp/data-model.md` defining `ManifestModel`, `Capability`, `AssetEntry`, `RiskTag`, `ConflictPolicy`, `BriefingSection`, `Confirmation` (per plan.md Phase 1).' to [x]",
+            "dependencies": [
+              "T006",
+              "T001"
+            ]
           },
           {
             "task_id": "T021",
             "agent_role": "Developer",
-            "instruction": "T021 [US1] Implement `report_to_json()` for --json flag in `agent_transfer/utils/preflight/report.py`",
-            "file_locks": ["agent_transfer/utils/preflight/report.py"],
+            "instruction": "**T021** [P] Integration test `tests/integration/test_path_rewrite_mcp.py`: import a bundle whose `~/.claude.json` references `/home/source-user/...` paths into a sandbox HOME at `/tmp/...`; assert all mcpServers paths now point inside the sandbox.",
+            "file_locks": [
+              "~/.claude.json",
+              "tests/integration/test_path_rewrite_mcp.py",
+              "claude.json"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T021' to [x]",
-            "dependencies": ["T020"]
-          },
-          {
-            "task_id": "T022",
-            "agent_role": "Developer",
-            "instruction": "T022 [US1] Add `preflight` CLI command to `agent_transfer/cli.py` — accepts archive path, --json flag",
-            "file_locks": ["agent_transfer/cli.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T022' to [x]",
-            "dependencies": ["T019", "T020", "T021", "T015"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T013"
+              ],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T021** [P] Integration test `tests/integration/test_path_rewrite_mcp.py`: import a bundle whose `~/.claude.json` references `/home/source-user/...` paths into a sandbox HOME at `/tmp/...`; assert all mcpServers paths now point inside the sandbox.' to [x]",
+            "dependencies": [
+              "T013"
+            ]
           },
           {
             "task_id": "T023",
             "agent_role": "Developer",
-            "instruction": "T023 [US1] Handle legacy archives (no manifest) — show warning, exit 0 in `agent_transfer/cli.py`",
-            "file_locks": ["agent_transfer/cli.py"],
+            "instruction": "**T023** [P] [US1] Integration test `tests/integration/test_rollback_diff.py::test_cascade_memory_rollback` \u2014 SC-002. File-tree diff before vs after install\u2192rollback shows zero leftover artifacts.",
+            "file_locks": [
+              "tests/integration/test_rollback_diff.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T023' to [x]",
-            "dependencies": ["T022"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T023** [P] [US1] Integration test `tests/integration/test_rollback_diff.py::test_cascade_memory_rollback` \u2014 SC-002. File-tree diff before vs after install\u2192rollback shows zero leftover artifacts.' to [x]",
+            "dependencies": []
           },
           {
             "task_id": "T024",
             "agent_role": "Developer",
-            "instruction": "T024 [US1] Implement checker tests — mock env for GREEN/YELLOW/RED paths in `tests/test_preflight_checker.py`",
-            "file_locks": ["tests/test_preflight_checker.py"],
+            "instruction": "**T024** [P] [US1] Unit test `tests/unit/test_compose_graph.py::test_cascade_memory_graph` \u2014 given `~/.claude/` fixture mirroring source machine, `compose(\"cascade-memory\")` returns the expected 14-asset graph with correct CORE/COMPANIONS/CONTEXT tier assignments.",
+            "file_locks": [
+              "tests/unit/test_compose_graph.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T024' to [x]",
-            "dependencies": ["T018", "T019"]
-          }
-        ],
-        "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "agent-transfer preflight archive.tar.gz shows color-coded report with remediation hints. Verify: python -m pytest tests/test_preflight_checker.py -v",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
-        }
-      },
-      {
-        "wave_id": 6,
-        "strategy": "SEQUENTIAL_MERGE",
-        "rationale": "Phase 5 US2 Import Gate: Modify import → integrate preflight → handle legacy → gate tests. Sequential on cli.py.",
-        "tasks": [
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T024** [P] [US1] Unit test `tests/unit/test_compose_graph.py::test_cascade_memory_graph` \u2014 given `~/.claude/` fixture mirroring source machine, `compose(\"cascade-memory\")` returns the expected 14-asset graph with correct CORE/COMPANIONS/CONTEXT tier assignments.' to [x]",
+            "dependencies": []
+          },
           {
             "task_id": "T025",
             "agent_role": "Developer",
-            "instruction": "T025 [US2] Modify `agent_transfer/cli.py` import command — add --force flag, read manifest before extraction",
-            "file_locks": ["agent_transfer/cli.py"],
+            "instruction": "**T025** [P] [US1] Unit test `tests/unit/test_selection_matrix.py` \u2014 3-tier matrix renders correctly; user trim of a COMPANIONS asset removes it from the export set; trim of a CORE asset is rejected with clear error.",
+            "file_locks": [
+              "tests/unit/test_selection_matrix.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T025' to [x]",
-            "dependencies": ["T022", "T023"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T025** [P] [US1] Unit test `tests/unit/test_selection_matrix.py` \u2014 3-tier matrix renders correctly; user trim of a COMPANIONS asset removes it from the export set; trim of a CORE asset is rejected with clear error.' to [x]",
+            "dependencies": []
           },
           {
             "task_id": "T026",
             "agent_role": "Developer",
-            "instruction": "T026 [US2] Integrate preflight check into import flow — run checks, display report, prompt on RED in `agent_transfer/cli.py`",
-            "file_locks": ["agent_transfer/cli.py"],
+            "instruction": "**T026** [US1] Implement `agent_transfer/bridge/compose.py::compose(capability_name) -> Capability`: deterministic dependency-graph walk per research.md heuristics. Reads `~/.claude/skills/`, `~/.claude/hooks/`, `~/.claude/rules/`, `~/bin/`, follows cross-references (skill\u2192bin, hook\u2192rule, rule\u2192skill). (FR-003, FR-004) Depends on T011, T015, T016.",
+            "file_locks": [
+              "agent_transfer/bridge/compose.py",
+              "research.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T026' to [x]",
-            "dependencies": ["T025"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T020",
+                "T011"
+              ],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T026** [US1] Implement `agent_transfer/bridge/compose.py::compose(capability_name) -> Capability`: deterministic dependency-graph walk per research.md heuristics. Reads `~/.claude/skills/`, `~/.claude/hooks/`, `~/.claude/rules/`, `~/bin/`, follows cross-references (skill\u2192bin, hook\u2192rule, rule\u2192skill). (FR-003, FR-004) Depends on T011, T015, T016.' to [x]",
+            "dependencies": [
+              "T020",
+              "T011"
+            ]
           },
           {
             "task_id": "T027",
             "agent_role": "Developer",
-            "instruction": "T027 [US2] Handle legacy archives in import — show \"no preflight data\" warning, proceed in `agent_transfer/cli.py`",
-            "file_locks": ["agent_transfer/cli.py"],
+            "instruction": "**T027** [US1] Implement `agent_transfer/bridge/selection_matrix.py`: Rich-based 3-tier UI (CORE always-included, COMPANIONS opt-out, CONTEXT opt-in). Returns the trimmed `Capability` after user confirmation. (FR-005) Depends on T011.",
+            "file_locks": [
+              "agent_transfer/bridge/selection_matrix.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T027' to [x]",
-            "dependencies": ["T026"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T011"
+              ],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T027** [US1] Implement `agent_transfer/bridge/selection_matrix.py`: Rich-based 3-tier UI (CORE always-included, COMPANIONS opt-out, CONTEXT opt-in). Returns the trimmed `Capability` after user confirmation. (FR-005) Depends on T011.' to [x]",
+            "dependencies": [
+              "T011"
+            ]
           },
           {
             "task_id": "T028",
             "agent_role": "Developer",
-            "instruction": "T028 [US2] Implement import gate tests — verify block on RED, warn on YELLOW, pass on GREEN in `tests/test_preflight.py`",
-            "file_locks": ["tests/test_preflight.py"],
+            "instruction": "**T028** [US1] Implement `agent_transfer/bridge/briefing.py::render(manifest) -> str`: emits BRIEFING.md from `contracts/briefing.template.md` with all 7 sections populated from the manifest. (FR-007) Depends on T011, T009.",
+            "file_locks": [
+              "agent_transfer/bridge/briefing.py",
+              "BRIEFING.md",
+              "contracts/briefing.template.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T028' to [x]",
-            "dependencies": ["T027"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T011"
+              ],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T028** [US1] Implement `agent_transfer/bridge/briefing.py::render(manifest) -> str`: emits BRIEFING.md from `contracts/briefing.template.md` with all 7 sections populated from the manifest. (FR-007) Depends on T011, T009.' to [x]",
+            "dependencies": [
+              "T011"
+            ]
+          },
+          {
+            "task_id": "T034",
+            "agent_role": "Developer",
+            "instruction": "**T034** [US1] Implement `agent_transfer/bridge/smoke_test.py::run(manifest)`: post-install self-interrogation \u2014 checks each declared asset is present at its declared path with declared mode, runs `session-search foo` on empty corpus, validates \"who are you\" against manifest. Flags drift. (FR-017)",
+            "file_locks": [
+              "agent_transfer/bridge/smoke_test.py"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T034** [US1] Implement `agent_transfer/bridge/smoke_test.py::run(manifest)`: post-install self-interrogation \u2014 checks each declared asset is present at its declared path with declared mode, runs `session-search foo` on empty corpus, validates \"who are you\" against manifest. Flags drift. (FR-017)' to [x]",
+            "dependencies": []
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "Import gates on preflight results. Legacy archives still import. --force bypasses. Verify: python -m pytest tests/test_preflight.py -v",
+          "verification_criteria": "Verify all Wave 3 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "memory_bank_agent": "project-bank-keeper"
         }
       },
       {
-        "wave_id": 7,
-        "strategy": "SEQUENTIAL_MERGE",
-        "rationale": "Phase 6 US4 Self-Audit: --self flag → self-audit collector → --self --json combo. Sequential on cli.py + collector.py.",
+        "wave_id": 4,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 4: 7 independent task(s) with no file conflicts",
         "tasks": [
           {
             "task_id": "T029",
             "agent_role": "Developer",
-            "instruction": "T029 [US4] Add --self flag to preflight CLI command — scan local env using pathfinder in `agent_transfer/cli.py`",
-            "file_locks": ["agent_transfer/cli.py"],
+            "instruction": "**T029** [US1] Implement `agent_transfer/bridge/preview.py`: Briefing Preview UI (Rich) \u2014 per-asset preview with risk tags; enforces `y/n` on every Yellow and Red asset; refuses to seal on declined Red. Writes `confirmations.log` to bundle root. (FR-009, FR-018, SC-007) Depends on T027.",
+            "file_locks": [
+              "agent_transfer/bridge/preview.py",
+              "confirmations.log"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T029' to [x]",
-            "dependencies": ["T022", "T019"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T027"
+              ],
+              "wave_position": 4,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T029** [US1] Implement `agent_transfer/bridge/preview.py`: Briefing Preview UI (Rich) \u2014 per-asset preview with risk tags; enforces `y/n` on every Yellow and Red asset; refuses to seal on declined Red. Writes `confirmations.log` to bundle root. (FR-009, FR-018, SC-007) Depends on T027.' to [x]",
+            "dependencies": [
+              "T027"
+            ]
           },
           {
             "task_id": "T030",
             "agent_role": "Developer",
-            "instruction": "T030 [US4] Implement self-audit collector path — discover local agents, skills, hooks, configs via pathfinder in `agent_transfer/utils/preflight/collector.py`",
-            "file_locks": ["agent_transfer/utils/preflight/collector.py"],
+            "instruction": "**T030** [US1] Implement `agent_transfer/bridge/rollback.py::snapshot(targets) -> (rollback_tar, rollback_sh)`: snapshots union of (every dest path the bundle will touch, `~/.claude.json`, `~/.claude/settings.json`). All-or-nothing tarball + shell script. (FR-016) Depends on T011.",
+            "file_locks": [
+              "claude.json",
+              "claude/settings.json",
+              "~/.claude.json",
+              "agent_transfer/bridge/rollback.py",
+              "~/.claude/settings.json"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T030' to [x]",
-            "dependencies": ["T012", "T029"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T013",
+                "T021",
+                "T011"
+              ],
+              "wave_position": 4,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T030** [US1] Implement `agent_transfer/bridge/rollback.py::snapshot(targets) -> (rollback_tar, rollback_sh)`: snapshots union of (every dest path the bundle will touch, `~/.claude.json`, `~/.claude/settings.json`). All-or-nothing tarball + shell script. (FR-016) Depends on T011.' to [x]",
+            "dependencies": [
+              "T013",
+              "T021",
+              "T011"
+            ]
           },
           {
             "task_id": "T031",
             "agent_role": "Developer",
-            "instruction": "T031 [US4] Support --self --json combination for manifest-format output in `agent_transfer/cli.py`",
-            "file_locks": ["agent_transfer/cli.py"],
+            "instruction": "**T031** [US1] Wire `ab compose --capability <name>` Click command in `agent_transfer/cli.py` invoking T026 \u2192 T027 \u2192 T028 \u2192 preview \u2192 existing `mcp_source_bundler` to seal. (FR-001) Depends on T026, T027, T028, T029, T030. Pre-seal secret scan (T012). Post-seal scan asserts SC-006.",
+            "file_locks": [
+              "agent_transfer/cli.py"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T031' to [x]",
-            "dependencies": ["T029", "T030"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T028",
+                "T026",
+                "T027"
+              ],
+              "wave_position": 4,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T031** [US1] Wire `ab compose --capability <name>` Click command in `agent_transfer/cli.py` invoking T026 \u2192 T027 \u2192 T028 \u2192 preview \u2192 existing `mcp_source_bundler` to seal. (FR-001) Depends on T026, T027, T028, T029, T030. Pre-seal secret scan (T012). Post-seal scan asserts SC-006.' to [x]",
+            "dependencies": [
+              "T028",
+              "T026",
+              "T027",
+              "T012",
+              "T030"
+            ]
+          },
+          {
+            "task_id": "T043",
+            "agent_role": "Developer",
+            "instruction": "**T043** [P] Update parent PRD `~/dev/prd/scratch/agent_transfer_full_config_capture_2026-05-02.md`: mark generated `setup.sh` init flow as superseded; mark HTTP-transport import as deferred; mark FR-010 (tighter secret regex) and FR-015 (path-rewrite) as landed in 003-agentbridge-mvp. (parent-PRD M4.3)",
+            "file_locks": [
+              "setup.sh",
+              "dev/prd/scratch/agent_transfer_full_config_capture_2026-05-02.md",
+              "~/dev/prd/scratch/agent_transfer_full_config_capture_2026-05-02.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 4,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T043** [P] Update parent PRD `~/dev/prd/scratch/agent_transfer_full_config_capture_2026-05-02.md`: mark generated `setup.sh` init flow as superseded; mark HTTP-transport import as deferred; mark FR-010 (tighter secret regex) and FR-015 (path-rewrite) as landed in 003-agentbridge-mvp. (parent-PRD M4.3)' to [x]",
+            "dependencies": []
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "agent-transfer preflight --self produces full dependency inventory of local machine.",
+          "verification_criteria": "Verify all Wave 4 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "memory_bank_agent": "project-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 5,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 5: 3 independent task(s) with no file conflicts",
+        "tasks": [
+          {
+            "task_id": "T032",
+            "agent_role": "Developer",
+            "instruction": "**T032** [US1] Author `agent_transfer/templates/skills/agentbridge-compose/SKILL.md` content: trigger phrases (\"bundle my X functionality\", \"I want to install X on another machine\"), behavior (invoke `ab compose`), expected outputs, conflict-handling guidance for the source-side agent. (FR-002) Depends on T031.",
+            "file_locks": [
+              "agent_transfer/templates/skills/agentbridge-compose/SKILL.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T031",
+                "T002"
+              ],
+              "wave_position": 5,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T032** [US1] Author `agent_transfer/templates/skills/agentbridge-compose/SKILL.md` content: trigger phrases (\"bundle my X functionality\", \"I want to install X on another machine\"), behavior (invoke `ab compose`), expected outputs, conflict-handling guidance for the source-side agent. (FR-002) Depends on T031.' to [x]",
+            "dependencies": [
+              "T031",
+              "T002"
+            ]
+          },
+          {
+            "task_id": "T033",
+            "agent_role": "Developer",
+            "instruction": "**T033** [US1] Implement `agent_transfer/bridge/ingest.py::ingest(bundle_path)`: reads BRIEFING.md, validates manifest, invokes selection_matrix again (for destination-side trim), prompts on every Yellow/Red, walks inventory, applies per-asset conflict policy (skip/merge/overwrite/ask), preserves mode bits, performs settings.json + ~/.claude.json idempotent merge. (FR-012, FR-013, FR-014, FR-011) Depends on T011, T013, T027, T030.",
+            "file_locks": [
+              "settings.json",
+              "claude.json",
+              "agent_transfer/bridge/ingest.py",
+              "BRIEFING.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T021",
+                "T011",
+                "T028",
+                "T013",
+                "T030"
+              ],
+              "wave_position": 5,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T033** [US1] Implement `agent_transfer/bridge/ingest.py::ingest(bundle_path)`: reads BRIEFING.md, validates manifest, invokes selection_matrix again (for destination-side trim), prompts on every Yellow/Red, walks inventory, applies per-asset conflict policy (skip/merge/overwrite/ask), preserves mode bits, performs settings.json + ~/.claude.json idempotent merge. (FR-012, FR-013, FR-014, FR-011) Depends on T011, T013, T027, T030.' to [x]",
+            "dependencies": [
+              "T021",
+              "T011",
+              "T028",
+              "T013",
+              "T030"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 5 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "project-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 6,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 6: 2 independent task(s) with no file conflicts",
+        "tasks": [
+          {
+            "task_id": "T035",
+            "agent_role": "Developer",
+            "instruction": "**T035** [US1] Wire `ab ingest <bundle>` Click command in `agent_transfer/cli.py` invoking rollback snapshot \u2192 T033 \u2192 T034. Failures trigger `rollback.sh` invocation hint. (FR-019 \u2014 additive only; existing 9 commands untouched).",
+            "file_locks": [
+              "agent_transfer/cli.py",
+              "rollback.sh"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T033",
+                "T031"
+              ],
+              "wave_position": 6,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T035** [US1] Wire `ab ingest <bundle>` Click command in `agent_transfer/cli.py` invoking rollback snapshot \u2192 T033 \u2192 T034. Failures trigger `rollback.sh` invocation hint. (FR-019 \u2014 additive only; existing 9 commands untouched).' to [x]",
+            "dependencies": [
+              "T033",
+              "T031",
+              "T030",
+              "T034"
+            ]
+          },
+          {
+            "task_id": "T037",
+            "agent_role": "Developer",
+            "instruction": "**T037** [US1] Add settings.json idempotent-merge integration test `tests/integration/test_settings_merge_idempotent.py::test_re_running_ingest_does_not_duplicate_hooks` \u2014 FR-014. Assert running ingestion twice produces exactly one set of hook entries.",
+            "file_locks": [
+              "tests/integration/test_settings_merge_idempotent.py",
+              "settings.json"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T033"
+              ],
+              "wave_position": 6,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T037** [US1] Add settings.json idempotent-merge integration test `tests/integration/test_settings_merge_idempotent.py::test_re_running_ingest_does_not_duplicate_hooks` \u2014 FR-014. Assert running ingestion twice produces exactly one set of hook entries.' to [x]",
+            "dependencies": [
+              "T033"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 6 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "project-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 7,
+        "strategy": "PARALLEL_SWARM",
+        "rationale": "Wave 7: 2 independent task(s) with no file conflicts",
+        "tasks": [
+          {
+            "task_id": "T036",
+            "agent_role": "Developer",
+            "instruction": "**T036** [US1] Author `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` content: trigger (\"Install this AgentBridge bundle\"), behavior (invoke `ab ingest`), conflict-policy guidance, smoke-test interpretation. (FR-012) Depends on T035.",
+            "file_locks": [
+              "agent_transfer/templates/skills/agentbridge-ingest/SKILL.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T003",
+                "T035"
+              ],
+              "wave_position": 7,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T036** [US1] Author `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` content: trigger (\"Install this AgentBridge bundle\"), behavior (invoke `ab ingest`), conflict-policy guidance, smoke-test interpretation. (FR-012) Depends on T035.' to [x]",
+            "dependencies": [
+              "T003",
+              "T035"
+            ]
+          },
+          {
+            "task_id": "T038",
+            "agent_role": "Developer",
+            "instruction": "**T038** [P] [US2] Integration test `tests/integration/test_prd_capability_roundtrip.py` \u2014 SC-009. Bundle the prd capability, install on sandbox, assert: `prd new test_descriptor` creates stub at right location; `prd-guard` blocks writes outside `scratch/`; `prd-guard` allows writes when skill-internal lock is held; settings.json gained the prd-guard hook entries non-destructively.",
+            "file_locks": [
+              "tests/integration/test_prd_capability_roundtrip.py",
+              "settings.json"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T033",
+                "T037"
+              ],
+              "wave_position": 7,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T038** [P] [US2] Integration test `tests/integration/test_prd_capability_roundtrip.py` \u2014 SC-009. Bundle the prd capability, install on sandbox, assert: `prd new test_descriptor` creates stub at right location; `prd-guard` blocks writes outside `scratch/`; `prd-guard` allows writes when skill-internal lock is held; settings.json gained the prd-guard hook entries non-destructively.' to [x]",
+            "dependencies": [
+              "T033",
+              "T037"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 7 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "project-bank-keeper"
         }
       },
       {
         "wave_id": 8,
         "strategy": "PARALLEL_SWARM",
-        "rationale": "Phase 7 US5 Skill: Two independent files for Claude Code skill integration.",
+        "rationale": "Polish phase \u2014 runs after US1 ship gate (T037, T036) is complete. Renames, README, perf verification, and quickstart validation all require a working MVP.",
         "tasks": [
           {
-            "task_id": "T032",
+            "task_id": "T041",
             "agent_role": "Developer",
-            "instruction": "T032 [US5] Create `/preflight` skill markdown file at `~/.claude/skills/preflight/SKILL.md` (or document how to create it)",
-            "file_locks": ["~/.claude/skills/preflight/SKILL.md"],
+            "instruction": "**T041** Rename: update `pyproject.toml` package name and the README title from `agent-transfer` to `AgentBridge`. Keep both `agent-transfer` and `ab` console-scripts working (R5). NO file renames (R10). (FR-021, parent-PRD M4.1)",
+            "file_locks": [
+              "pyproject.toml"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T032' to [x]",
-            "dependencies": ["T022"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T005"
+              ],
+              "wave_position": 3,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T041** Rename: update `pyproject.toml` package name and the README title from `agent-transfer` to `AgentBridge`. Keep both `agent-transfer` and `ab` console-scripts working (R5). NO file renames (R10). (FR-021, parent-PRD M4.1)' to [x]",
+            "dependencies": [
+              "T005",
+              "T037",
+              "T036"
+            ]
           },
           {
-            "task_id": "T033",
+            "task_id": "T042",
             "agent_role": "Developer",
-            "instruction": "T033 [US5] Skill script that invokes `agent-transfer preflight` and formats output for agentic conversation",
-            "file_locks": [],
+            "instruction": "**T042** [P] Rewrite `README.md` around \"capability-level transfer with agent-driven composition and ingestion.\" Explicitly state Mode A only; cross-harness is post-MVP. (parent-PRD M4.2)",
+            "file_locks": [
+              "README.md"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T033' to [x]",
-            "dependencies": ["T022"]
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 4,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T042** [P] Rewrite `README.md` around \"capability-level transfer with agent-driven composition and ingestion.\" Explicitly state Mode A only; cross-harness is post-MVP. (parent-PRD M4.2)' to [x]",
+            "dependencies": [
+              "T037",
+              "T036"
+            ]
+          },
+          {
+            "task_id": "T045",
+            "agent_role": "Developer",
+            "instruction": "**T045** Performance verification: SC-004 (source-side bundle for cascade-memory < 60s) and SC-005 (destination-side ingestion excluding pause time < 30s). Time the sandbox walkthrough; record numbers in `quickstart.md`.",
+            "file_locks": [
+              "quickstart.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": true,
+              "has_upstream_deps": false,
+              "upstream_dep_ids": [],
+              "wave_position": 4,
+              "can_test_now": true,
+              "test_hint": "isolated-unit"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T045** Performance verification: SC-004 (source-side bundle for cascade-memory < 60s) and SC-005 (destination-side ingestion excluding pause time < 30s). Time the sandbox walkthrough; record numbers in `quickstart.md`.' to [x]",
+            "dependencies": [
+              "T037",
+              "T036"
+            ]
+          },
+          {
+            "task_id": "T047",
+            "agent_role": "Developer",
+            "instruction": "**T047** Run `quickstart.md` validation end-to-end one final time on a clean sandbox.",
+            "file_locks": [
+              "quickstart.md"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T045"
+              ],
+              "wave_position": 5,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T047** Run `quickstart.md` validation end-to-end one final time on a clean sandbox.' to [x]",
+            "dependencies": [
+              "T045",
+              "T037",
+              "T036"
+            ]
           }
         ],
-        "checkpoint_after": {
-          "enabled": true,
-          "verification_criteria": "/preflight skill invocable in Claude Code sessions.",
-          "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
-        }
+        "checkpoint_after": {}
       },
       {
         "wave_id": 9,
         "strategy": "SEQUENTIAL_MERGE",
-        "rationale": "Phase 8 Polish: Lint (parallel) → security audit → backward compat tests → e2e tests → git checkpoint. Must run AFTER all implementation.",
+        "rationale": "Wave 8: 1 independent task(s) with no file conflicts",
         "tasks": [
-          {
-            "task_id": "T034",
-            "agent_role": "Developer",
-            "instruction": "T034 [P] Run Ruff linter on all new preflight modules and fix issues",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T034' to [x]",
-            "dependencies": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T012", "T013", "T014", "T015", "T018", "T019", "T020", "T021"]
-          },
-          {
-            "task_id": "T035",
-            "agent_role": "Developer",
-            "instruction": "T035 [P] Run Ruff linter on modified cli.py and transfer.py and fix issues",
-            "file_locks": ["agent_transfer/cli.py", "agent_transfer/utils/transfer.py"],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T035' to [x]",
-            "dependencies": ["T016", "T022", "T023", "T025", "T026", "T027", "T029", "T031"]
-          },
-          {
-            "task_id": "T036",
-            "agent_role": "Developer",
-            "instruction": "T036 [P] Adversarial bug hunting — targeted scan of manifest serialization and env var handling (R8 compliance)",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T036' to [x]",
-            "dependencies": ["T034", "T035"]
-          },
-          {
-            "task_id": "T037",
-            "agent_role": "Developer",
-            "instruction": "T037 [P] Adversarial bug hunting — general logic scan across all preflight modules",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T037' to [x]",
-            "dependencies": ["T034", "T035"]
-          },
-          {
-            "task_id": "T038",
-            "agent_role": "Developer",
-            "instruction": "T038 Ensure env var values are NEVER logged or displayed — security audit of all report paths",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T038' to [x]",
-            "dependencies": ["T036", "T037"]
-          },
           {
             "task_id": "T039",
             "agent_role": "Developer",
-            "instruction": "T039 Run full existing test suite to verify backward compatibility (R5)",
-            "file_locks": [],
+            "instruction": "**T039** [US2] No new code required if Phase 3 is correct \u2014 Phase 3's general ingestion handles `prd`'s asset mix (binary + skill + hook + settings.json fragment + companion skills + rule). Run T038 to confirm. If gaps found, file targeted fixes here.",
+            "file_locks": [
+              "settings.json"
+            ],
             "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T039' to [x]",
-            "dependencies": ["T038"]
-          },
-          {
-            "task_id": "T040",
-            "agent_role": "Developer",
-            "instruction": "T040 Run quickstart.md test scenarios end-to-end",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T040' to [x]",
-            "dependencies": ["T039"]
-          },
-          {
-            "task_id": "T041",
-            "agent_role": "Developer",
-            "instruction": "T041 Git checkpoint — commit all changes",
-            "file_locks": [],
-            "constitution_rules": [],
-            "completion_handshake": "Upon success, update tasks.md line containing 'T041' to [x]",
-            "dependencies": ["T040"]
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T038",
+                "T033",
+                "T037"
+              ],
+              "wave_position": 8,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T039** [US2] No new code required if Phase 3 is correct \u2014 Phase 3's general ingestion handles `prd`'s asset mix (binary + skill + hook + settings.json fragment + companion skills + rule). Run T038 to confirm. If gaps found, file targeted fixes here.' to [x]",
+            "dependencies": [
+              "T038",
+              "T033",
+              "T037"
+            ]
           }
         ],
         "checkpoint_after": {
           "enabled": true,
-          "verification_criteria": "All linting passes, no env var value leaks, full test suite green, quickstart scenarios pass, all changes committed.",
+          "verification_criteria": "Verify all Wave 8 tasks are marked [x] in tasks.md",
           "git_agent": "git-version-manager",
-          "memory_bank_agent": "memory-bank-keeper"
+          "memory_bank_agent": "project-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 10,
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Wave 9: 1 independent task(s) with no file conflicts",
+        "tasks": [
+          {
+            "task_id": "T040",
+            "agent_role": "Developer",
+            "instruction": "**T040** [US2] If T039 surfaces issues, implement targeted fixes (most likely: settings.json fragment merge edge cases, Red-tier hook confirmation flow). All fixes MUST keep T022 (US1 ship gate) green.",
+            "file_locks": [
+              "settings.json"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T038",
+                "T033",
+                "T037",
+                "T039"
+              ],
+              "wave_position": 9,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T040** [US2] If T039 surfaces issues, implement targeted fixes (most likely: settings.json fragment merge edge cases, Red-tier hook confirmation flow). All fixes MUST keep T022 (US1 ship gate) green.' to [x]",
+            "dependencies": [
+              "T038",
+              "T033",
+              "T037",
+              "T039"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 9 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "project-bank-keeper"
+        }
+      },
+      {
+        "wave_id": 11,
+        "strategy": "SEQUENTIAL_MERGE",
+        "rationale": "Wave 10: 1 independent task(s) with no file conflicts",
+        "tasks": [
+          {
+            "task_id": "T044",
+            "agent_role": "Developer",
+            "instruction": "**T044** Run adversarial bug-hunter agents (constitution R12) \u2014 spawn one targeted (rollback path / secret-leak / settings.json merge / mode-bit preservation) and one general scan. Fix all CRITICAL and HIGH findings before merge.",
+            "file_locks": [
+              "settings.json"
+            ],
+            "constitution_rules": [],
+            "testability": {
+              "isolated": false,
+              "has_upstream_deps": true,
+              "upstream_dep_ids": [
+                "T039",
+                "T033",
+                "T040",
+                "T037",
+                "T038"
+              ],
+              "wave_position": 10,
+              "can_test_now": true,
+              "test_hint": "integration-post-deps"
+            },
+            "completion_handshake": "Upon success, update tasks.md line containing '**T044** Run adversarial bug-hunter agents (constitution R12) \u2014 spawn one targeted (rollback path / secret-leak / settings.json merge / mode-bit preservation) and one general scan. Fix all CRITICAL and HIGH findings before merge.' to [x]",
+            "dependencies": [
+              "T039",
+              "T033",
+              "T040",
+              "T037",
+              "T038"
+            ]
+          }
+        ],
+        "checkpoint_after": {
+          "enabled": true,
+          "verification_criteria": "Verify all Wave 10 tasks are marked [x] in tasks.md",
+          "git_agent": "git-version-manager",
+          "memory_bank_agent": "project-bank-keeper"
         }
       }
     ]

@@ -1,1 +1,1 @@
-specs/002-preflight-check/tasks.md
+specs/003-agentbridge-mvp/tasks.md
