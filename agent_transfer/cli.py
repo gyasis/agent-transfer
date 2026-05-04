@@ -1099,6 +1099,58 @@ def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle
     console.print("  manifest.json, BRIEFING.md, bundle/, rollback.tar.gz, rollback.sh")
 
 
+@cli.command(name="ingest")
+@click.argument("bundle", type=click.Path(exists=True))
+@click.option("--yes", "auto_yes", is_flag=True, help="Skip prompts; auto-confirm Yellow/Red.")
+def ingest_cmd(bundle, auto_yes):
+    """Install an AgentBridge bundle on this machine.
+
+    BUNDLE is a directory or .tar.gz produced by `ab compose`. Reads
+    BRIEFING.md, validates the manifest, generates a rollback snapshot
+    BEFORE any write, walks the inventory applying per-asset conflict
+    policy, runs the post-install smoke test.
+    """
+    from agent_transfer.bridge.ingest import ingest as _do_ingest
+
+    bundle_path = Path(bundle).resolve()
+    result = _do_ingest(bundle_path, auto_yes=auto_yes)
+
+    console.print(f"[green]installed:[/green] {len(result.installed)}")
+    for p in result.installed:
+        console.print(f"  + {p}")
+    if result.merged:
+        console.print(f"[cyan]merged:[/cyan] {len(result.merged)}")
+        for p in result.merged:
+            console.print(f"  ~ {p}")
+    if result.skipped:
+        console.print(f"[yellow]skipped:[/yellow] {len(result.skipped)}")
+        for p in result.skipped:
+            console.print(f"  - {p}")
+    if result.declined:
+        console.print(f"[yellow]declined:[/yellow] {len(result.declined)}")
+        for p in result.declined:
+            console.print(f"  ! {p}")
+    if result.errors:
+        console.print(f"[red]errors:[/red] {len(result.errors)}")
+        for e in result.errors:
+            console.print(f"  X {e}")
+    if result.smoke_failures:
+        console.print(f"[red]smoke failures:[/red] {len(result.smoke_failures)}")
+        for f in result.smoke_failures:
+            console.print(f"  ? {f}")
+        rb = (
+            bundle_path / "rollback.sh"
+            if bundle_path.is_dir()
+            else bundle_path.parent / "rollback.sh"
+        )
+        console.print(
+            f"[yellow]Smoke checks failed.[/yellow] To restore: bash {rb}"
+        )
+        sys.exit(5)
+    if result.errors:
+        sys.exit(6)
+
+
 def main():
     """Main entry point."""
     cli()

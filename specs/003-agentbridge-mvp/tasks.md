@@ -99,9 +99,9 @@ Single-project Python CLI per plan.md. Paths are relative to repo root (`~/dev/a
 
 - [x] **T033** [US1] Implement `agent_transfer/bridge/ingest.py::ingest(bundle_path)`: reads BRIEFING.md, validates manifest, invokes selection_matrix again (for destination-side trim), prompts on every Yellow/Red, walks inventory, applies per-asset conflict policy (skip/merge/overwrite/ask), preserves mode bits, performs settings.json + ~/.claude.json idempotent merge. (FR-012, FR-013, FR-014, FR-011) Depends on T011, T013, T027, T030.
 - [x] **T034** [US1] Implement `agent_transfer/bridge/smoke_test.py::run(manifest)`: post-install self-interrogation — checks each declared asset is present at its declared path with declared mode, runs `session-search foo` on empty corpus, validates "who are you" against manifest. Flags drift. (FR-017)
-- [ ] **T035** [US1] Wire `ab ingest <bundle>` Click command in `agent_transfer/cli.py` invoking rollback snapshot → T033 → T034. Failures trigger `rollback.sh` invocation hint. (FR-019 — additive only; existing 9 commands untouched).
+- [x] **T035** [US1] Wire `ab ingest <bundle>` Click command in `agent_transfer/cli.py` invoking rollback snapshot → T033 → T034. Failures trigger `rollback.sh` invocation hint. (FR-019 — additive only; existing 9 commands untouched).
 - [ ] **T036** [US1] Author `agent_transfer/templates/skills/agentbridge-ingest/SKILL.md` content: trigger ("Install this AgentBridge bundle"), behavior (invoke `ab ingest`), conflict-policy guidance, smoke-test interpretation. (FR-012) Depends on T035.
-- [ ] **T037** [US1] Add settings.json idempotent-merge integration test `tests/integration/test_settings_merge_idempotent.py::test_re_running_ingest_does_not_duplicate_hooks` — FR-014. Assert running ingestion twice produces exactly one set of hook entries.
+- [x] **T037** [US1] Add settings.json idempotent-merge integration test `tests/integration/test_settings_merge_idempotent.py::test_re_running_ingest_does_not_duplicate_hooks` — FR-014. Assert running ingestion twice produces exactly one set of hook entries.
 
 **Checkpoint**: User Story 1 fully functional. Run T022–T025 + T037; all green. Run the manual sandbox walkthrough end-to-end. **MVP IS SHIPPABLE AT THIS POINT.** Commit.
 
