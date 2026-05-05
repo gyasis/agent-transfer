@@ -124,24 +124,39 @@ def read_settings_local_json(claude_dir: Optional[Path] = None) -> Dict[str, Any
         return json.load(f)
 
 
-def get_all_mcp_servers(claude_dir: Optional[Path] = None) -> Dict[str, Dict]:
-    """Get MCP servers from BOTH mcp.json and settings.json.
+def read_claude_json(home: Optional[Path] = None) -> Dict[str, Any]:
+    """Read ~/.claude.json — the canonical MCP config in current Claude Code versions.
 
-    Returns merged dict. mcp.json takes precedence on duplicates.
+    This is distinct from ~/.claude/mcp.json (a legacy stub on most installs).
+    See ARCHITECTURE.md / CLAUDE.md "MCP CONFIG LOCATION".
     """
-    mcp_data = read_mcp_json(claude_dir)
+    home = home or Path.home()
+    path = home / '.claude.json'
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
+def get_all_mcp_servers(claude_dir: Optional[Path] = None) -> Dict[str, Dict]:
+    """Get MCP servers from ALL three known sources, merged by priority.
+
+    Sources (lowest → highest precedence):
+      1. ~/.claude/settings.json `mcpServers` key
+      2. ~/.claude/mcp.json (legacy)
+      3. ~/.claude.json (canonical in current Claude Code) — wins on duplicates
+    """
     settings_data = read_settings_json(claude_dir)
+    mcp_data = read_mcp_json(claude_dir)
+    claude_json_data = read_claude_json()
 
-    servers = {}
-
-    # Settings.json mcpServers (lower priority)
+    servers: Dict[str, Dict] = {}
     if 'mcpServers' in settings_data:
         servers.update(settings_data['mcpServers'])
-
-    # mcp.json mcpServers (higher priority — overrides)
     if 'mcpServers' in mcp_data:
         servers.update(mcp_data['mcpServers'])
-
+    if 'mcpServers' in claude_json_data:
+        servers.update(claude_json_data['mcpServers'])
     return servers
 
 
@@ -286,7 +301,7 @@ def export_config(
         if local_data:
             export_data['permissions'] = local_data.get('permissions', {})
 
-    # Detect runtimes needed
+    # Detect runtimes needed (shallow — runtime presence check)
     runtimes = detect_runtimes(servers)
     export_data['_runtimes'] = {
         name: {
@@ -296,6 +311,19 @@ def export_config(
         }
         for name, info in runtimes.items()
     }
+
+    # Per-server classification (deep — class, capture, rewrite, install_steps)
+    # See mcp_classifier.py for the 7-class taxonomy and ARCHITECTURE.md for spec.
+    try:
+        from dataclasses import asdict as _asdict
+        from .mcp_classifier import classify_servers, summarize
+        classifications = classify_servers(servers)
+        export_data['_classification'] = {
+            'summary': summarize(classifications),
+            'servers': {c.name: _asdict(c) for c in classifications},
+        }
+    except Exception as exc:  # don't block export if classifier has a bug
+        export_data['_classification'] = {'error': f'classifier failed: {exc!r}'}
 
     # Write
     output_path = Path(output_file)
@@ -541,3 +569,95 @@ def display_import_results(results: Dict[str, Any]) -> None:
             f"(needed by: {', '.join(rt['servers'])})"
         )
         console.print(f"  [dim]Install: {rt['install_hint']}[/dim]")
+
+
+# ============================================================================
+# AgentBridge MVP (003) — T016 / FR-006
+# ============================================================================
+# Capability-shaped output — emit a list of AssetEntry alongside the existing
+# config dict. The new bridge/compose.py walks ~/.claude/ and calls this
+# helper to convert raw filesystem paths into manifest-ready AssetEntry.
+#
+# Constitution: R4 (wrap, don't rewrite) — no existing callers are touched.
+#               R5 (backward compat) — additive only.
+
+import hashlib as _hashlib  # noqa: E402
+import os as _os  # noqa: E402
+from typing import List as _List, Optional as _Optional, Dict as _Dict  # noqa: E402
+
+
+def _sha256_of(path: Path) -> str:
+    h = _hashlib.sha256()
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                h.update(chunk)
+    except OSError:
+        return "0" * 64
+    return h.hexdigest()
+
+
+def _file_mode(path: Path) -> int:
+    try:
+        return _os.stat(path).st_mode & 0o7777
+    except OSError:
+        return 0o644
+
+
+def emit_asset_entries(
+    paths: _List[Path],
+    risk_for: _Optional[_Dict[str, str]] = None,
+    conflict_for: _Optional[_Dict[str, str]] = None,
+    home: _Optional[Path] = None,
+) -> _List[_Dict]:
+    """Convert a list of filesystem paths to dicts shaped like AssetEntry.
+
+    Args:
+        paths: Absolute paths to bundle.
+        risk_for: Optional override map { abs_path_str -> "green"|"yellow"|"red" }.
+                  If absent or missing a key, default risk is "yellow" for files
+                  inside ~/.claude/ and "red" for ~/bin scripts.
+        conflict_for: Optional override map { abs_path_str -> conflict_policy }.
+                      Defaults: "merge" for *.json/*.md inside ~/.claude/, "ask"
+                      for ~/bin scripts, "overwrite" for everything else.
+        home: Override of $HOME for portability in tests.
+
+    Returns:
+        List of dicts compatible with bridge.models.AssetEntry. Caller is
+        responsible for converting to the Pydantic model.
+    """
+    home = home or Path.home()
+    risk_for = risk_for or {}
+    conflict_for = conflict_for or {}
+    home_str = str(home)
+    bin_dirs = (str(home / "bin"), str(home / ".local" / "bin"))
+
+    out: _List[_Dict] = []
+    for p in paths:
+        abs_str = str(p.resolve())
+        if any(abs_str.startswith(b + "/") for b in bin_dirs):
+            default_risk = "red"
+            default_conflict = "ask"
+        elif abs_str.endswith(".json") or abs_str.endswith(".md"):
+            default_risk = "yellow"
+            default_conflict = "merge"
+        else:
+            default_risk = "yellow"
+            default_conflict = "overwrite"
+
+        # Make destination path home-relative for portability.
+        if abs_str.startswith(home_str + "/"):
+            dest_path = "~" + abs_str[len(home_str):]
+        else:
+            dest_path = abs_str
+
+        out.append({
+            "path": _os.path.relpath(abs_str, home_str) if abs_str.startswith(home_str + "/") else _os.path.basename(abs_str),
+            "dest_path": dest_path,
+            "risk": risk_for.get(abs_str, default_risk),
+            "conflict": conflict_for.get(abs_str, default_conflict),
+            "sha256": _sha256_of(p),
+            "mode_bits": _file_mode(p),
+            "notes": None,
+        })
+    return out

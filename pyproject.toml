@@ -3,16 +3,16 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agent-transfer"
-version = "1.1.0"
-description = "Transfer Claude Code agents between systems with interactive selection"
+name = "agentbridge"
+version = "1.2.0"
+description = "AgentBridge — capability-level Claude Code → Claude Code transfer with agent-driven composition and ingestion"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
     {name = "PromptChain", email = "dev@promptchain.ai"}
 ]
-keywords = ["claude", "claude-code", "agents", "transfer", "backup"]
+keywords = ["claude", "claude-code", "agents", "skills", "transfer", "backup", "bundle", "capability", "agentbridge"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -29,6 +29,7 @@ dependencies = [
     "rich>=13.0.0",
     "pyyaml>=6.0",
     "click>=8.0.0",
+    "pydantic>=2.0.0",
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "markdown>=3.5.0",
@@ -38,6 +39,7 @@ dependencies = [
 
 [project.scripts]
 agent-transfer = "agent_transfer.cli:main"
+ab = "agent_transfer.cli:main"
 
 [project.optional-dependencies]
 dev = [

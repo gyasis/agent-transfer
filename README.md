@@ -1,6 +1,57 @@
-# Agent Transfer
+# AgentBridge
 
-A beautiful Python CLI tool to transfer Claude Code agents between systems with interactive selection.
+**Capability-level Claude Code → Claude Code transfer with agent-driven composition and ingestion.**
+
+AgentBridge bundles a *named capability* (e.g. "cascade-memory functionality") — composed of skills + hooks + rules + bin scripts — and ships it as a sealed semi-package that another Claude Code session can install on a fresh machine. The unit of work is the capability, not the file.
+
+> **Scope note:** v1 is Mode A only (Claude Code → Claude Code). Cross-harness transfer to Goose / Letta / OpenCode / PromptChain (Mode B / Mode C) is post-MVP; see [`specs/003-agentbridge-mvp/spec.md`](specs/003-agentbridge-mvp/spec.md) for the explicit out-of-scope list.
+
+## Quick start — bundle and install a capability
+
+```bash
+# On the source machine — bundle a capability you have working locally
+ab compose --capability cascade-memory
+
+# What lands in ./bundle-cascade-memory-<timestamp>/:
+#   manifest.json        Pydantic source manifest (capability + asset entries with risk tags)
+#   BRIEFING.md          "Dear Receiving Claude" — 7-section letter the destination reads
+#   bundle/              The asset tree, with permissions preserved
+#   rollback.tar.gz      All-or-nothing pre-install snapshot (generated lazily on import)
+#   rollback.sh          Restore script for the destination
+#   confirmations.log    Audit trail of user Y/N decisions
+
+# On the destination machine
+ab ingest bundle-cascade-memory-<timestamp>
+```
+
+The destination invocation runs the pre-install rollback snapshot, validates the manifest, prompts the user on every Yellow and Red asset, applies per-asset conflict policy (skip / merge / overwrite / ask), preserves mode bits, and runs a post-install smoke test.
+
+## How it differs from a tar of `~/.claude/`
+
+- **Capability composition** — `ab compose` walks the dependency graph in `~/.claude/` (skill → bin script, hook → rule, rule → skill) and proposes a 3-tier selection matrix: **CORE** (always-included), **COMPANIONS** (opt-out), **CONTEXT** (opt-in). You don't list files; you name a capability.
+- **Risk tagging** — every asset is Green / Yellow / Red. Hooks and state-writing bin scripts are Red and require explicit user confirmation pre-seal AND pre-install.
+- **Agent-driven ingestion** — the receiving Claude reads `BRIEFING.md` (7 mandatory sections per FR-007) before any write. The briefing explains *why* the capability exists, what to verify, and what to do if anything breaks.
+- **All-or-nothing rollback** — `rollback.sh` restores the pre-install state with zero leftover artifacts. Per SC-002, file-tree diff before-vs-after install→rollback is empty.
+- **Secret scan** — pre-seal merged regex (Bearer / `sk-` / `sk-ant-` / `ghp_` / `xox*` / `ATBB...` / `AKIA...` / generic high-entropy fallback) refuses to seal a bundle containing secrets.
+
+See [`specs/003-agentbridge-mvp/`](specs/003-agentbridge-mvp/) for the full spec, plan, research, data model, and contracts.
+
+## Two CLI entry points
+
+Both `agent-transfer` and `ab` resolve to the same Click app. Existing scripts using `agent-transfer` keep working unchanged (constitution R5).
+
+```bash
+ab compose --capability NAME [OPTIONS]   # source-side
+ab ingest BUNDLE [OPTIONS]               # destination-side
+agent-transfer export ...                # legacy wholesale export (still works)
+agent-transfer import ...                # legacy import (still works)
+```
+
+---
+
+## Legacy commands — `agent-transfer export` / `import`
+
+The pre-AgentBridge bulk export/import path is still present and supported. It transfers wholesale agents, skills, rules, hooks, CLAUDE.md, settings, and MCP config without the capability-composition layer.
 
 **Standalone Script Available**: The `agent-transfer.sh` script works completely standalone for import operations - no Python package installation needed! See [STANDALONE_USAGE.md](./STANDALONE_USAGE.md) for details.
 
