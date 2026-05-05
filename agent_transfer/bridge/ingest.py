@@ -28,6 +28,10 @@ from agent_transfer.bridge.rollback import snapshot as _rollback_snapshot
 from agent_transfer.bridge.smoke_test import run as _run_smoke
 
 
+class SettingsCorruptError(RuntimeError):
+    """Existing settings.json could not be parsed; refusing to overwrite (C#1)."""
+
+
 @dataclass
 class IngestResult:
     installed: List[str] = field(default_factory=list)
@@ -82,15 +86,36 @@ def _merge_json(target_path: Path, incoming: dict) -> None:
     """Idempotent additive merge of incoming dict into target JSON file.
 
     Used for ~/.claude.json and ~/.claude/settings.json. Keys present in
-    BOTH are deep-merged (dict-only). Lists are union'd by string repr.
+    BOTH are deep-merged (dict-only). Lists are union'd by canonical
+    sort-keyed JSON of items (R12 C#3 fix — robust against dict reorder).
     Existing user values are NEVER replaced.
+
+    R12 C#1 fix: on JSONDecodeError, the existing file is preserved on
+    disk (copied to <path>.corrupt-<ts>) and a SettingsCorruptError is
+    raised. We never silently wipe user settings.
     """
     existing: dict = {}
     if target_path.exists():
         try:
             existing = json.loads(target_path.read_text())
-        except json.JSONDecodeError:
-            existing = {}
+        except json.JSONDecodeError as e:
+            from datetime import datetime as _dt
+            corrupt_sidecar = target_path.with_suffix(
+                target_path.suffix + f".corrupt-{_dt.utcnow().strftime('%Y%m%dT%H%M%S')}"
+            )
+            corrupt_sidecar.write_bytes(target_path.read_bytes())
+            raise SettingsCorruptError(
+                f"Could not parse existing {target_path}: {e}. "
+                f"Original copied to {corrupt_sidecar}. Refusing to overwrite "
+                "user settings — fix the JSON or move it aside and re-ingest."
+            ) from e
+
+    def _canonical(item) -> str:
+        """Canonical key for list-dedup. Sorts dict keys for stable dedup."""
+        try:
+            return json.dumps(item, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            return repr(item)
 
     def _merge(a: dict, b: Mapping) -> dict:
         out = dict(a)
@@ -100,11 +125,11 @@ def _merge_json(target_path: Path, incoming: dict) -> None:
             elif isinstance(out[k], dict) and isinstance(v, Mapping):
                 out[k] = _merge(out[k], v)
             elif isinstance(out[k], list) and isinstance(v, list):
-                seen = {repr(x) for x in out[k]}
+                seen = {_canonical(x) for x in out[k]}
                 for item in v:
-                    if repr(item) not in seen:
+                    if _canonical(item) not in seen:
                         out[k].append(item)
-                        seen.add(repr(item))
+                        seen.add(_canonical(item))
             # else: existing user value wins (idempotent)
         return out
 
@@ -177,13 +202,57 @@ def _apply_one_asset(
         except json.JSONDecodeError:
             result.errors.append(f"merge requested for non-JSON file {asset.path}")
             return
-        _merge_json(dest, incoming)
+        try:
+            _merge_json(dest, incoming)
+        except SettingsCorruptError as e:
+            # R12 C#1 — refuse to wipe; surface to user, don't silently destroy.
+            result.errors.append(str(e))
+            return
         result.merged.append(asset.dest_path)
     else:
+        # R12 H#7 — guard against degenerate mode_bits values.
+        mode = _safe_mode_bits(asset.dest_path, asset.mode_bits)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
-        os.chmod(dest, asset.mode_bits)  # FR-011 — preserve executable bit
+        # Use os.open to atomically write with mode (closes H#7 race).
+        with open(src, "rb") as fin:
+            data = fin.read()
+        fd = os.open(str(dest), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+        try:
+            os.write(fd, data)
+        finally:
+            os.close(fd)
+        os.chmod(dest, mode)  # FR-011 — preserve executable bit
+        # Preserve mtime from bundle for deterministic round-trip.
+        try:
+            st = os.stat(src)
+            os.utime(dest, (st.st_atime, st.st_mtime))
+        except OSError:
+            pass
         result.installed.append(asset.dest_path)
+
+
+# ----------------------------------------------------------------------
+# R12 H#7 — mode_bits sanity check
+# ----------------------------------------------------------------------
+
+
+def _safe_mode_bits(dest_path: str, mode_bits: int) -> int:
+    """Clamp mode_bits to a sane minimum; force exec bit on hooks/bin scripts.
+
+    Per adversarial finding: a bundled asset with mode_bits == 0 (e.g. NTFS
+    source where exec bit isn't stored) would write a 0o000 file and silently
+    break ingestion. Clamp to 0o400 minimum, and force 0o755 for any path
+    under ~/.claude/hooks/ or ~/bin/ or ~/.local/bin/ that would otherwise
+    lack the executable bit.
+    """
+    m = int(mode_bits) if mode_bits and mode_bits > 0 else 0o644
+    # Always at least owner-readable.
+    m |= 0o400
+    is_hook = "/.claude/hooks/" in dest_path
+    is_bin = "/bin/" in dest_path
+    if is_hook or is_bin:
+        m |= 0o100  # owner exec; preserve any group/other bits already set
+    return m & 0o7777
 
 
 def ingest(

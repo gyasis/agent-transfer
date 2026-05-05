@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # Risk tag for an individual asset. Drives whether user confirmation is required
 # at preview / ingest time. Green = personas/tone/text-only rules. Yellow = tool
@@ -76,6 +76,26 @@ class Capability(BaseModel):
         default_factory=list,
         description="Names of OS-level binaries the destination must have (e.g. ripgrep)",
     )
+
+    @model_validator(mode="after")
+    def _no_duplicate_dest_paths(self) -> "Capability":
+        """R12 H#9 fix — refuse duplicate dest_path values within one Capability.
+
+        Two AssetEntry rows pointing at the same destination would silently
+        either skip the second install (conflict=skip) or clobber the first
+        (conflict=overwrite) with no warning. The duplicate is almost always
+        a composer bug; surface it loudly at construction time.
+        """
+        seen: dict[str, int] = {}
+        for i, a in enumerate(self.assets):
+            if a.dest_path in seen:
+                raise ValueError(
+                    f"duplicate dest_path {a.dest_path!r} (assets[{seen[a.dest_path]}] "
+                    f"and assets[{i}]); each capability may only land one asset per "
+                    "destination path"
+                )
+            seen[a.dest_path] = i
+        return self
 
 
 class Confirmation(BaseModel):

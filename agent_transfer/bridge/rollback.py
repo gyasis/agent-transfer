@@ -42,13 +42,18 @@ def _expand_dest(dest_path: str, home: Path) -> Path:
 
 
 def _under_home(p: Path, home: Path) -> str:
-    """Return path relative to before/home/ when under $HOME, else absolute."""
-    try:
-        rel = p.resolve().relative_to(home.resolve())
-        return f"home/{rel}"
-    except ValueError:
-        # Path is outside $HOME — store under abs/ to keep the tar self-contained.
-        return f"abs{p.resolve()}"
+    """Return path relative to before/home/ when under $HOME, else absolute.
+
+    R12 H#6 — does NOT call resolve() to keep snapshot keys consistent with
+    apply-side keys, which also avoids resolve(). Symlinked HOME on WSL
+    would otherwise produce mismatched canonical-vs-symlinked entries.
+    """
+    home_str = str(home).rstrip("/")
+    p_str = str(p)
+    if p_str == home_str or p_str.startswith(home_str + "/"):
+        rel = p_str[len(home_str) + 1:]
+        return f"home/{rel}" if rel else "home"
+    return f"abs{p_str}"
 
 
 def _sibling_paths_for_orphan_detection(p: Path) -> Path:
@@ -93,9 +98,12 @@ def snapshot(
     })
 
     # Build manifest of bundle writes for orphan detection.
-    bundle_writes: List[str] = [
-        str(_expand_dest(t, home).resolve()) for t in targets
-    ]
+    # R12 H#6 fix — do NOT resolve(): apply path uses _expand_dest without
+    # resolve, so snapshot paths must match exactly. Symlinked HOME (common
+    # on WSL) was producing bundle_writes pointing at canonical paths while
+    # the actual writes went through the symlinked HOME — divergence on
+    # rollback. Match apply-side semantics.
+    bundle_writes: List[str] = [str(_expand_dest(t, home)) for t in targets]
 
     # Collect orphan-detection parents (~/bin parents etc.).
     parent_listings: dict[str, List[str]] = {}
@@ -144,14 +152,16 @@ def snapshot(
 
 
 _ROLLBACK_SH_BODY = r"""#!/usr/bin/env bash
-# AgentBridge rollback script — restores pre-install state.
+# AgentBridge rollback script — restores pre-install state (FR-016).
 #
-# Usage: bash rollback.sh
+# R12 H#4 hardening: refuses to run unless $HOME matches the manifest's
+# recorded home, and rejects manifests where home is "/" or starts with
+# anything outside the user's actual HOME. This blocks privesc when a
+# user accidentally runs `sudo bash rollback.sh` against a bundle whose
+# manifest has been crafted or carried over from another box.
 #
-# This is the all-or-nothing safety net per FR-016. Invokes:
-#   1. Read manifest-of-bundle-writes.json from sibling rollback.tar.gz
-#   2. Remove every path the bundle wrote
-#   3. Restore before/ over those paths
+# R12 H#5 fix: directories are restored too (find now includes -type d),
+# and parent-listing orphan detection actually consults the manifest.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -173,6 +183,20 @@ fi
 
 HOME_DIR="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["home"])' "$MANIFEST")"
 
+# R12 H#4 — assert manifest's HOME matches the actual current HOME.
+# Reject obviously dangerous values (/, /etc, /root) outright.
+case "$HOME_DIR" in
+    /|/etc|/etc/*|/root|/root/*|/sys|/sys/*|/proc|/proc/*)
+        echo "rollback: refusing to restore into privileged path $HOME_DIR" >&2
+        exit 2
+        ;;
+esac
+if [ "${HOME_DIR%/}" != "${HOME%/}" ]; then
+    echo "rollback: manifest home ($HOME_DIR) does not match current HOME ($HOME)" >&2
+    echo "rollback: refusing to run — re-run from a session where HOME matches" >&2
+    exit 2
+fi
+
 # Step 1: remove orphans the bundle introduced.
 python3 -c '
 import json, os, sys
@@ -190,10 +214,15 @@ for p in m.get("bundle_writes", []):
 ' "$MANIFEST"
 
 # Step 2: restore before/ tree.
+# R12 H#5 — include directories in the find so empty / permission-only
+# entries are recreated. -print0 + read -d '' to handle paths with spaces
+# or newlines safely (M#3 hardening).
 if [ -d "$WORK/before" ]; then
-    # Resolve "home/<rel>" -> "$HOME_DIR/<rel>", "abs/<abs>" -> absolute path.
-    find "$WORK/before" -type f -o -type l | while read -r src; do
+    find "$WORK/before" \( -type f -o -type l -o -type d \) -print0 | while IFS= read -r -d '' src; do
         rel="${src#$WORK/before/}"
+        if [ "$rel" = "before" ] || [ -z "$rel" ]; then
+            continue
+        fi
         case "$rel" in
             home/*)
                 dst="$HOME_DIR/${rel#home/}"
@@ -207,12 +236,15 @@ if [ -d "$WORK/before" ]; then
         esac
         case "$dst" in
             *.was-missing)
-                # nothing to restore; the path was missing pre-install
                 continue
                 ;;
         esac
-        mkdir -p "$(dirname "$dst")"
-        cp -p "$src" "$dst"
+        if [ -d "$src" ] && [ ! -L "$src" ]; then
+            mkdir -p "$dst"
+        else
+            mkdir -p "$(dirname "$dst")"
+            cp -p "$src" "$dst"
+        fi
     done
 fi
 

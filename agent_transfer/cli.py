@@ -1095,6 +1095,31 @@ def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
 
+    # R12 C#2 fix — scan EVERY asset byte under bundle/ for secrets, not
+    # just manifest.json + BRIEFING.md. A hook script with a hardcoded
+    # Bearer/sk-/ATBB token in its body would otherwise be sealed and shipped.
+    asset_findings: list = []
+    for p in asset_root.rglob("*"):
+        if not p.is_file():
+            continue
+        try:
+            blob = p.read_text(errors="replace")
+        except OSError:
+            continue
+        for f in _secret_scan(blob):
+            asset_findings.append((str(p.relative_to(bundle_root)), f))
+    if asset_findings:
+        for path, f in asset_findings[:5]:
+            console.print(f"[red]secret in asset[/red] {path}: {f.pattern} {f.match[:24]}...")
+        console.print(
+            "[red]Refusing to seal: bundle ASSETS contain potential secrets "
+            "(R8 + SC-006). Scrub the source files and re-run.[/red]"
+        )
+        # R12 M#3-cleanup — delete the partially-built bundle so next run
+        # doesn't pile up empty dirs.
+        shutil.rmtree(bundle_root, ignore_errors=True)
+        sys.exit(4)
+
     console.print(f"[green]Bundle sealed:[/green] {bundle_root}")
     console.print("  manifest.json, BRIEFING.md, bundle/, rollback.tar.gz, rollback.sh")
 

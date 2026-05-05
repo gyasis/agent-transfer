@@ -1323,25 +1323,38 @@ def rewrite_mcp_servers_for_target_home(
             out[name] = dict(post)
             continue
 
-        # Fallback: best-effort string substitution.
+        # Fallback: anchored-regex path substitution that recurses into
+        # nested dicts/lists. Per R12 adversarial findings:
+        #   H#8 — substring corruption (/home/u becoming a prefix of
+        #         /home/users/u or mutating /home/u-old/...) is fixed
+        #         by the `(?=/|$)` lookahead boundary.
+        #   H#10 — nested env values (dict-in-dict, list-of-dicts) were
+        #          not rewritten; now we recurse to any depth.
         if source_home and source_home != target_home:
-            new_cfg: dict = {}
-            for k, v in src_cfg.items():
-                if isinstance(v, str):
-                    new_cfg[k] = v.replace(source_home, target_home)
-                elif isinstance(v, list):
-                    new_cfg[k] = [
-                        item.replace(source_home, target_home) if isinstance(item, str) else item
-                        for item in v
-                    ]
-                elif isinstance(v, dict):
-                    new_cfg[k] = {
-                        kk: (vv.replace(source_home, target_home) if isinstance(vv, str) else vv)
-                        for kk, vv in v.items()
-                    }
-                else:
-                    new_cfg[k] = v
-            out[name] = new_cfg
+            out[name] = _rewrite_paths_recursive(src_cfg, source_home, target_home)
         else:
             out[name] = dict(src_cfg)
     return out
+
+
+def _rewrite_paths_recursive(value, source_home: str, target_home: str):
+    """Recurse through dicts/lists/strings rewriting path-prefixed strings."""
+    if isinstance(value, str):
+        return _rewrite_one_string(value, source_home, target_home)
+    if isinstance(value, dict):
+        return {
+            k: _rewrite_paths_recursive(v, source_home, target_home)
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_rewrite_paths_recursive(v, source_home, target_home) for v in value]
+    return value
+
+
+def _rewrite_one_string(s: str, source_home: str, target_home: str) -> str:
+    import re as _re
+    # Boundary: source_home must be followed by `/` or end-of-string.
+    # This prevents `/home/u-old/...` from being mutated when source_home is
+    # `/home/u`, and prevents `/home/users/u/...` from getting double-mapped.
+    pattern = _re.compile(_re.escape(source_home) + r"(?=/|$)")
+    return pattern.sub(target_home, s)
