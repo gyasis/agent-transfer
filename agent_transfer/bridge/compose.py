@@ -23,6 +23,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+from agent_transfer.bridge.capability_registry import (
+    CapabilityRegistration,
+    expand_asset_paths,
+    load_registered,
+)
 from agent_transfer.bridge.models import AssetEntry, Capability
 from agent_transfer.utils.config_manager import emit_asset_entries
 from agent_transfer.utils.script_discovery import (
@@ -98,6 +103,42 @@ def _classify_kind(p: Path, claude_dir: Path) -> str:
     return "skill"  # default — unknown markdown under .claude/ treated as skill-like
 
 
+def _is_skill_package_anchor(p: Path, claude_dir: Path) -> Optional[Path]:
+    """Return the package directory if `p` is a SKILL.md inside one.
+
+    A "skill package" is a directory under ~/.claude/skills/ whose
+    SKILL.md is the entry point and whose siblings (scripts/, *.css,
+    requirements.txt, etc.) belong to the same shipping unit. Detected
+    when `p.name == "SKILL.md"` and the parent dir lives directly under
+    skills/ or learned/.
+    """
+    if p.name != "SKILL.md":
+        return None
+    skills_root = claude_dir / "skills"
+    try:
+        rel = p.parent.relative_to(skills_root)
+    except ValueError:
+        return None
+    # parent is either <slug>/ (depth 1) or <subdir>/<slug>/ (depth 2 e.g. learned/foo/)
+    parts = rel.parts
+    if 1 <= len(parts) <= 2:
+        return p.parent
+    return None
+
+
+def _expand_skill_package(pkg_dir: Path) -> List[Path]:
+    """Return every file inside a skill-package directory.
+
+    G2 — pre-fix `_walk_dir` filtered to .md only, silently dropping
+    scripts/, requirements.txt, .css/.html/.js companions inside skill
+    packages (e.g. planning-enhanced/, kami/, data-analyzer/). Now we
+    pull the whole package tree.
+    """
+    if not pkg_dir.is_dir():
+        return []
+    return [p for p in pkg_dir.rglob("*") if p.is_file()]
+
+
 def _anchor_pass(
     capability_name: str,
     claude_dir: Path,
@@ -105,6 +146,7 @@ def _anchor_pass(
     """Return CORE-tier candidates whose name/body matches the capability."""
     synonyms = _split_synonyms(capability_name)
     candidates: List[_Candidate] = []
+    seen: Set[Path] = set()
 
     md_files: List[Path] = []
     md_files += _walk_dir(claude_dir / "skills", (".md",))
@@ -114,11 +156,38 @@ def _anchor_pass(
     for p in md_files:
         norm_name = _norm_name(p.stem)
         norm_body = _norm_name(_safe_read_head(p))
-        hit = any(s in norm_name for s in synonyms) or any(
+        # G4 — word-boundary match on BOTH name and body. Substring match
+        # on name produced absurd false positives (capability "sio" matched
+        # "session", "decision", "mission" — every word containing s-i-o
+        # in sequence). _norm_name already collapses non-alnum to single
+        # spaces, so wrapping with leading/trailing spaces gives token
+        # equality without regex.
+        hit = any(f" {s} " in f" {norm_name} " for s in synonyms) or any(
             f" {s} " in f" {norm_body} " for s in synonyms
         )
+        # Special case: skill-package SKILL.md — match against package
+        # slug too, since the SKILL.md filename itself is generic.
+        if not hit:
+            pkg = _is_skill_package_anchor(p, claude_dir)
+            if pkg is not None:
+                slug_norm = _norm_name(pkg.name)
+                hit = any(f" {s} " in f" {slug_norm} " for s in synonyms)
         if hit:
+            if p in seen:
+                continue
             candidates.append(_Candidate(p, "CORE", _classify_kind(p, claude_dir)))
+            seen.add(p)
+            # G2 — expand skill-package directories to include sibling
+            # files (scripts/, assets, requirements.txt, ...).
+            pkg = _is_skill_package_anchor(p, claude_dir)
+            if pkg is not None:
+                for sibling in _expand_skill_package(pkg):
+                    if sibling == p or sibling in seen:
+                        continue
+                    candidates.append(
+                        _Candidate(sibling, "CORE", _classify_kind(sibling, claude_dir))
+                    )
+                    seen.add(sibling)
 
     return candidates
 
@@ -229,13 +298,22 @@ def compose(
     claude_dir = home / ".claude"
     bin_dirs = [Path(str(b).replace(str(Path.home()), str(home))) for b in DEFAULT_BIN_DIRS]
 
+    # G12 — registry path takes precedence over discovery. When the user
+    # has declared the capability explicitly at
+    # ~/.claude/capabilities/<name>.yaml, use that authoritative list so
+    # composing the same capability on two machines produces the same
+    # set of assets (modulo the actual files existing).
+    registration = load_registered(capability_name, home=home)
+    if registration is not None:
+        return _compose_from_registration(registration, home=home)
+
     cores = _anchor_pass(capability_name, claude_dir)
 
     if not cores:
         raise ValueError(
             f"No assets matched capability name {capability_name!r}. "
             "Try a more concrete name (e.g. 'cascade-memory' instead of 'memory'), "
-            "or list synonyms in the description."
+            f"or register one at ~/.claude/capabilities/{capability_name}.yaml."
         )
 
     companions = _expand_one_hop(cores, claude_dir, bin_dirs)
@@ -267,6 +345,34 @@ def compose(
         intent=intent or "User-defined capability bundle generated by ab compose.",
         assets=assets,
         dependencies=[],
+    )
+
+
+def _compose_from_registration(
+    reg: CapabilityRegistration,
+    *,
+    home: Path,
+) -> Capability:
+    """G12 — build a Capability from an explicit registry file.
+
+    Skips the anchor + BFS discovery; the registration's `assets` list
+    is authoritative. All assets are tagged tier=CORE because the user
+    explicitly declared them.
+    """
+    paths = expand_asset_paths(reg, home=home)
+    asset_dicts = emit_asset_entries(paths, home=home)
+    assets: List[AssetEntry] = []
+    for d in asset_dicts:
+        d["notes"] = "tier=CORE"
+        assets.append(AssetEntry(**d))
+
+    return Capability(
+        name=reg.name,
+        description=reg.description,
+        intent=reg.intent,
+        assets=assets,
+        dependencies=reg.dependencies,
+        smoke_commands=reg.smoke_commands,
     )
 
 

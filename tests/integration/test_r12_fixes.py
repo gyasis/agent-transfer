@@ -221,3 +221,49 @@ def test_h6_snapshot_uses_unresolved_paths(tmp_path):
         manifest_data = json.loads(f.read())
     # Should contain str(home / "bin" / "x"), NOT the resolved equivalent.
     assert manifest_data["bundle_writes"][0] == str(home / "bin" / "x")
+
+
+def test_g9_snapshot_preserves_existing_baseline(tmp_path):
+    """G9 — second snapshot() call must NOT overwrite the first.
+
+    The first ingest's snapshot captures the authoritative pre-install
+    state. A second ingest of the same bundle (re-sync, idempotent retry)
+    must leave that baseline intact, otherwise rollback would restore the
+    POST-install state and silently lose the original "before".
+    """
+    import tarfile
+
+    home = tmp_path / "home"
+    home.mkdir()
+    target = home / "config.txt"
+    target.write_text("ORIGINAL")
+
+    from agent_transfer.bridge.rollback import snapshot
+
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+
+    # First snapshot: captures ORIGINAL.
+    snapshot(["~/config.txt"], bundle, home=home)
+    with tarfile.open(bundle / "rollback.tar.gz") as tar:
+        f = tar.extractfile("before/home/config.txt")
+        assert f.read() == b"ORIGINAL"
+
+    # Simulate post-install state.
+    target.write_text("INSTALLED")
+
+    # Second snapshot: must NOT overwrite the baseline.
+    snapshot(["~/config.txt"], bundle, home=home)
+    with tarfile.open(bundle / "rollback.tar.gz") as tar:
+        f = tar.extractfile("before/home/config.txt")
+        assert f.read() == b"ORIGINAL", (
+            "G9 regression: second snapshot overwrote the baseline with "
+            "post-install state. Rollback would now restore INSTALLED, not "
+            "ORIGINAL."
+        )
+
+    # Explicit override still works (compose-time regeneration).
+    snapshot(["~/config.txt"], bundle, home=home, preserve_existing=False)
+    with tarfile.open(bundle / "rollback.tar.gz") as tar:
+        f = tar.extractfile("before/home/config.txt")
+        assert f.read() == b"INSTALLED"

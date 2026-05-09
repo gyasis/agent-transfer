@@ -1,0 +1,169 @@
+"""G12 — capability registry takes precedence over discovery.
+
+Pre-fix bug: `--capability X` was free text. Two machines with the same
+capability name composed different bundles based on local file contents,
+so `compose → ship → re-compose` could not round-trip identity.
+
+Post-fix: `~/.claude/capabilities/<name>.yaml` declares the canonical
+asset list. When present, compose() uses it directly; otherwise falls
+back to discovery.
+"""
+
+from __future__ import annotations
+
+import textwrap
+from pathlib import Path
+
+import pytest
+
+from agent_transfer.bridge.capability_registry import (
+    RegistryError,
+    load_registered,
+)
+from agent_transfer.bridge.compose import compose
+
+
+def _write_registry(home: Path, name: str, body: str) -> Path:
+    reg_dir = home / ".claude" / "capabilities"
+    reg_dir.mkdir(parents=True, exist_ok=True)
+    p = reg_dir / f"{name}.yaml"
+    p.write_text(textwrap.dedent(body).lstrip())
+    return p
+
+
+def _seed_skill(home: Path, slug: str) -> Path:
+    skills = home / ".claude" / "skills"
+    skills.mkdir(parents=True, exist_ok=True)
+    p = skills / f"{slug}.md"
+    p.write_text(f"# {slug}\n")
+    return p
+
+
+def _seed_skill_pkg(home: Path, slug: str) -> Path:
+    pkg = home / ".claude" / "skills" / slug
+    pkg.mkdir(parents=True, exist_ok=True)
+    (pkg / "SKILL.md").write_text(f"# {slug}\n")
+    (pkg / "scripts").mkdir()
+    (pkg / "scripts" / "go.sh").write_text("#!/bin/sh\n")
+    return pkg
+
+
+def _seed_rule(home: Path, name: str) -> Path:
+    rules = home / ".claude" / "rules" / "tools"
+    rules.mkdir(parents=True, exist_ok=True)
+    p = rules / f"{name}.md"
+    p.write_text(f"# {name} rule\n")
+    return p
+
+
+def test_g12_registry_takes_precedence_over_discovery(tmp_path):
+    home = tmp_path / "home"
+    # Seed two skills — only one is in the registry.
+    _seed_skill(home, "sio-scan")
+    _seed_skill(home, "sio-suggest")
+    _seed_rule(home, "sio")
+
+    # Registry declares ONLY sio-scan + sio rule, NOT sio-suggest.
+    _write_registry(home, "sio", """
+        name: sio
+        description: SIO subset
+        intent: Test registry precedence
+        assets:
+          - ~/.claude/skills/sio-scan.md
+          - ~/.claude/rules/tools/sio.md
+    """)
+
+    cap = compose("sio", home=home)
+    rels = {a.dest_path for a in cap.assets}
+
+    assert rels == {
+        "~/.claude/skills/sio-scan.md",
+        "~/.claude/rules/tools/sio.md",
+    }, "registry must be authoritative; discovery's sio-suggest must NOT be in the bundle"
+
+
+def test_g12_registry_carries_smoke_commands_and_deps(tmp_path):
+    home = tmp_path / "home"
+    _seed_skill(home, "sio-scan")
+
+    _write_registry(home, "sio", """
+        name: sio
+        description: SIO with smoke
+        intent: Test smoke + deps
+        assets:
+          - ~/.claude/skills/sio-scan.md
+        dependencies:
+          - sio
+        smoke_commands:
+          - sio --version
+          - sio status
+    """)
+
+    cap = compose("sio", home=home)
+    assert cap.dependencies == ["sio"]
+    assert cap.smoke_commands == ["sio --version", "sio status"]
+    assert cap.description == "SIO with smoke"
+
+
+def test_g12_registry_dir_asset_pulls_subtree(tmp_path):
+    home = tmp_path / "home"
+    _seed_skill_pkg(home, "sio-scan")
+
+    _write_registry(home, "sio", """
+        name: sio
+        description: SIO with package
+        intent: Test dir expansion
+        assets:
+          - ~/.claude/skills/sio-scan/
+    """)
+
+    cap = compose("sio", home=home)
+    rels = {a.dest_path for a in cap.assets}
+    assert "~/.claude/skills/sio-scan/SKILL.md" in rels
+    assert "~/.claude/skills/sio-scan/scripts/go.sh" in rels
+
+
+def test_g12_no_registry_falls_back_to_discovery(tmp_path):
+    home = tmp_path / "home"
+    _seed_skill(home, "sio-scan")
+    # No registry file written.
+
+    cap = compose("sio-scan", home=home)
+    rels = {a.dest_path for a in cap.assets}
+    assert "~/.claude/skills/sio-scan.md" in rels
+
+
+def test_g12_malformed_yaml_raises(tmp_path):
+    home = tmp_path / "home"
+    _write_registry(home, "sio", """
+        name: sio
+        : : :
+    """)
+    with pytest.raises(RegistryError, match="Malformed YAML"):
+        load_registered("sio", home=home)
+
+
+def test_g12_missing_asset_path_raises(tmp_path):
+    home = tmp_path / "home"
+    _write_registry(home, "sio", """
+        name: sio
+        description: x
+        intent: x
+        assets:
+          - ~/.claude/skills/does-not-exist.md
+    """)
+    with pytest.raises(RegistryError, match="does not exist"):
+        compose("sio", home=home)
+
+
+def test_g12_name_mismatch_raises(tmp_path):
+    home = tmp_path / "home"
+    _write_registry(home, "sio", """
+        name: not-sio
+        description: x
+        intent: x
+        assets:
+          - ~/.claude/skills/x.md
+    """)
+    with pytest.raises(RegistryError, match="filename stem"):
+        load_registered("sio", home=home)

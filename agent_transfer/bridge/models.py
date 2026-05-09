@@ -76,6 +76,17 @@ class Capability(BaseModel):
         default_factory=list,
         description="Names of OS-level binaries the destination must have (e.g. ripgrep)",
     )
+    smoke_commands: List[str] = Field(
+        default_factory=list,
+        description=(
+            "G6 — shell commands the destination runs post-install to verify the "
+            "capability is actually wired up. Each must exit 0 within "
+            "10 seconds (executed under sh -c with destination HOME). Catches "
+            "partial installs that file-presence smoke would miss "
+            "(e.g. skills installed but the binary they call is absent, "
+            "or hook section never reached because of an unrelated parse error)."
+        ),
+    )
 
     @model_validator(mode="after")
     def _no_duplicate_dest_paths(self) -> "Capability":

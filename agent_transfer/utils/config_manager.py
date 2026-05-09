@@ -635,11 +635,42 @@ def emit_asset_entries(
     out: _List[_Dict] = []
     for p in paths:
         abs_str = str(p.resolve())
+        basename = _os.path.basename(abs_str)
+        hooks_root = str(home / ".claude" / "hooks") + "/"
+        is_top_level_hook = (
+            abs_str.startswith(hooks_root)
+            and abs_str.count("/", len(hooks_root)) == 0
+            and (abs_str.endswith(".sh") or abs_str.endswith(".py")
+                 or abs_str.endswith(".bash") or abs_str.endswith(".zsh"))
+        )
         if any(abs_str.startswith(b + "/") for b in bin_dirs):
             default_risk = "red"
             default_conflict = "ask"
-        elif abs_str.endswith(".json") or abs_str.endswith(".md"):
+        elif abs_str.endswith(".json"):
             default_risk = "yellow"
+            default_conflict = "merge"
+        elif basename == "CLAUDE.md":
+            # G1/H8 — CLAUDE.md is a USER file: capability fragments are
+            # merged in via section markers (see ingest._merge_markdown).
+            # Only CLAUDE.md (and other explicitly-marked files) get merge;
+            # generic .md skill/rule files are capability-owned and clobber.
+            default_risk = "yellow"
+            default_conflict = "merge"
+        elif abs_str.endswith(".md"):
+            # G1/H8 — capability-owned skill/rule .md files: overwrite.
+            # Previous default was "merge" which the ingest path could not
+            # satisfy for non-JSON, silently dropping the asset with an
+            # "merge requested for non-JSON file" error.
+            default_risk = "yellow"
+            default_conflict = "overwrite"
+        elif is_top_level_hook:
+            # H2 — top-level files in ~/.claude/hooks/ (e.g. session-start.sh,
+            # pre-compact.sh) are SHARED across capabilities. Default to
+            # section-marker merge so adding a SIO block doesn't clobber the
+            # memory/retry-guard sections in the same file. Subdir hooks
+            # (e.g. retry-guard/foo.sh) are owned by their subdir capability
+            # and fall through to overwrite.
+            default_risk = "red"  # hooks gate tool calls — high impact
             default_conflict = "merge"
         else:
             default_risk = "yellow"

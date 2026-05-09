@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
@@ -92,6 +93,59 @@ def _check_dependencies(manifest: ManifestModel, result: SmokeTestResult) -> Non
             result.fail(f"Required OS dependency not on PATH: {dep!r}")
 
 
+_SMOKE_COMMAND_TIMEOUT_S = 10
+
+
+def _check_smoke_commands(
+    manifest: ManifestModel,
+    home: Path,
+    result: SmokeTestResult,
+) -> None:
+    """G6 — run capability-declared smoke commands; each must exit 0.
+
+    Catches partial installs where file-presence checks pass but the
+    capability isn't actually functional (e.g. a `sio` skill ships but
+    the `sio` binary is missing on PATH; a hook block lands but a parse
+    error earlier in the file means it never reaches it).
+
+    Commands run under `sh -c` with HOME pointed at the destination so
+    `~/`-relative checks work as installed. Each is hard-capped at
+    10 seconds.
+    """
+    cmds = list(manifest.capability.smoke_commands)
+    if not cmds:
+        return
+
+    env = dict(os.environ)
+    env["HOME"] = str(home)
+
+    for cmd in cmds:
+        try:
+            proc = subprocess.run(
+                ["sh", "-c", cmd],
+                capture_output=True,
+                text=True,
+                timeout=_SMOKE_COMMAND_TIMEOUT_S,
+                env=env,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            result.fail(
+                f"smoke command timed out after {_SMOKE_COMMAND_TIMEOUT_S}s: {cmd!r}"
+            )
+            continue
+        except OSError as e:
+            result.fail(f"smoke command could not start: {cmd!r}: {e}")
+            continue
+        if proc.returncode != 0:
+            tail = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail_text = " | ".join(tail[-3:])[:400]
+            result.fail(
+                f"smoke command exited {proc.returncode}: {cmd!r}"
+                + (f" — {tail_text}" if tail_text else "")
+            )
+
+
 def run(manifest: ManifestModel, *, home: Path | None = None) -> SmokeTestResult:
     """Run smoke test against the destination machine.
 
@@ -114,7 +168,10 @@ def run(manifest: ManifestModel, *, home: Path | None = None) -> SmokeTestResult
     # Check 2 — OS-level deps.
     _check_dependencies(manifest, result)
 
-    # Check 3 — compose self-interrogation prompt for the caller to use.
+    # Check 3 — capability-declared smoke commands (G6).
+    _check_smoke_commands(manifest, home, result)
+
+    # Check 4 — compose self-interrogation prompt for the caller to use.
     result.self_interrogation_prompt = SELF_INTERROGATION_PROMPT.format(
         capability_name=manifest.capability.name
     )

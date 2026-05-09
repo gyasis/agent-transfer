@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import tarfile
@@ -138,6 +139,113 @@ def _merge_json(target_path: Path, incoming: dict) -> None:
     target_path.write_text(json.dumps(merged, indent=2))
 
 
+class _MarkdownMergeError(RuntimeError):
+    """Raised when an incoming text fragment can't be section-merged.
+
+    Name kept for backward compat — covers markdown AND shell/python
+    section-marker merges (H2).
+    """
+
+
+# Markdown / HTML-comment markers (G1/H8 — CLAUDE.md, skill descriptions).
+_MD_BEGIN_RE = re.compile(r"<!--\s*BEGIN\s+agentbridge:([A-Za-z0-9_\-]+)\s*-->")
+_MD_END_RE = re.compile(r"<!--\s*END\s+agentbridge:([A-Za-z0-9_\-]+)\s*-->")
+
+# Shell / Python / generic-hash-comment markers (H2 — shared hook files).
+_SH_BEGIN_RE = re.compile(
+    r"^[ \t]*#[ \t]*BEGIN[ \t]+agentbridge:([A-Za-z0-9_\-]+)[ \t]*$",
+    re.MULTILINE,
+)
+_SH_END_RE = re.compile(
+    r"^[ \t]*#[ \t]*END[ \t]+agentbridge:([A-Za-z0-9_\-]+)[ \t]*$",
+    re.MULTILINE,
+)
+
+
+def _merge_section(
+    target_path: Path,
+    incoming_text: str,
+    begin_re: "re.Pattern[str]",
+    end_re: "re.Pattern[str]",
+    *,
+    syntax_label: str,
+) -> None:
+    """Generic section-marker merge.
+
+    Incoming text MUST contain exactly one BEGIN/END marker pair (matching
+    `begin_re` / `end_re`). The block — including markers — replaces any
+    same-named block in `target_path`, or is appended if absent.
+
+    Used by:
+      • G1/H8 — CLAUDE.md HTML-comment markers
+      • H2    — shared shell / python hooks with `# BEGIN agentbridge:<name>`
+
+    Raises _MarkdownMergeError on missing / mismatched / out-of-order markers.
+    """
+    begins = list(begin_re.finditer(incoming_text))
+    ends = list(end_re.finditer(incoming_text))
+    if len(begins) != 1 or len(ends) != 1:
+        raise _MarkdownMergeError(
+            f"incoming {syntax_label} fragment must contain exactly one "
+            f"BEGIN/END agentbridge marker pair "
+            f"(found {len(begins)} BEGIN, {len(ends)} END)"
+        )
+    incoming_name = begins[0].group(1)
+    if ends[0].group(1) != incoming_name:
+        raise _MarkdownMergeError(
+            f"BEGIN name {incoming_name!r} does not match END name "
+            f"{ends[0].group(1)!r}"
+        )
+    if begins[0].start() > ends[0].start():
+        raise _MarkdownMergeError("BEGIN marker appears after END marker")
+
+    existing = target_path.read_text()
+    name_re = re.escape(incoming_name)
+
+    # Build a per-syntax block-matching regex by re-using the marker regex
+    # patterns with the captured name pinned in.
+    if syntax_label == "markdown":
+        block_re = re.compile(
+            r"<!--\s*BEGIN\s+agentbridge:" + name_re + r"\s*-->"
+            r".*?"
+            r"<!--\s*END\s+agentbridge:" + name_re + r"\s*-->",
+            re.DOTALL,
+        )
+    else:  # shell/python
+        block_re = re.compile(
+            r"^[ \t]*#[ \t]*BEGIN[ \t]+agentbridge:" + name_re + r"[ \t]*$"
+            r".*?"
+            r"^[ \t]*#[ \t]*END[ \t]+agentbridge:" + name_re + r"[ \t]*$",
+            re.DOTALL | re.MULTILINE,
+        )
+
+    incoming_block = incoming_text[begins[0].start():ends[0].end()]
+
+    if block_re.search(existing):
+        new_text = block_re.sub(lambda _m: incoming_block, existing, count=1)
+    else:
+        sep = "" if existing.endswith("\n\n") else ("\n" if existing.endswith("\n") else "\n\n")
+        new_text = existing + sep + incoming_block + "\n"
+
+    target_path.write_text(new_text)
+
+
+def _merge_markdown(target_path: Path, incoming_text: str) -> None:
+    """G1/H8 wrapper — preserved for callers that import it directly."""
+    _merge_section(
+        target_path, incoming_text, _MD_BEGIN_RE, _MD_END_RE,
+        syntax_label="markdown",
+    )
+
+
+def _merge_shell(target_path: Path, incoming_text: str) -> None:
+    """H2 wrapper — section-marker merge for shell / python hooks."""
+    _merge_section(
+        target_path, incoming_text, _SH_BEGIN_RE, _SH_END_RE,
+        syntax_label="shell",
+    )
+
+
 def _open_bundle(bundle_path: Path) -> Path:
     """Bundle can be a directory or a .tar.gz. Returns path to the dir."""
     if bundle_path.is_dir():
@@ -207,6 +315,31 @@ def _apply_one_asset(
         except SettingsCorruptError as e:
             # R12 C#1 — refuse to wipe; surface to user, don't silently destroy.
             result.errors.append(str(e))
+            return
+        result.merged.append(asset.dest_path)
+    elif policy == "merge" and dest.exists() and dest.suffix == ".md":
+        # G1/H8 — section-marker merge for markdown (CLAUDE.md fragments).
+        # Bundle ships a fragment wrapped in <!-- BEGIN agentbridge:<name> -->
+        # … <!-- END agentbridge:<name> --> markers; merge replaces the
+        # existing block with that name (idempotent re-ingest) or appends
+        # if absent. Anything outside markers in the destination file is
+        # preserved untouched.
+        try:
+            _merge_markdown(dest, src.read_text())
+        except _MarkdownMergeError as e:
+            result.errors.append(f"markdown merge failed for {asset.path}: {e}")
+            return
+        result.merged.append(asset.dest_path)
+    elif policy == "merge" and dest.exists() and dest.suffix in (".sh", ".py", ".bash", ".zsh"):
+        # H2 — section-marker merge for shared shell/python hooks.
+        # Hook files like ~/.claude/hooks/session-start.sh are co-owned by
+        # multiple capabilities (memory + retry-guard + sio + specstory).
+        # Whole-file overwrite would clobber peers; section-marker merge
+        # extracts/inserts only the named block.
+        try:
+            _merge_shell(dest, src.read_text())
+        except _MarkdownMergeError as e:
+            result.errors.append(f"shell hook merge failed for {asset.path}: {e}")
             return
         result.merged.append(asset.dest_path)
     else:

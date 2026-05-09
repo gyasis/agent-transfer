@@ -67,6 +67,7 @@ def snapshot(
     *,
     home: Path,
     extra_whole_files: Iterable[str] = (),
+    preserve_existing: bool = True,
 ) -> Tuple[Path, Path]:
     """Snapshot pre-install state. Returns (rollback_tar, rollback_sh).
 
@@ -76,6 +77,14 @@ def snapshot(
         home: Receiver's home directory.
         extra_whole_files: Always-snapshot paths regardless of `targets`.
             Defaults add ~/.claude.json + ~/.claude/settings.json[.local].
+        preserve_existing: If True (default) and rollback.tar.gz already
+            exists in bundle_root, return its path unchanged WITHOUT
+            re-snapshotting. The first-ingest snapshot is the authoritative
+            pre-install baseline; re-running ingest must NOT overwrite it
+            with post-install state (G9 — the second snapshot would capture
+            files we just installed, silently losing the original "before"
+            and breaking rollback). Set False at compose time when you
+            intend to regenerate.
 
     Returns:
         (rollback_tar, rollback_sh) absolute paths.
@@ -83,6 +92,16 @@ def snapshot(
     bundle_root.mkdir(parents=True, exist_ok=True)
     rollback_tar = bundle_root / "rollback.tar.gz"
     rollback_sh = bundle_root / "rollback.sh"
+
+    # G9 — protect the original pre-install baseline. If a rollback already
+    # exists in this bundle (i.e. a previous ingest captured it), do NOT
+    # overwrite. Re-snapshotting after install would tar up the now-installed
+    # files as the "before" state — silent data loss on rollback.
+    if preserve_existing and rollback_tar.exists():
+        if not rollback_sh.exists():
+            rollback_sh.write_text(_ROLLBACK_SH_BODY)
+            rollback_sh.chmod(0o755)
+        return rollback_tar, rollback_sh
 
     # Always include the canonical config files.
     always_paths = [
