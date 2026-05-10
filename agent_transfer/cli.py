@@ -1127,7 +1127,15 @@ def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle
 @cli.command(name="ingest")
 @click.argument("bundle", type=click.Path(exists=True))
 @click.option("--yes", "auto_yes", is_flag=True, help="Skip prompts; auto-confirm Yellow/Red.")
-def ingest_cmd(bundle, auto_yes):
+@click.option(
+    "--no-smoke", "no_smoke", is_flag=True,
+    help=(
+        "Skip capability-declared smoke commands (still runs presence "
+        "+ sha + dep checks). Use when the bundle's smoke_commands are "
+        "untrusted or when the receiver has no shell access."
+    ),
+)
+def ingest_cmd(bundle, auto_yes, no_smoke):
     """Install an AgentBridge bundle on this machine.
 
     BUNDLE is a directory or .tar.gz produced by `ab compose`. Reads
@@ -1138,7 +1146,20 @@ def ingest_cmd(bundle, auto_yes):
     from agent_transfer.bridge.ingest import ingest as _do_ingest
 
     bundle_path = Path(bundle).resolve()
-    result = _do_ingest(bundle_path, auto_yes=auto_yes)
+    result = _do_ingest(
+        bundle_path, auto_yes=auto_yes, skip_smoke_commands=no_smoke,
+    )
+
+    # I — surface rollback_reused BEFORE the per-asset summary so the user
+    # knows the safety net's baseline is the FIRST ingest's pre-install
+    # state (not this run's), in case they expected a fresh snapshot.
+    if result.rollback_reused:
+        console.print(
+            "[yellow]rollback baseline reused:[/yellow] an existing "
+            "rollback.tar.gz from a prior ingest is preserved (G9). If "
+            "you need to restore, it will revert to the FIRST ingest's "
+            "pre-install state, not this run's."
+        )
 
     console.print(f"[green]installed:[/green] {len(result.installed)}")
     for p in result.installed:
@@ -1159,6 +1180,18 @@ def ingest_cmd(bundle, auto_yes):
         console.print(f"[red]errors:[/red] {len(result.errors)}")
         for e in result.errors:
             console.print(f"  X {e}")
+    # I — surface post-merge secret warnings. Non-fatal (the secret may
+    # be pre-existing destination state, not the bundle's fault) but
+    # the user MUST see them — auditing the merged result is the whole
+    # point of running the post-merge scan.
+    if result.post_merge_secret_warnings:
+        console.print(
+            f"[red]post-merge secret warnings:[/red] "
+            f"{len(result.post_merge_secret_warnings)} (non-fatal — "
+            "secret may be pre-existing destination state)"
+        )
+        for w in result.post_merge_secret_warnings:
+            console.print(f"  ! {w}")
     if result.smoke_failures:
         console.print(f"[red]smoke failures:[/red] {len(result.smoke_failures)}")
         for f in result.smoke_failures:

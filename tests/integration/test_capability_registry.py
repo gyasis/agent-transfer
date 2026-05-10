@@ -264,6 +264,32 @@ def test_c_no_provenance_on_discovery_compose(tmp_path):
     assert cap.registered_via is None
 
 
+def test_m_is_under_home_case_aware(tmp_path, monkeypatch):
+    """M (Hunter A N7) — case-insensitive containment fallback for
+    macOS APFS / Windows NTFS / WSL DrvFs.
+    """
+    from pathlib import Path as _P
+    from agent_transfer.bridge.capability_registry import _is_under_home
+
+    # Byte-exact case still works (Linux ext4 baseline).
+    assert _is_under_home(_P("/Users/Alice/x/y"), _P("/Users/Alice"))
+
+    # Different case ONLY differs by case → with normcase fallback
+    # (which lowercases on macOS/Windows; no-op on Linux), this must
+    # work on a Mac. We simulate normcase = lower for the test.
+    monkeypatch.setattr(
+        "agent_transfer.bridge.capability_registry._os.path.normcase",
+        lambda s: s.lower(),
+    )
+    assert _is_under_home(_P("/Users/ALICE/x/y"), _P("/Users/alice"))
+    assert _is_under_home(_P("/users/alice/x"), _P("/Users/Alice"))
+
+    # Outside-home stays rejected even with normcase.
+    assert not _is_under_home(_P("/etc/shadow"), _P("/Users/alice"))
+    # Non-prefix match (alice vs alicia) must NOT pass.
+    assert not _is_under_home(_P("/Users/alicia/x"), _P("/Users/alice"))
+
+
 def test_g12_name_mismatch_raises(tmp_path):
     home = tmp_path / "home"
     _write_registry(home, "sio", """

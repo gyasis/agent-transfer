@@ -26,6 +26,7 @@ Schema:
 
 from __future__ import annotations
 
+import os as _os
 from pathlib import Path
 from typing import List, Optional
 
@@ -90,6 +91,30 @@ def load_registered(name: str, *, home: Path) -> Optional[CapabilityRegistration
         raise RegistryError(f"Invalid registration in {p}: {e}") from e
 
 
+def _is_under_home(path_abs: Path, home_abs: Path) -> bool:
+    """Case-aware containment check (M — Hunter A N7).
+
+    `Path.relative_to` is byte-exact. On case-insensitive filesystems
+    (macOS APFS by default, Windows NTFS, WSL DrvFs) `/Users/U/x` and
+    `/users/u/x` refer to the same file but compare unequal. Without
+    this helper, registry assets get false-rejected on every Mac and
+    every Windows + WSL setup.
+
+    Strategy: try `relative_to` first (cheap, exact). If that fails,
+    re-check using `os.path.normcase` (which is a no-op on case-
+    sensitive filesystems but lower-cases on macOS/Windows).
+    """
+    try:
+        path_abs.relative_to(home_abs)
+        return True
+    except ValueError:
+        pass
+    # Fallback: case-folded prefix check.
+    p = _os.path.normcase(str(path_abs))
+    h = _os.path.normcase(str(home_abs)).rstrip(_os.sep)
+    return p == h or p.startswith(h + _os.sep)
+
+
 def _validate_asset_path(raw: str, resolved: Path, home: Path) -> None:
     """Reject paths outside $HOME, symlinks, and traversal escapes (B — F2).
 
@@ -102,6 +127,7 @@ def _validate_asset_path(raw: str, resolved: Path, home: Path) -> None:
 
     Rules:
       1. Resolved path MUST be inside $HOME (or be $HOME itself).
+         Case-insensitive on macOS APFS / Windows NTFS / WSL DrvFs.
       2. Resolved path MUST NOT be a symlink and MUST NOT traverse one.
          Anywhere along the path that's a symlink → reject.
       3. Raw entry MUST NOT contain `..` segments.
@@ -127,14 +153,10 @@ def _validate_asset_path(raw: str, resolved: Path, home: Path) -> None:
             break
         parent = parent.parent
 
-    # 1. Must be inside $HOME. Use lexical comparison on resolved
-    # absolute paths — but resolve() would follow symlinks, defeating
-    # the symlink check above. Compare absolute (non-resolved) paths.
+    # 1. Must be inside $HOME. Case-aware (M).
     abs_resolved = resolved if resolved.is_absolute() else resolved.absolute()
     home_abs = home if home.is_absolute() else home.absolute()
-    try:
-        abs_resolved.relative_to(home_abs)
-    except ValueError:
+    if not _is_under_home(abs_resolved, home_abs):
         raise RegistryError(
             f"Registered asset {raw!r} (-> {abs_resolved}) is outside "
             f"$HOME ({home_abs}). Registry assets must live under $HOME "
@@ -185,9 +207,7 @@ def expand_asset_paths(reg: CapabilityRegistration, *, home: Path) -> List[Path]
                         f"Registered dir {raw!r} contains symlink at {sub} "
                         "— refusing to follow."
                     )
-                try:
-                    sub.absolute().relative_to(home.absolute())
-                except ValueError:
+                if not _is_under_home(sub.absolute(), home.absolute()):
                     raise RegistryError(
                         f"Registered dir {raw!r} contains path outside $HOME: "
                         f"{sub}"

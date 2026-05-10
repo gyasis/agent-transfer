@@ -229,6 +229,114 @@ def test_f_post_merge_scan_silent_when_clean(tmp_path):
     assert _post_merge_secret_scan(target) == []
 
 
+def test_j_post_merge_scan_runs_on_json_merge(tmp_path):
+    """J (Hunter A N4) — JSON merge path now also runs post-merge scan.
+
+    settings.json / .claude.json are exactly where Bearer / api-key tokens
+    are most likely to live via mcpServers env vars. The original post-
+    merge scan was wired only into the .md and .sh branches.
+    """
+    import hashlib
+    from datetime import datetime
+
+    from agent_transfer.bridge.ingest import ingest
+    from agent_transfer.bridge.models import (
+        AssetEntry, Capability, ManifestModel,
+    )
+
+    home = tmp_path / "home"
+    home.mkdir()
+    # Pre-existing settings.json with a Bearer token already in it.
+    (home / ".claude").mkdir()
+    settings = home / ".claude" / "settings.json"
+    import json as _json
+    settings.write_text(_json.dumps({
+        "weird": {"old": "Bearer abcdef0123456789ABCDEF0123456789"},
+    }))
+
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "bundle").mkdir()
+    src = bundle / "bundle" / "settings.json"
+    src.write_text(_json.dumps({"new": {"clean": True}}))
+    sha = hashlib.sha256(src.read_bytes()).hexdigest()
+
+    manifest = ManifestModel(
+        generated_at=datetime.utcnow(),
+        source_machine_hint="test",
+        capability=Capability(
+            name="t", description="x", intent="x",
+            assets=[AssetEntry(
+                path="settings.json",
+                dest_path="~/.claude/settings.json",
+                risk="green",
+                conflict="merge",
+                sha256=sha,
+                mode_bits=0o644,
+            )],
+        ),
+    )
+    (bundle / "manifest.json").write_text(manifest.model_dump_json())
+
+    r = ingest(bundle, home=home, auto_yes=True, interactive=False)
+    assert any(
+        "Bearer" in w or "post-merge secret" in w
+        for w in r.post_merge_secret_warnings
+    ), (
+        f"J regression: pre-existing token in settings.json was not "
+        f"caught by post-merge JSON scan. Warnings: "
+        f"{r.post_merge_secret_warnings}"
+    )
+
+
+def test_j_post_merge_scan_runs_on_overwrite(tmp_path):
+    """J (Hunter A N5) — overwrite path also re-scans post-write."""
+    import hashlib
+    from datetime import datetime
+
+    from agent_transfer.bridge.ingest import ingest
+    from agent_transfer.bridge.models import (
+        AssetEntry, Capability, ManifestModel,
+    )
+
+    home = tmp_path / "home"
+    (home / ".claude" / "skills").mkdir(parents=True)
+
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "bundle").mkdir()
+    src = bundle / "bundle" / "rules.md"
+    # Imagine seal-time scanner missed this token.
+    src.write_text("# rules\nBearer abcdef0123456789ABCDEF0123456789\n")
+    sha = hashlib.sha256(src.read_bytes()).hexdigest()
+
+    manifest = ManifestModel(
+        generated_at=datetime.utcnow(),
+        source_machine_hint="test",
+        capability=Capability(
+            name="t", description="x", intent="x",
+            assets=[AssetEntry(
+                path="rules.md",
+                dest_path="~/.claude/skills/rules.md",
+                risk="green",
+                conflict="overwrite",
+                sha256=sha,
+                mode_bits=0o644,
+            )],
+        ),
+    )
+    (bundle / "manifest.json").write_text(manifest.model_dump_json())
+
+    r = ingest(bundle, home=home, auto_yes=True, interactive=False)
+    assert any(
+        "Bearer" in w or "post-merge secret" in w
+        for w in r.post_merge_secret_warnings
+    ), (
+        f"J regression: post-overwrite scan missed the token. "
+        f"Warnings: {r.post_merge_secret_warnings}"
+    )
+
+
 def test_h8_merge_rejects_mismatched_names(tmp_path):
     target = tmp_path / "CLAUDE.md"
     target.write_text("# CLAUDE.md\n")

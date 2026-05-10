@@ -198,6 +198,38 @@ def discover_referenced_scripts(
         for match in pattern.finditer(text):
             strict_refs.setdefault(match.group(1), set()).add(str(cfg_file))
 
+    # K (Hunter B B-adjacent) — bin_dirs traversal must apply the same
+    # symlink-and-under-home check the registry path does. Without it, an
+    # attacker-planted symlink at ~/bin/sio → /etc/shadow would be
+    # discovered as a "script" and the destination's bytes would get
+    # bundled and shipped. Discovery is the SAME trust boundary as the
+    # registry — just a different door.
+    home_path_resolved = Path(home).resolve() if home else None
+
+    def _is_safe_bin_entry(child: Path) -> bool:
+        """Skip bin-dir entries whose symlink target escapes $HOME.
+
+        Allow real files (not symlinks) and symlinks whose realpath is
+        still under $HOME. Reject symlinks pointing outside $HOME — that
+        catches ~/bin/sio → /etc/shadow without breaking legitimate
+        in-HOME symlink farms (e.g. tool managers that link
+        ~/bin/foo → ~/.local/share/tool/bin/foo).
+        """
+        if not child.is_symlink():
+            return True
+        if home_path_resolved is None:
+            # No HOME context to compare against — be conservative.
+            return False
+        try:
+            real = child.resolve()
+        except (OSError, RuntimeError):
+            return False
+        try:
+            real.relative_to(home_path_resolved)
+            return True
+        except ValueError:
+            return False
+
     # ---- PASS 2: lenient (bare command references) ----
     # Enumerate basenames present in any bin_dir, then word-boundary grep.
     bin_basenames: dict[str, Path] = {}  # basename -> resolved bin path
@@ -205,6 +237,8 @@ def discover_referenced_scripts(
         if not bd.exists():
             continue
         for child in bd.iterdir():
+            if not _is_safe_bin_entry(child):
+                continue
             if child.is_file() and child.name not in bin_basenames:
                 bin_basenames[child.name] = bd
 
@@ -233,6 +267,8 @@ def discover_referenced_scripts(
         bin_dir: Path | None = None
         for bd in bin_dirs:
             candidate = bd / basename
+            if not _is_safe_bin_entry(candidate):
+                continue
             if candidate.is_file():
                 resolved = candidate
                 bin_dir = bd

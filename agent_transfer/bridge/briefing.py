@@ -104,6 +104,26 @@ def render(manifest: ManifestModel) -> str:
         return _stringify(val)
 
     out = _VAR_RE.sub(var_repl, out)
+
+    # I (C surfacing) — append a Provenance section when the bundle
+    # was composed from a registry YAML rather than discovery. Renders
+    # the registry path + sha256 so a human receiver can verify the
+    # bundle's origin without parsing the manifest JSON.
+    reg = manifest.capability.registered_via
+    if reg is not None:
+        if not out.endswith("\n"):
+            out += "\n"
+        out += (
+            "\n## Provenance\n\n"
+            f"This bundle was composed from a registry declaration at "
+            f"`{reg.registry_path}` on the source machine.\n\n"
+            f"- Registry path: `{reg.registry_path}`\n"
+            f"- Registry SHA-256: `{reg.yaml_sha256}`\n\n"
+            "Registry-composed bundles produce reproducible asset lists "
+            "across machines (G12). To audit, ask the source machine for "
+            "the YAML at the path above and verify its sha256 matches.\n"
+        )
+
     return out
 
 

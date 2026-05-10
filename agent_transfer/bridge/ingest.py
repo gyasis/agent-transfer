@@ -387,6 +387,11 @@ def _apply_one_asset(
             result.errors.append(str(e))
             return
         result.merged.append(asset.dest_path)
+        # J — post-merge scan also applies to JSON merge. ~/.claude.json
+        # and settings.json are exactly where Bearer/api-key tokens are
+        # most likely to land via mcpServers env vars; not scanning them
+        # was the most damaging gap of the 8-fix pass (Hunter A N4).
+        result.post_merge_secret_warnings.extend(_post_merge_secret_scan(dest))
     elif policy == "merge" and dest.exists() and dest.suffix == ".md":
         # G1/H8 — section-marker merge for markdown (CLAUDE.md fragments).
         # Bundle ships a fragment wrapped in <!-- BEGIN agentbridge:<name> -->
@@ -434,6 +439,11 @@ def _apply_one_asset(
         except OSError:
             pass
         result.installed.append(asset.dest_path)
+        # J — post-merge scan also applies to overwrite path. The seal-
+        # time scanner is best-effort, and a regex miss on the bundle
+        # source means the secret rides through. Re-scanning post-write
+        # gives a second chance with a tiny amount of work (Hunter A N5).
+        result.post_merge_secret_warnings.extend(_post_merge_secret_scan(dest))
 
 
 # ----------------------------------------------------------------------

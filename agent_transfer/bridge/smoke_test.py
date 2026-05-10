@@ -164,25 +164,46 @@ def _check_smoke_commands(
     env = _smoke_env(home)
 
     for cmd in cmds:
+        # L (Hunter B D-adjacent) — start_new_session=True puts the
+        # smoke command in its own process group. On TimeoutExpired we
+        # killpg the whole group so backgrounded grandchildren
+        # (`cmd & disown`, `nohup ...`) can't outlive the timeout.
+        # Without this, subprocess.run only SIGKILLs the immediate `sh`,
+        # and any disowned grandchild keeps running forever.
+        proc = None
         try:
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 ["sh", "-c", cmd],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=_SMOKE_COMMAND_TIMEOUT_S,
                 env=env,
-                check=False,
+                start_new_session=True,
             )
-        except subprocess.TimeoutExpired:
-            result.fail(
-                f"smoke command timed out after {_SMOKE_COMMAND_TIMEOUT_S}s: {cmd!r}"
-            )
-            continue
+            try:
+                stdout, stderr = proc.communicate(
+                    timeout=_SMOKE_COMMAND_TIMEOUT_S,
+                )
+            except subprocess.TimeoutExpired:
+                # Kill the entire process group, not just the leader.
+                try:
+                    os.killpg(proc.pid, 9)  # SIGKILL
+                except (OSError, ProcessLookupError):
+                    pass
+                # Reap so the zombie doesn't linger.
+                try:
+                    proc.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    pass
+                result.fail(
+                    f"smoke command timed out after {_SMOKE_COMMAND_TIMEOUT_S}s: {cmd!r}"
+                )
+                continue
         except OSError as e:
             result.fail(f"smoke command could not start: {cmd!r}: {e}")
             continue
         if proc.returncode != 0:
-            tail = (proc.stderr or proc.stdout or "").strip().splitlines()
+            tail = (stderr or stdout or "").strip().splitlines()
             tail_text = " | ".join(tail[-3:])[:400]
             result.fail(
                 f"smoke command exited {proc.returncode}: {cmd!r}"
