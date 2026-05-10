@@ -65,6 +65,25 @@ class BriefingSection(BaseModel):
     content_md: str = Field(..., description="Rendered Markdown content for this section")
 
 
+class RegistrationRef(BaseModel):
+    """C (Hunter B G12 adjacent) — provenance of a registry-composed bundle.
+
+    When a capability is composed from `~/.claude/capabilities/<name>.yaml`
+    (rather than from discovery), the registry path + content sha256 are
+    stamped here. Receivers can verify the bundle's origin and replay the
+    same registration semantically.
+    """
+
+    registry_path: str = Field(
+        ...,
+        description="Path to the registry YAML on the source machine, with ~/ where applicable",
+    )
+    yaml_sha256: str = Field(
+        ...,
+        description="Hex sha256 of the registry YAML at compose time",
+    )
+
+
 class Capability(BaseModel):
     """A named bundle of intent + behavior, composed of one or more assets."""
 
@@ -85,6 +104,16 @@ class Capability(BaseModel):
             "partial installs that file-presence smoke would miss "
             "(e.g. skills installed but the binary they call is absent, "
             "or hook section never reached because of an unrelated parse error)."
+        ),
+    )
+    registered_via: Optional[RegistrationRef] = Field(
+        default=None,
+        description=(
+            "C (B G12 adjacent) — when set, this capability was composed "
+            "from a registry YAML rather than discovery. Path + sha lets "
+            "the receiver verify provenance and tell registry-composed "
+            "bundles from discovery-composed ones (otherwise they'd be "
+            "byte-indistinguishable)."
         ),
     )
 

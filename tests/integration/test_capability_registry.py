@@ -156,6 +156,114 @@ def test_g12_missing_asset_path_raises(tmp_path):
         compose("sio", home=home)
 
 
+def test_b_rejects_absolute_path_outside_home(tmp_path):
+    """B (F2) — registry asset path must be inside $HOME."""
+    home = tmp_path / "home"
+    home.mkdir()
+    _write_registry(home, "evil", """
+        name: evil
+        description: x
+        intent: x
+        assets:
+          - /etc/shadow
+    """)
+    with pytest.raises(RegistryError, match="outside .HOME"):
+        compose("evil", home=home)
+
+
+def test_b_rejects_dotdot_traversal(tmp_path):
+    """B (F2) — `..` segments rejected even if they happen to stay in $HOME."""
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / "innocent.md").write_text("ok")
+    _write_registry(home, "trav", """
+        name: trav
+        description: x
+        intent: x
+        assets:
+          - ~/../home/innocent.md
+    """)
+    # Using a relative-form home, so we adjust the YAML format if needed.
+    # The literal "~/.." path is what we want to reject.
+    with pytest.raises(RegistryError, match="may not contain"):
+        compose("trav", home=home)
+
+
+def test_b_rejects_symlinked_asset(tmp_path):
+    """B (F2) — symlinks under registry-declared paths are not followed."""
+    home = tmp_path / "home"
+    home.mkdir()
+    target_outside = tmp_path / "outside"
+    target_outside.mkdir()
+    (target_outside / "secret.md").write_text("SECRET")
+    link = home / "link.md"
+    link.symlink_to(target_outside / "secret.md")
+
+    _write_registry(home, "lk", """
+        name: lk
+        description: x
+        intent: x
+        assets:
+          - ~/link.md
+    """)
+    with pytest.raises(RegistryError, match="symlink"):
+        compose("lk", home=home)
+
+
+def test_b_rejects_symlinked_subpath_in_dir(tmp_path):
+    """B (F2) — dir asset whose child is a symlink rejects."""
+    home = tmp_path / "home"
+    pkg = home / ".claude" / "skills" / "x"
+    pkg.mkdir(parents=True)
+    (pkg / "SKILL.md").write_text("# x\n")
+
+    target = tmp_path / "outside" / "evil.sh"
+    target.parent.mkdir()
+    target.write_text("#!/bin/sh\nrm -rf /\n")
+    (pkg / "evil-link.sh").symlink_to(target)
+
+    _write_registry(home, "x", """
+        name: x
+        description: x
+        intent: x
+        assets:
+          - ~/.claude/skills/x/
+    """)
+    with pytest.raises(RegistryError, match="symlink"):
+        compose("x", home=home)
+
+
+def test_c_provenance_stamped_on_registry_compose(tmp_path):
+    """C (B G12 adjacent) — registry-composed Capability records source path + sha."""
+    import hashlib
+
+    home = tmp_path / "home"
+    _seed_skill(home, "sio-scan")
+
+    body = """
+        name: sio
+        description: SIO with provenance
+        intent: Test C
+        assets:
+          - ~/.claude/skills/sio-scan.md
+    """
+    reg_path = _write_registry(home, "sio", body)
+    expected_sha = hashlib.sha256(reg_path.read_bytes()).hexdigest()
+
+    cap = compose("sio", home=home)
+    assert cap.registered_via is not None
+    assert cap.registered_via.registry_path == "~/.claude/capabilities/sio.yaml"
+    assert cap.registered_via.yaml_sha256 == expected_sha
+
+
+def test_c_no_provenance_on_discovery_compose(tmp_path):
+    """Discovery path (no registry) leaves registered_via=None."""
+    home = tmp_path / "home"
+    _seed_skill(home, "sio-scan")
+    cap = compose("sio-scan", home=home)
+    assert cap.registered_via is None
+
+
 def test_g12_name_mismatch_raises(tmp_path):
     home = tmp_path / "home"
     _write_registry(home, "sio", """

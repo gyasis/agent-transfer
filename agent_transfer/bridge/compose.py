@@ -27,8 +27,9 @@ from agent_transfer.bridge.capability_registry import (
     CapabilityRegistration,
     expand_asset_paths,
     load_registered,
+    registry_path_for,
 )
-from agent_transfer.bridge.models import AssetEntry, Capability
+from agent_transfer.bridge.models import AssetEntry, Capability, RegistrationRef
 from agent_transfer.utils.config_manager import emit_asset_entries
 from agent_transfer.utils.script_discovery import (
     DEFAULT_BIN_DIRS,
@@ -126,17 +127,80 @@ def _is_skill_package_anchor(p: Path, claude_dir: Path) -> Optional[Path]:
     return None
 
 
+# A (F1) — exclusion list for skill-package expansion.
+# Without these, `pkg_dir.rglob("*")` would happily pull `.git/` (multi-MiB
+# pack files), `.venv/` (hundreds of MiB), `node_modules/` (worse), `.env`
+# (secrets!), `__pycache__/` (stale bytecode), `.DS_Store`, etc. into the
+# bundle. Skill maintainers shouldn't have to manually .gitignore-style
+# every accidentally-committed cache; the bundler skips them by default.
+_SKILL_PKG_EXCLUDED_DIRS = frozenset({
+    ".git",
+    ".venv", "venv",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".tox",
+    "dist", "build",
+    ".idea", ".vscode",
+})
+_SKILL_PKG_EXCLUDED_NAMES = frozenset({
+    ".env", ".env.local",  # secrets — .env.example is fine
+    ".DS_Store",
+    "Thumbs.db",
+})
+_SKILL_PKG_EXCLUDED_SUFFIXES = frozenset({
+    ".pyc", ".pyo",
+    ".log",
+    ".swp", ".swo",
+})
+_SKILL_PKG_MAX_FILE_BYTES = 5 * 1024 * 1024  # 5 MiB per file
+
+
+def _is_skill_package_excluded(p: Path, pkg_dir: Path) -> bool:
+    """Return True if `p` (a file under `pkg_dir`) should be skipped.
+
+    Excludes by:
+      • any ancestor directory name in _SKILL_PKG_EXCLUDED_DIRS
+      • exact filename in _SKILL_PKG_EXCLUDED_NAMES
+      • file extension in _SKILL_PKG_EXCLUDED_SUFFIXES
+      • size > _SKILL_PKG_MAX_FILE_BYTES
+    """
+    try:
+        rel = p.relative_to(pkg_dir)
+    except ValueError:
+        return True
+    if any(part in _SKILL_PKG_EXCLUDED_DIRS for part in rel.parts):
+        return True
+    if p.name in _SKILL_PKG_EXCLUDED_NAMES:
+        return True
+    if p.suffix in _SKILL_PKG_EXCLUDED_SUFFIXES:
+        return True
+    try:
+        if p.stat().st_size > _SKILL_PKG_MAX_FILE_BYTES:
+            return True
+    except OSError:
+        return True
+    return False
+
+
 def _expand_skill_package(pkg_dir: Path) -> List[Path]:
-    """Return every file inside a skill-package directory.
+    """Return every file inside a skill-package directory, with exclusions.
 
     G2 — pre-fix `_walk_dir` filtered to .md only, silently dropping
     scripts/, requirements.txt, .css/.html/.js companions inside skill
     packages (e.g. planning-enhanced/, kami/, data-analyzer/). Now we
-    pull the whole package tree.
+    pull the whole package tree EXCEPT `.git/`, `.venv/`, `node_modules/`,
+    `__pycache__/`, `.env`, files >5 MiB — those are accidental-include
+    risks more than legitimate capability assets (A — F1).
     """
     if not pkg_dir.is_dir():
         return []
-    return [p for p in pkg_dir.rglob("*") if p.is_file()]
+    return [
+        p for p in pkg_dir.rglob("*")
+        if p.is_file() and not _is_skill_package_excluded(p, pkg_dir)
+    ]
 
 
 def _anchor_pass(
@@ -222,6 +286,12 @@ def _expand_one_hop(
         skill_paths_by_slug: Dict[str, Path] = {}
         for sp in _walk_dir(skill_dir, (".md",)):
             skill_paths_by_slug[sp.stem.lower()] = sp
+        # Skill-package SKILL.md indexed by package dir name too.
+        for sub in skill_dir.iterdir():
+            if sub.is_dir():
+                skill_md = sub / "SKILL.md"
+                if skill_md.exists():
+                    skill_paths_by_slug.setdefault(sub.name.lower(), skill_md)
         for c in seeds:
             head = _safe_read_head(c.path)
             for m in _SLUG_REF_RE.finditer(head):
@@ -230,6 +300,20 @@ def _expand_one_hop(
                 if target and target not in seen_paths:
                     new.append(_Candidate(target, "COMPANIONS", "skill"))
                     seen_paths.add(target)
+                    # G (B G2 adjacent) — symmetric package expansion.
+                    # Anchor pass expands skill packages; 1-hop slug
+                    # references must too, otherwise a companion skill's
+                    # scripts/ subdir gets silently dropped.
+                    pkg = _is_skill_package_anchor(target, claude_dir)
+                    if pkg is not None:
+                        for sibling in _expand_skill_package(pkg):
+                            if sibling == target or sibling in seen_paths:
+                                continue
+                            new.append(_Candidate(
+                                sibling, "COMPANIONS",
+                                _classify_kind(sibling, claude_dir),
+                            ))
+                            seen_paths.add(sibling)
 
     # Hooks that mention a CORE rule / skill path → pull in the hook.
     hooks_root = claude_dir / "hooks"
@@ -357,14 +441,32 @@ def _compose_from_registration(
 
     Skips the anchor + BFS discovery; the registration's `assets` list
     is authoritative. All assets are tagged tier=CORE because the user
-    explicitly declared them.
+    explicitly declared them. C — provenance (path + sha256 of the
+    registry YAML at compose time) is stamped onto the Capability so
+    the receiver can tell registry-composed bundles from discovery-
+    composed ones.
     """
+    import hashlib as _hashlib
+
     paths = expand_asset_paths(reg, home=home)
     asset_dicts = emit_asset_entries(paths, home=home)
     assets: List[AssetEntry] = []
     for d in asset_dicts:
         d["notes"] = "tier=CORE"
         assets.append(AssetEntry(**d))
+
+    # C — record provenance. Use the home-relative form of the registry
+    # path so the manifest doesn't leak the source machine's absolute
+    # path layout.
+    reg_path = registry_path_for(reg.name, home=home)
+    yaml_bytes = reg_path.read_bytes()
+    yaml_sha = _hashlib.sha256(yaml_bytes).hexdigest()
+    reg_path_str = str(reg_path)
+    home_str = str(home)
+    if reg_path_str.startswith(home_str + "/"):
+        reg_path_display = "~" + reg_path_str[len(home_str):]
+    else:
+        reg_path_display = reg_path_str
 
     return Capability(
         name=reg.name,
@@ -373,6 +475,10 @@ def _compose_from_registration(
         assets=assets,
         dependencies=reg.dependencies,
         smoke_commands=reg.smoke_commands,
+        registered_via=RegistrationRef(
+            registry_path=reg_path_display,
+            yaml_sha256=yaml_sha,
+        ),
     )
 
 

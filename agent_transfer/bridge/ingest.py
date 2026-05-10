@@ -41,6 +41,18 @@ class IngestResult:
     declined: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     smoke_failures: List[str] = field(default_factory=list)
+    # H (Hunter A F4 / Hunter B G9 adjacent) — set True when an existing
+    # rollback.tar.gz from a prior ingest was preserved instead of
+    # re-snapshotted. Surfaces the silent-preserve case so the user
+    # knows rollback restores the ORIGINAL pre-install state, not the
+    # state captured between this ingest and the previous one.
+    rollback_reused: bool = False
+    # F (Hunter B G1/H2 adjacent) — post-merge re-scan findings.
+    # Non-fatal — secrets here may be pre-existing destination state
+    # rather than something the bundle introduced. Surface for user
+    # visibility instead of blocking install (the seal-time scan
+    # already blocked any secret the BUNDLE itself shipped).
+    post_merge_secret_warnings: List[str] = field(default_factory=list)
 
 
 def _ask(prompt: str, *, auto_yes: bool, interactive: bool) -> bool:
@@ -148,16 +160,17 @@ class _MarkdownMergeError(RuntimeError):
 
 
 # Markdown / HTML-comment markers (G1/H8 — CLAUDE.md, skill descriptions).
-_MD_BEGIN_RE = re.compile(r"<!--\s*BEGIN\s+agentbridge:([A-Za-z0-9_\-]+)\s*-->")
-_MD_END_RE = re.compile(r"<!--\s*END\s+agentbridge:([A-Za-z0-9_\-]+)\s*-->")
+# `.` is allowed for sub-namespaces (E — `sio.routing` etc.)
+_MD_BEGIN_RE = re.compile(r"<!--\s*BEGIN\s+agentbridge:([A-Za-z0-9_\-\.]+)\s*-->")
+_MD_END_RE = re.compile(r"<!--\s*END\s+agentbridge:([A-Za-z0-9_\-\.]+)\s*-->")
 
 # Shell / Python / generic-hash-comment markers (H2 — shared hook files).
 _SH_BEGIN_RE = re.compile(
-    r"^[ \t]*#[ \t]*BEGIN[ \t]+agentbridge:([A-Za-z0-9_\-]+)[ \t]*$",
+    r"^[ \t]*#[ \t]*BEGIN[ \t]+agentbridge:([A-Za-z0-9_\-\.]+)[ \t]*$",
     re.MULTILINE,
 )
 _SH_END_RE = re.compile(
-    r"^[ \t]*#[ \t]*END[ \t]+agentbridge:([A-Za-z0-9_\-]+)[ \t]*$",
+    r"^[ \t]*#[ \t]*END[ \t]+agentbridge:([A-Za-z0-9_\-\.]+)[ \t]*$",
     re.MULTILINE,
 )
 
@@ -169,6 +182,7 @@ def _merge_section(
     end_re: "re.Pattern[str]",
     *,
     syntax_label: str,
+    capability_name: Optional[str] = None,
 ) -> None:
     """Generic section-marker merge.
 
@@ -181,6 +195,13 @@ def _merge_section(
       • H2    — shared shell / python hooks with `# BEGIN agentbridge:<name>`
 
     Raises _MarkdownMergeError on missing / mismatched / out-of-order markers.
+
+    E (Hunter A F5) — when `capability_name` is provided, the incoming
+    marker name MUST equal it OR be a sub-namespace (`<name>.suffix`).
+    Without this, a malicious / accidentally-mislabeled bundle for
+    capability `sio` could ship a fragment with `agentbridge:cascade-memory`
+    markers and silently clobber an unrelated capability's block in the
+    same target file.
     """
     begins = list(begin_re.finditer(incoming_text))
     ends = list(end_re.finditer(incoming_text))
@@ -198,6 +219,19 @@ def _merge_section(
         )
     if begins[0].start() > ends[0].start():
         raise _MarkdownMergeError("BEGIN marker appears after END marker")
+
+    # E — bind marker name to capability name (or sub-namespace).
+    if capability_name is not None:
+        if not (
+            incoming_name == capability_name
+            or incoming_name.startswith(capability_name + ".")
+        ):
+            raise _MarkdownMergeError(
+                f"section marker {incoming_name!r} does not belong to "
+                f"capability {capability_name!r}; expected {capability_name!r} "
+                f"or {capability_name + '.<sub>'!r}. Refusing to clobber a "
+                "different capability's block."
+            )
 
     existing = target_path.read_text()
     name_re = re.escape(incoming_name)
@@ -230,20 +264,55 @@ def _merge_section(
     target_path.write_text(new_text)
 
 
-def _merge_markdown(target_path: Path, incoming_text: str) -> None:
+def _merge_markdown(
+    target_path: Path,
+    incoming_text: str,
+    capability_name: Optional[str] = None,
+) -> None:
     """G1/H8 wrapper — preserved for callers that import it directly."""
     _merge_section(
         target_path, incoming_text, _MD_BEGIN_RE, _MD_END_RE,
         syntax_label="markdown",
+        capability_name=capability_name,
     )
 
 
-def _merge_shell(target_path: Path, incoming_text: str) -> None:
+def _merge_shell(
+    target_path: Path,
+    incoming_text: str,
+    capability_name: Optional[str] = None,
+) -> None:
     """H2 wrapper — section-marker merge for shell / python hooks."""
     _merge_section(
         target_path, incoming_text, _SH_BEGIN_RE, _SH_END_RE,
         syntax_label="shell",
+        capability_name=capability_name,
     )
+
+
+def _post_merge_secret_scan(target_path: Path) -> List[str]:
+    """F (Hunter B G1/H2 adjacent) — re-scan the merged file for secrets.
+
+    The seal-time scanner runs on every asset BYTE the bundle ships, so
+    secrets the bundle itself contains are blocked at compose time. But
+    after a merge, the on-disk file is `existing_destination + our_block`.
+    A pre-existing destination block could contain credentials we just
+    extended (or chained into) by appending. Re-scan the result and
+    return human-readable warnings; non-fatal because the secret may
+    be entirely pre-existing — out of AgentBridge's control to remove.
+    """
+    from agent_transfer.bridge.secrets import scan as _scan
+    try:
+        text = target_path.read_text(errors="replace")
+    except OSError:
+        return []
+    findings = _scan(text)
+    if not findings:
+        return []
+    return [
+        f"post-merge secret in {target_path}: {f.pattern} {f.match[:24]}…"
+        for f in findings[:5]
+    ]
 
 
 def _open_bundle(bundle_path: Path) -> Path:
@@ -267,6 +336,7 @@ def _apply_one_asset(
     auto_yes: bool,
     interactive: bool,
     result: IngestResult,
+    capability_name: Optional[str] = None,
 ) -> None:
     src = bundle_dir / "bundle" / asset.path
     if not src.exists():
@@ -325,11 +395,12 @@ def _apply_one_asset(
         # if absent. Anything outside markers in the destination file is
         # preserved untouched.
         try:
-            _merge_markdown(dest, src.read_text())
+            _merge_markdown(dest, src.read_text(), capability_name=capability_name)
         except _MarkdownMergeError as e:
             result.errors.append(f"markdown merge failed for {asset.path}: {e}")
             return
         result.merged.append(asset.dest_path)
+        result.post_merge_secret_warnings.extend(_post_merge_secret_scan(dest))
     elif policy == "merge" and dest.exists() and dest.suffix in (".sh", ".py", ".bash", ".zsh"):
         # H2 — section-marker merge for shared shell/python hooks.
         # Hook files like ~/.claude/hooks/session-start.sh are co-owned by
@@ -337,11 +408,12 @@ def _apply_one_asset(
         # Whole-file overwrite would clobber peers; section-marker merge
         # extracts/inserts only the named block.
         try:
-            _merge_shell(dest, src.read_text())
+            _merge_shell(dest, src.read_text(), capability_name=capability_name)
         except _MarkdownMergeError as e:
             result.errors.append(f"shell hook merge failed for {asset.path}: {e}")
             return
         result.merged.append(asset.dest_path)
+        result.post_merge_secret_warnings.extend(_post_merge_secret_scan(dest))
     else:
         # R12 H#7 — guard against degenerate mode_bits values.
         mode = _safe_mode_bits(asset.dest_path, asset.mode_bits)
@@ -394,6 +466,7 @@ def ingest(
     home: Optional[Path] = None,
     auto_yes: bool = False,
     interactive: bool = True,
+    skip_smoke_commands: bool = False,
 ) -> IngestResult:
     """Install an AgentBridge bundle on this machine.
 
@@ -430,8 +503,12 @@ def ingest(
         )
         return result
 
-    # Generate rollback snapshot BEFORE any write (FR-016)
+    # Generate rollback snapshot BEFORE any write (FR-016).
+    # H — flag whether the existing rollback.tar.gz was preserved (G9
+    # baseline-protect path) so the user can be told they're re-ingesting.
     target_dest_paths = [a.dest_path for a in manifest.capability.assets]
+    rollback_tar_path = bundle_dir / "rollback.tar.gz"
+    result.rollback_reused = rollback_tar_path.exists()
     _rollback_snapshot(target_dest_paths, bundle_dir, home=home)
 
     # Apply each asset
@@ -439,10 +516,15 @@ def ingest(
         _apply_one_asset(
             asset, bundle_dir, home,
             auto_yes=auto_yes, interactive=interactive, result=result,
+            capability_name=manifest.capability.name,
         )
 
-    # Smoke test (FR-017)
-    smoke = _run_smoke(manifest, home=home)
+    # Smoke test (FR-017). D — `skip_smoke_commands` lets the receiver
+    # opt out of capability-declared `sh -c` execution while keeping
+    # presence + sha + dep checks.
+    smoke = _run_smoke(
+        manifest, home=home, skip_smoke_commands=skip_smoke_commands
+    )
     if not smoke.passed:
         result.smoke_failures = smoke.failures
 

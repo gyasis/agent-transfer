@@ -88,6 +88,72 @@ def test_g6_multiple_commands_one_fails(tmp_path):
     assert "'false'" in r.failures[0]
 
 
+def test_d_path_is_scrubbed_to_safe_set(tmp_path):
+    """D (F8) — smoke commands run with a scrubbed PATH, not the inherited one."""
+    home = tmp_path / "home"
+    home.mkdir()
+    # Plant a binary in a junk dir; it should NOT appear in smoke's PATH.
+    junk = tmp_path / "evil-bin"
+    junk.mkdir()
+    (junk / "evil-cmd").write_text("#!/bin/sh\necho pwned\n")
+    (junk / "evil-cmd").chmod(0o755)
+
+    import os
+    saved = os.environ.get("PATH", "")
+    os.environ["PATH"] = f"{junk}:{saved}"
+    try:
+        # The smoke command tries to call evil-cmd; under scrubbed PATH
+        # it must fail (command not found → non-zero exit).
+        m = _manifest(["evil-cmd"])
+        r = smoke_run(m, home=home)
+        assert r.passed is False, (
+            "evil-cmd was found despite scrubbed PATH — sandbox leak"
+        )
+    finally:
+        os.environ["PATH"] = saved
+
+
+def test_d_destination_local_bin_resolves(tmp_path):
+    """Smoke can still find a binary the destination shipped to ~/.local/bin."""
+    home = tmp_path / "home"
+    bin_dir = home / ".local" / "bin"
+    bin_dir.mkdir(parents=True)
+    cmd = bin_dir / "ok-cmd"
+    cmd.write_text("#!/bin/sh\nexit 0\n")
+    cmd.chmod(0o755)
+
+    m = _manifest(["ok-cmd"])
+    r = smoke_run(m, home=home)
+    assert r.passed is True, f"ok-cmd in ~/.local/bin failed: {r.failures}"
+
+
+def test_d_skip_flag_warns_but_does_not_run(tmp_path):
+    """`--no-smoke` opt-out: commands NOT run, warning recorded."""
+    m = _manifest(["false"])  # would fail if executed
+    r = smoke_run(m, home=tmp_path, skip_smoke_commands=True)
+    assert r.passed is True, "skip mode must not produce failures"
+    assert any("opt-out" in w for w in r.warnings)
+
+
+def test_d_env_does_not_leak_arbitrary_keys(tmp_path):
+    """Env vars not on the allowlist must NOT reach the smoke process."""
+    home = tmp_path / "home"
+    home.mkdir()
+    import os
+    os.environ["AGENTBRIDGE_TEST_SECRET"] = "must-not-leak"
+    try:
+        # Command echoes the env var; if it leaks, output is non-empty
+        # and the test below would catch it. We verify by exit code:
+        # `test -z` exits 0 if string is EMPTY.
+        m = _manifest(["test -z \"$AGENTBRIDGE_TEST_SECRET\""])
+        r = smoke_run(m, home=home)
+        assert r.passed is True, (
+            "AGENTBRIDGE_TEST_SECRET leaked into smoke env"
+        )
+    finally:
+        os.environ.pop("AGENTBRIDGE_TEST_SECRET", None)
+
+
 def test_g6_timeout_is_a_failure(tmp_path):
     """Hanging command must NOT block the smoke step forever."""
     # Override the timeout to keep the test fast.

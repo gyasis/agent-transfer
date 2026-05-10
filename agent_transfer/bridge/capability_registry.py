@@ -90,6 +90,58 @@ def load_registered(name: str, *, home: Path) -> Optional[CapabilityRegistration
         raise RegistryError(f"Invalid registration in {p}: {e}") from e
 
 
+def _validate_asset_path(raw: str, resolved: Path, home: Path) -> None:
+    """Reject paths outside $HOME, symlinks, and traversal escapes (B — F2).
+
+    Registry YAML files at ~/.claude/capabilities/ are writable by any
+    local process. Without these guards, a registration could declare
+    `/etc/shadow` or `~/../etc/passwd` and AgentBridge would dutifully
+    bundle it. The MVP threat model assumes the user owns the source
+    machine, but a stricter contract (capability bundles distributable
+    across users) requires hard rejection at the trust boundary.
+
+    Rules:
+      1. Resolved path MUST be inside $HOME (or be $HOME itself).
+      2. Resolved path MUST NOT be a symlink and MUST NOT traverse one.
+         Anywhere along the path that's a symlink → reject.
+      3. Raw entry MUST NOT contain `..` segments.
+    """
+    # 3. Reject `..` in the raw spec — the user shouldn't be writing
+    # traversals into the registry, even harmless ones.
+    if ".." in raw.split("/"):
+        raise RegistryError(
+            f"Registered asset path may not contain '..': {raw!r}"
+        )
+
+    # 2. Reject symlinks anywhere on the path. We walk the chain and
+    # check is_symlink() at every component that exists. resolve()
+    # would silently follow them.
+    parent = resolved
+    while True:
+        if parent.is_symlink():
+            raise RegistryError(
+                f"Registered asset {raw!r} resolves through a symlink "
+                f"at {parent} — refusing to follow (B — F2 trust boundary)."
+            )
+        if parent.parent == parent:
+            break
+        parent = parent.parent
+
+    # 1. Must be inside $HOME. Use lexical comparison on resolved
+    # absolute paths — but resolve() would follow symlinks, defeating
+    # the symlink check above. Compare absolute (non-resolved) paths.
+    abs_resolved = resolved if resolved.is_absolute() else resolved.absolute()
+    home_abs = home if home.is_absolute() else home.absolute()
+    try:
+        abs_resolved.relative_to(home_abs)
+    except ValueError:
+        raise RegistryError(
+            f"Registered asset {raw!r} (-> {abs_resolved}) is outside "
+            f"$HOME ({home_abs}). Registry assets must live under $HOME "
+            "to keep capability bundles user-scoped."
+        )
+
+
 def expand_asset_paths(reg: CapabilityRegistration, *, home: Path) -> List[Path]:
     """Resolve `~/`-relative asset paths and recurse into directories.
 
@@ -99,6 +151,8 @@ def expand_asset_paths(reg: CapabilityRegistration, *, home: Path) -> List[Path]
       • A path containing `~` (expanded via `home`).
 
     Missing paths raise RegistryError — registries must be authoritative.
+    Paths that escape $HOME, traverse symlinks, or contain `..` are
+    rejected (B — F2 trust boundary).
     """
     out: List[Path] = []
     for raw in reg.assets:
@@ -109,6 +163,8 @@ def expand_asset_paths(reg: CapabilityRegistration, *, home: Path) -> List[Path]
         else:
             p = Path(raw)
 
+        _validate_asset_path(raw, p, home)
+
         if not p.exists():
             raise RegistryError(
                 f"Registered asset does not exist on this machine: {raw!r} "
@@ -118,7 +174,25 @@ def expand_asset_paths(reg: CapabilityRegistration, *, home: Path) -> List[Path]
         if p.is_file():
             out.append(p)
         elif p.is_dir():
-            out.extend(sub for sub in p.rglob("*") if sub.is_file())
+            # Per B — F2: every recursed sub-path must also pass the
+            # symlink + $HOME check, since rglob can yield symlinked
+            # children that point outside $HOME.
+            for sub in p.rglob("*"):
+                if not sub.is_file():
+                    continue
+                if sub.is_symlink():
+                    raise RegistryError(
+                        f"Registered dir {raw!r} contains symlink at {sub} "
+                        "— refusing to follow."
+                    )
+                try:
+                    sub.absolute().relative_to(home.absolute())
+                except ValueError:
+                    raise RegistryError(
+                        f"Registered dir {raw!r} contains path outside $HOME: "
+                        f"{sub}"
+                    )
+                out.append(sub)
         else:
             raise RegistryError(f"Asset is neither file nor dir: {p}")
     return out

@@ -95,11 +95,42 @@ def _check_dependencies(manifest: ManifestModel, result: SmokeTestResult) -> Non
 
 _SMOKE_COMMAND_TIMEOUT_S = 10
 
+# D (Hunter A F8) — minimal sandboxed PATH for smoke commands.
+# Pre-fix: the smoke runner inherited the composer's full PATH, so a
+# command like `sio --version` could pass on a developer box (where
+# ~/.local/bin is on PATH) and silently fail on a clean receiver. Worse,
+# combined with the registry-as-trust-boundary issue (F3), an attacker-
+# planted YAML could exec arbitrary tooling from a non-standard PATH.
+# Reset PATH to a vetted minimum + the destination's ~/bin and
+# ~/.local/bin so capability-declared binaries can still resolve.
+_SMOKE_SAFE_PATH_BASE = "/usr/local/bin:/usr/bin:/bin"
+
+
+def _smoke_env(home: Path) -> dict[str, str]:
+    """Build a scrubbed env for sh -c invocation (D — F8)."""
+    base = {
+        "HOME": str(home),
+        "PATH": (
+            f"{home}/bin:{home}/.local/bin:{_SMOKE_SAFE_PATH_BASE}"
+        ),
+        # Locale so command output (used in failure-tail) decodes sanely.
+        "LANG": os.environ.get("LANG", "C.UTF-8"),
+        "LC_ALL": os.environ.get("LC_ALL", "C.UTF-8"),
+        # SHELL — `sh -c` ignores it but downstream subshells may peek.
+        "SHELL": "/bin/sh",
+    }
+    # Some commands genuinely need TERM (less, vi, color decisions).
+    if "TERM" in os.environ:
+        base["TERM"] = os.environ["TERM"]
+    return base
+
 
 def _check_smoke_commands(
     manifest: ManifestModel,
     home: Path,
     result: SmokeTestResult,
+    *,
+    skip: bool = False,
 ) -> None:
     """G6 — run capability-declared smoke commands; each must exit 0.
 
@@ -108,16 +139,29 @@ def _check_smoke_commands(
     the `sio` binary is missing on PATH; a hook block lands but a parse
     error earlier in the file means it never reaches it).
 
-    Commands run under `sh -c` with HOME pointed at the destination so
-    `~/`-relative checks work as installed. Each is hard-capped at
-    10 seconds.
+    D (Hunter A F3+F8) — env is scrubbed: only HOME / PATH (vetted set
+    + destination ~/bin) / LANG / LC_ALL / SHELL / TERM are forwarded.
+    Inheriting the receiver's full env opens a privilege-escalation
+    path through registry-planted smoke_commands.
+
+    Commands are hard-capped at 10 seconds (per-command timeout override
+    is not yet a manifest field — defer if needed).
+
+    `skip=True` suppresses execution; the result records a warning so
+    the user knows smoke was opt-out'd. Used by the `--no-smoke` CLI
+    flag for environments where running arbitrary shell from a bundle
+    is itself the threat.
     """
     cmds = list(manifest.capability.smoke_commands)
     if not cmds:
         return
+    if skip:
+        result.warn(
+            f"smoke commands skipped by user opt-out ({len(cmds)} declared)"
+        )
+        return
 
-    env = dict(os.environ)
-    env["HOME"] = str(home)
+    env = _smoke_env(home)
 
     for cmd in cmds:
         try:
@@ -146,7 +190,12 @@ def _check_smoke_commands(
             )
 
 
-def run(manifest: ManifestModel, *, home: Path | None = None) -> SmokeTestResult:
+def run(
+    manifest: ManifestModel,
+    *,
+    home: Path | None = None,
+    skip_smoke_commands: bool = False,
+) -> SmokeTestResult:
     """Run smoke test against the destination machine.
 
     The caller (ingest CLI in T035) is responsible for asking the
@@ -169,7 +218,7 @@ def run(manifest: ManifestModel, *, home: Path | None = None) -> SmokeTestResult
     _check_dependencies(manifest, result)
 
     # Check 3 — capability-declared smoke commands (G6).
-    _check_smoke_commands(manifest, home, result)
+    _check_smoke_commands(manifest, home, result, skip=skip_smoke_commands)
 
     # Check 4 — compose self-interrogation prompt for the caller to use.
     result.self_interrogation_prompt = SELF_INTERROGATION_PROMPT.format(

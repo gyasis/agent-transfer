@@ -267,3 +267,59 @@ def test_g9_snapshot_preserves_existing_baseline(tmp_path):
     with tarfile.open(bundle / "rollback.tar.gz") as tar:
         f = tar.extractfile("before/home/config.txt")
         assert f.read() == b"INSTALLED"
+
+
+def test_h_ingest_result_signals_rollback_reuse(tmp_path):
+    """H — IngestResult.rollback_reused tells the user the second ingest
+    preserved the first ingest's baseline (G9) rather than capturing
+    fresh pre-install state. Silent reuse is the original gap; this is
+    the user-visible signal.
+    """
+    from agent_transfer.bridge.ingest import ingest
+    from datetime import datetime
+
+    home = tmp_path / "home"
+    home.mkdir()
+    target = home / ".claude" / "skills" / "test.md"
+    target.parent.mkdir(parents=True)
+
+    # Build a minimal bundle by hand.
+    bundle_dir = tmp_path / "bundle"
+    bundle_dir.mkdir()
+    (bundle_dir / "bundle").mkdir()
+    src = bundle_dir / "bundle" / "test.md"
+    src.write_text("# from bundle\n")
+
+    import hashlib
+    sha = hashlib.sha256(src.read_bytes()).hexdigest()
+
+    from agent_transfer.bridge.models import (
+        AssetEntry, Capability, ManifestModel,
+    )
+    manifest = ManifestModel(
+        generated_at=datetime.utcnow(),
+        source_machine_hint="test",
+        capability=Capability(
+            name="t", description="x", intent="x",
+            assets=[AssetEntry(
+                path="test.md",
+                dest_path="~/.claude/skills/test.md",
+                risk="green",
+                conflict="overwrite",
+                sha256=sha,
+                mode_bits=0o644,
+            )],
+        ),
+    )
+    (bundle_dir / "manifest.json").write_text(manifest.model_dump_json())
+
+    # First ingest: rollback.tar.gz didn't exist before — should NOT be reused.
+    r1 = ingest(bundle_dir, home=home, auto_yes=True, interactive=False)
+    assert r1.rollback_reused is False, "first ingest should NOT signal reuse"
+
+    # Second ingest: rollback.tar.gz exists from first run.
+    r2 = ingest(bundle_dir, home=home, auto_yes=True, interactive=False)
+    assert r2.rollback_reused is True, (
+        "second ingest must signal that rollback baseline was preserved "
+        "(silent reuse is the original gap)"
+    )

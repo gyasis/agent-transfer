@@ -147,6 +147,88 @@ def test_h8_merge_rejects_no_markers(tmp_path):
         _merge_markdown(target, "raw fragment without markers\n")
 
 
+def test_e_merge_rejects_marker_for_other_capability(tmp_path):
+    """E (Hunter A F5) — incoming marker name must match the capability."""
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("# CLAUDE.md\n")
+    incoming = (
+        "<!-- BEGIN agentbridge:cascade-memory -->\n"
+        "rules\n"
+        "<!-- END agentbridge:cascade-memory -->\n"
+    )
+    with pytest.raises(_MarkdownMergeError, match="does not belong to capability 'sio'"):
+        _merge_markdown(target, incoming, capability_name="sio")
+
+
+def test_e_merge_accepts_exact_capability_name(tmp_path):
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("# CLAUDE.md\n")
+    incoming = (
+        "<!-- BEGIN agentbridge:sio -->\n"
+        "rules\n"
+        "<!-- END agentbridge:sio -->\n"
+    )
+    _merge_markdown(target, incoming, capability_name="sio")
+    assert "BEGIN agentbridge:sio" in target.read_text()
+
+
+def test_e_merge_accepts_subnamespace(tmp_path):
+    """sio.routing is a sub-block of capability sio — allowed."""
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("# CLAUDE.md\n")
+    incoming = (
+        "<!-- BEGIN agentbridge:sio.routing -->\n"
+        "routing\n"
+        "<!-- END agentbridge:sio.routing -->\n"
+    )
+    _merge_markdown(target, incoming, capability_name="sio")
+    assert "BEGIN agentbridge:sio.routing" in target.read_text()
+
+
+def test_e_merge_rejects_prefix_collision(tmp_path):
+    """`siofoo` is NOT a sub-namespace of `sio` (no separating `.`)."""
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("# CLAUDE.md\n")
+    incoming = (
+        "<!-- BEGIN agentbridge:siofoo -->\n"
+        "x\n"
+        "<!-- END agentbridge:siofoo -->\n"
+    )
+    with pytest.raises(_MarkdownMergeError, match="does not belong to"):
+        _merge_markdown(target, incoming, capability_name="sio")
+
+
+def test_f_post_merge_scan_catches_preexisting_secret(tmp_path):
+    """F (Hunter B G1/H2 adjacent) — post-merge re-scan flags secrets in
+    the resulting file even when the bundle's own block is clean.
+
+    Models a destination CLAUDE.md that already contains a credential;
+    our merge adds an unrelated block, but the merged file still has the
+    secret. Should produce a non-fatal warning.
+    """
+    from agent_transfer.bridge.ingest import _post_merge_secret_scan
+    target = tmp_path / "CLAUDE.md"
+    target.write_text(
+        "# CLAUDE.md\n\n"
+        "Bearer abcdef0123456789ABCDEF0123456789\n"  # pre-existing secret
+        "\n"
+        "<!-- BEGIN agentbridge:sio -->\n"
+        "clean rules\n"
+        "<!-- END agentbridge:sio -->\n"
+    )
+    warns = _post_merge_secret_scan(target)
+    assert any("Bearer" in w or "post-merge secret" in w for w in warns), (
+        f"expected post-merge secret warning, got: {warns}"
+    )
+
+
+def test_f_post_merge_scan_silent_when_clean(tmp_path):
+    target = tmp_path / "CLAUDE.md"
+    target.write_text("# CLAUDE.md\n\nNothing suspicious here.\n")
+    from agent_transfer.bridge.ingest import _post_merge_secret_scan
+    assert _post_merge_secret_scan(target) == []
+
+
 def test_h8_merge_rejects_mismatched_names(tmp_path):
     target = tmp_path / "CLAUDE.md"
     target.write_text("# CLAUDE.md\n")

@@ -139,6 +139,18 @@
           },
           "title": "Smoke Commands",
           "type": "array"
+        },
+        "registered_via": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegistrationRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "C (B G12 adjacent) \u2014 when set, this capability was composed from a registry YAML rather than discovery. Path + sha lets the receiver verify provenance and tell registry-composed bundles from discovery-composed ones (otherwise they'd be byte-indistinguishable)."
         }
       },
       "required": [
@@ -186,6 +198,27 @@
         "user_choice"
       ],
       "title": "Confirmation",
+      "type": "object"
+    },
+    "RegistrationRef": {
+      "description": "C (Hunter B G12 adjacent) \u2014 provenance of a registry-composed bundle.\n\nWhen a capability is composed from `~/.claude/capabilities/<name>.yaml`\n(rather than from discovery), the registry path + content sha256 are\nstamped here. Receivers can verify the bundle's origin and replay the\nsame registration semantically.",
+      "properties": {
+        "registry_path": {
+          "description": "Path to the registry YAML on the source machine, with ~/ where applicable",
+          "title": "Registry Path",
+          "type": "string"
+        },
+        "yaml_sha256": {
+          "description": "Hex sha256 of the registry YAML at compose time",
+          "title": "Yaml Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "registry_path",
+        "yaml_sha256"
+      ],
+      "title": "RegistrationRef",
       "type": "object"
     }
   },
