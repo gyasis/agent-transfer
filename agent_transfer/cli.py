@@ -58,6 +58,9 @@ def cli():
       CLAUDE.md   ~/.claude/CLAUDE.md (global) and <project>/CLAUDE.md
       Settings    ~/.claude/settings.json, settings.local.json, keybindings.json
       MCP Config  ~/.claude.json (home root) and ~/.claude/mcp.json
+      Bin scripts Auto-discovered ~/bin and ~/.local/bin scripts referenced
+                  by skills/rules/hooks (session-search, prd, bb, etc.).
+                  Bundled to bin-scripts/ in the archive; restored on import.
 
     \b
     PIECEMEAL USAGE:

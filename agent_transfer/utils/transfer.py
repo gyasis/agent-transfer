@@ -163,8 +163,13 @@ def export_agents_and_skills(
                     shutil.copy2(agent_path, project_agents_dir / agent_path.name)
 
         # Define ignore patterns for skill directory copying
-        def ignore_patterns(_directory, files):
-            """Ignore common development artifacts."""
+        def ignore_patterns(directory, files):
+            """Ignore common development artifacts and broken symlinks.
+
+            Broken symlinks (dangling, or pointing to user-specific paths that
+            do not exist on this machine) crash shutil.copytree. Skip them so
+            export does not abort on unrelated skills.
+            """
             ignore_list = [
                 ".venv",
                 "__pycache__",
@@ -173,7 +178,16 @@ def export_agents_and_skills(
                 ".DS_Store",
                 "node_modules",
             ]
-            return [f for f in files if any(pattern in f for pattern in ignore_list)]
+            skipped = []
+            for f in files:
+                if any(pattern in f for pattern in ignore_list):
+                    skipped.append(f)
+                    continue
+                p = Path(directory) / f
+                if p.is_symlink() and not p.exists():
+                    console.print(f"[yellow]Skipping broken symlink: {p}[/yellow]")
+                    skipped.append(f)
+            return skipped
 
         # Copy selected skills
         user_skill_count = 0
