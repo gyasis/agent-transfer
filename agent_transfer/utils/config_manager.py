@@ -634,7 +634,15 @@ def emit_asset_entries(
 
     out: _List[_Dict] = []
     for p in paths:
-        abs_str = str(p.resolve())
+        # Use the ORIGINAL absolute path (do not resolve symlinks).
+        # Resolving collapses domain-shadow symlinks (e.g. user has 12
+        # rules/domains/<keyword>.md symlinks all pointing at hh-dev.md
+        # so any of those keywords loads the same content) into a single
+        # canonical target — producing 13 AssetEntries with identical
+        # dest_path that R12 H#9 rejects. Each alias must keep its own
+        # dest_path; sha-by-content + shutil.copy2 (follows symlinks)
+        # handle bundling correctly without needing to dedupe bytes here.
+        abs_str = str(p if p.is_absolute() else p.absolute())
         basename = _os.path.basename(abs_str)
         hooks_root = str(home / ".claude" / "hooks") + "/"
         is_top_level_hook = (
