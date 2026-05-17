@@ -1,0 +1,122 @@
+#!/bin/bash
+# Post-checkout hook for dev-kid + speckit integration
+# Auto-symlinks tasks.md and constitution to speckit locations.
+#
+# This file is version-controlled. It is installed into the active git
+# repo via `git config core.hooksPath scripts/hooks` (done by install.sh).
+# Edit here, not in .git/hooks/, or your change will not propagate.
+
+set -u  # error on unset vars; do NOT set -e — we want to report errors and continue.
+
+BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+SPEC_TASKS=".specify/specs/${BRANCH}/tasks.md"
+SPEC_CONSTITUTION=".specify/memory/constitution.md"
+MEMORY_BANK_CONSTITUTION="memory-bank/shared/.constitution.md"
+
+# Track failure for final exit code. post-checkout previously always
+# exit 0 even on enforced failures — callers couldn't detect
+# misconfiguration. We now exit 1 if .devkid/config.json sets
+# `constitution.enforce: true` AND constitution linking failed.
+FAIL=0
+
+# Ephemeral worktree-agent branches (created by Claude Code subagent
+# isolation) don't have their own spec docs — skip tasks symlink for
+# them, otherwise the hook spams "No tasks.md found" every spawn.
+case "$BRANCH" in
+    worktree-agent-*)
+        SKIP_TASKS=1
+        ;;
+    *)
+        SKIP_TASKS=0
+        ;;
+esac
+
+# ===== TASKS SYMLINKING =====
+
+if [ "$SKIP_TASKS" = "0" ]; then
+    # Backup existing tasks.md if it's a regular file with uncommitted changes.
+    # `git diff --quiet` exits 128 when the file is untracked — treat that as
+    # "no backup needed" rather than spuriously backing up every untracked file.
+    if [ -f "tasks.md" ] && [ ! -L "tasks.md" ]; then
+        DIFF_RC=0
+        git diff --quiet tasks.md 2>/dev/null || DIFF_RC=$?
+        if [ "$DIFF_RC" = "1" ]; then
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE=".claude/tasks.md.backup.$TIMESTAMP"
+            mkdir -p .claude
+            cp tasks.md "$BACKUP_FILE"
+            echo "⚠️  Backed up uncommitted tasks.md → $BACKUP_FILE"
+        fi
+    fi
+
+    if [ -L "tasks.md" ] || [ -f "tasks.md" ]; then
+        rm -f tasks.md
+    fi
+
+    if [ -f "$SPEC_TASKS" ]; then
+        if [ -r "$SPEC_TASKS" ]; then
+            echo "🔗 Linking tasks.md → $SPEC_TASKS"
+            ln -s "$SPEC_TASKS" tasks.md
+            if [ -r "tasks.md" ]; then
+                echo "   ✅ Tasks loaded for branch: $BRANCH"
+            else
+                echo "   ❌ ERROR: Symlink created but target not readable"
+                rm -f tasks.md
+            fi
+        else
+            echo "   ❌ ERROR: $SPEC_TASKS exists but not readable"
+        fi
+    else
+        if [ -d ".specify/specs" ]; then
+            echo "⚠️  No tasks.md found for branch $BRANCH"
+            echo "   Expected: $SPEC_TASKS"
+            echo "   Run /speckit.tasks to generate tasks for this feature"
+        fi
+    fi
+fi
+
+# ===== CONSTITUTION SYMLINKING =====
+
+if [ -L "$MEMORY_BANK_CONSTITUTION" ]; then
+    rm -f "$MEMORY_BANK_CONSTITUTION"
+fi
+
+if [ -f "$SPEC_CONSTITUTION" ]; then
+    if [ -r "$SPEC_CONSTITUTION" ]; then
+        # Ensure parent dir exists. In a fresh `git worktree add`, the
+        # `memory-bank/shared/` dir may not have been materialized yet —
+        # historically `memory-bank/` was gitignored entirely. Even with
+        # `shared/` now tracked (.gitignore exception), keeping mkdir -p
+        # here makes the hook tolerant of older clones.
+        mkdir -p "$(dirname "$MEMORY_BANK_CONSTITUTION")"
+        echo "🔗 Linking $MEMORY_BANK_CONSTITUTION → $SPEC_CONSTITUTION"
+        if ln -s "../../.specify/memory/constitution.md" "$MEMORY_BANK_CONSTITUTION" 2>/dev/null; then
+            if [ -r "$MEMORY_BANK_CONSTITUTION" ]; then
+                echo "   ✅ Constitution linked"
+            else
+                echo "   ❌ ERROR: Constitution symlink created but target not readable"
+                rm -f "$MEMORY_BANK_CONSTITUTION"
+                FAIL=1
+            fi
+        else
+            echo "   ❌ ERROR: Failed to create constitution symlink"
+            FAIL=1
+        fi
+    else
+        echo "   ❌ ERROR: $SPEC_CONSTITUTION exists but not readable"
+        FAIL=1
+    fi
+else
+    if [ -d ".specify/memory" ]; then
+        echo "⚠️  No constitution found"
+        echo "   Expected: $SPEC_CONSTITUTION"
+        echo "   Run /speckit.constitution to create project constitution"
+    fi
+fi
+
+if [ "$FAIL" = "1" ]; then
+    if [ -f ".devkid/config.json" ] && grep -q '"enforce": true' .devkid/config.json 2>/dev/null; then
+        exit 1
+    fi
+fi
+exit 0

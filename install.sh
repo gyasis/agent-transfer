@@ -33,6 +33,17 @@ echo ""
 echo "📦 Installing agent-transfer package..."
 uv pip install -e .
 
+# Wire git hooks via core.hooksPath. Hooks live in scripts/hooks/ in
+# the tree (version-controlled). Without this, .git/hooks/ is empty on
+# a fresh clone and dev-kid + speckit integrations silently no-op.
+# Safe to re-run: core.hooksPath is just a config setting.
+if [ -d ".git" ] || [ -f ".git" ]; then
+    echo "🔗 Wiring git hooks (scripts/hooks/) via core.hooksPath..."
+    git config core.hooksPath scripts/hooks
+    chmod +x scripts/hooks/* 2>/dev/null || true
+    echo "✅ Hooks installed"
+fi
+
 echo ""
 echo "✅ Installation complete!"
 echo ""

@@ -1,0 +1,46 @@
+#!/bin/bash
+# Post-commit hook for dev-kid
+# Logs each commit to the dev-kid activity stream + system bus.
+#
+# This file is version-controlled. It is installed via core.hooksPath
+# in install.sh. Edit here, not in .git/hooks/.
+
+set -u
+
+# Ensure .claude/ exists — it's gitignored, so fresh worktrees don't
+# have it. Without this, `echo >> .claude/activity_stream.md` errors
+# with "No such file or directory" on every commit in a fresh tree.
+mkdir -p .claude
+
+# Log to activity stream
+{
+    echo ""
+    echo "### $(date +%Y-%m-%d\ %H:%M:%S) - Git Checkpoint"
+    echo "- Commit: $(git rev-parse --short HEAD)"
+} >> .claude/activity_stream.md
+
+# Update system bus — wrapped in try/except so a schema change doesn't
+# break every commit. Failure here is observability, not correctness.
+python3 << 'PYTHON' 2>/dev/null || true
+import json
+from pathlib import Path
+from datetime import datetime
+
+bus_file = Path('.claude/system_bus.json')
+if bus_file.exists():
+    try:
+        with open(bus_file) as f:
+            bus = json.load(f)
+        bus.setdefault('events', []).append({
+            'timestamp': datetime.now().isoformat(),
+            'agent': 'git-manager',
+            'event_type': 'checkpoint_created',
+        })
+        with open(bus_file, 'w') as f:
+            json.dump(bus, f, indent=2)
+    except Exception:
+        # Schema drift or transient FS error — don't fail the commit.
+        pass
+PYTHON
+
+exit 0
