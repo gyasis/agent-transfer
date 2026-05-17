@@ -1011,7 +1011,21 @@ def preflight(archive, json_output, self_audit, force):
 @click.option("--add", multiple=True, help="dest_path of a CONTEXT asset to opt-in (repeat).")
 @click.option("--yes", "auto_yes", is_flag=True, help="Skip prompts; auto-confirm Yellow/Red (CI / tests).")
 @click.option("--no-bundle", is_flag=True, help="Stop after preview; do not write bundle.")
-def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle):
+@click.option(
+    "--anchor-mode",
+    type=click.Choice(["name", "body", "both"], case_sensitive=False),
+    default="name",
+    show_default=True,
+    help=(
+        "How the anchor pass matches the capability name. 'name' (default) "
+        "— file-stem match only, correct for capabilities anchored on a "
+        "concrete artifact (CLI tool, named skill); avoids the upstream-"
+        "consumer explosion where any file mentioning X gets falsely tagged "
+        "CORE. 'body' — body-text match only. 'both' — legacy OR-match (pre-"
+        "spec-006); use sparingly."
+    ),
+)
+def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle, anchor_mode):
     """Bundle a named capability for transfer to another machine.
 
     Pipeline: graph walk -> 3-tier selection matrix -> briefing render ->
@@ -1036,7 +1050,10 @@ def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle
     bundle_root.mkdir(parents=True, exist_ok=True)
 
     try:
-        cap = _compose(capability, description=description, intent=intent)
+        cap = _compose(
+            capability, description=description, intent=intent,
+            anchor_mode=anchor_mode,
+        )
     except ValueError as e:
         console.print(f"[red]compose failed:[/red] {e}")
         sys.exit(2)

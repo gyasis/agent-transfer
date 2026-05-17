@@ -1,1 +1,0 @@
-specs/003-agentbridge-mvp/tasks.md

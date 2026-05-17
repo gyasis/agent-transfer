@@ -206,9 +206,38 @@ def _expand_skill_package(pkg_dir: Path) -> List[Path]:
 def _anchor_pass(
     capability_name: str,
     claude_dir: Path,
+    *,
+    anchor_mode: str = "name",
+    bin_dirs: Optional[List[Path]] = None,
 ) -> List[_Candidate]:
-    """Return CORE-tier candidates whose name/body matches the capability."""
-    synonyms = _split_synonyms(capability_name)
+    """Return CORE-tier candidates whose name/body matches the capability.
+
+    anchor_mode:
+        "name" (default) — match capability synonyms only against the file
+            stem. Correct for a capability anchored on a concrete artifact
+            (CLI tool, named skill). Prevents the ".body match" explosion
+            where any skill that *uses* X gets falsely tagged CORE.
+        "body" — match only against the first ~2 KiB of file body. Useful
+            for capabilities expressed as concepts where many files
+            implement the concept but no file is named for it.
+        "both" — legacy behavior: name OR body match. Pre-spec-006
+            default. Retained for backward compatibility; use sparingly,
+            it produces large CORE sets for common verbs.
+    """
+    if anchor_mode not in ("name", "body", "both"):
+        raise ValueError(
+            f"anchor_mode must be 'name', 'body', or 'both'; got {anchor_mode!r}"
+        )
+    # In name mode, use ONLY the full normalized capability as the synonym
+    # — anchor identity must be strict. _split_synonyms produces
+    # {'session search', 'session', 'search'} for "session-search", which
+    # then matches "session-recall", "specstory-search", etc. as false
+    # CORE anchors. Body/both modes keep the looser synonym set so concept
+    # bundles ("memory", "session") still discover related artifacts.
+    if anchor_mode == "name":
+        synonyms = {_norm_name(capability_name)}
+    else:
+        synonyms = _split_synonyms(capability_name)
     candidates: List[_Candidate] = []
     seen: Set[Path] = set()
 
@@ -219,16 +248,26 @@ def _anchor_pass(
 
     for p in md_files:
         norm_name = _norm_name(p.stem)
-        norm_body = _norm_name(_safe_read_head(p))
-        # G4 — word-boundary match on BOTH name and body. Substring match
-        # on name produced absurd false positives (capability "sio" matched
-        # "session", "decision", "mission" — every word containing s-i-o
-        # in sequence). _norm_name already collapses non-alnum to single
-        # spaces, so wrapping with leading/trailing spaces gives token
-        # equality without regex.
-        hit = any(f" {s} " in f" {norm_name} " for s in synonyms) or any(
-            f" {s} " in f" {norm_body} " for s in synonyms
-        )
+        # G4 — word-boundary match. _norm_name collapses non-alnum to
+        # single spaces; wrapping with leading/trailing spaces gives
+        # token equality without regex. Substring match without bounds
+        # produced false positives (capability "sio" matched "session",
+        # "decision", "mission" — anything containing s-i-o in sequence).
+        name_hit = any(f" {s} " in f" {norm_name} " for s in synonyms)
+        body_hit = False
+        # Read body only when needed — anchor_mode="name" is the hot path
+        # for narrow-capability bundles and skipping the read here makes
+        # it noticeably faster on large ~/.claude/ trees.
+        if anchor_mode in ("body", "both"):
+            norm_body = _norm_name(_safe_read_head(p))
+            body_hit = any(f" {s} " in f" {norm_body} " for s in synonyms)
+        if anchor_mode == "name":
+            hit = name_hit
+        elif anchor_mode == "body":
+            hit = body_hit
+        else:  # "both"
+            hit = name_hit or body_hit
+        # (continued — selection happens after this block)
         # Special case: skill-package SKILL.md — match against package
         # slug too, since the SKILL.md filename itself is generic.
         if not hit:
@@ -252,6 +291,24 @@ def _anchor_pass(
                         _Candidate(sibling, "CORE", _classify_kind(sibling, claude_dir))
                     )
                     seen.add(sibling)
+
+    # ALSO scan ~/bin and ~/.local/bin for executables whose stem matches
+    # the capability name. Critical for capabilities anchored on a CLI
+    # tool (e.g. "session-search" lives at ~/bin/session-search, NOT in
+    # ~/.claude/). Without this, anchor_mode="name" would return zero
+    # cores for any bin-anchored capability and raise ValueError.
+    if anchor_mode in ("name", "both") and bin_dirs:
+        for bd in bin_dirs:
+            if not bd.exists():
+                continue
+            for entry in bd.iterdir():
+                if not entry.is_file():
+                    continue
+                stem_norm = _norm_name(entry.stem or entry.name)
+                if any(f" {s} " in f" {stem_norm} " for s in synonyms):
+                    if entry not in seen:
+                        candidates.append(_Candidate(entry, "CORE", "bin"))
+                        seen.add(entry)
 
     return candidates
 
@@ -363,6 +420,7 @@ def compose(
     home: Optional[Path] = None,
     description: Optional[str] = None,
     intent: Optional[str] = None,
+    anchor_mode: str = "name",
 ) -> Capability:
     """Compose a Capability bundle from a free-text capability name.
 
@@ -371,6 +429,13 @@ def compose(
         home: Override $HOME — for tests with a fixture HOME.
         description: One-sentence what-it-does (defaults to a placeholder).
         intent: User's why (defaults to a placeholder).
+        anchor_mode: How to match the capability name against discovered
+            files in the anchor pass. "name" (default) — file-stem match
+            only; correct for capabilities anchored on a concrete artifact
+            (CLI tool, named skill). "body" — body-text match only. "both"
+            — legacy OR-match (pre-spec-006); produces large CORE sets and
+            pulls in upstream consumers as false anchors. See
+            _anchor_pass docstring for guidance.
 
     Returns:
         Capability with `assets` pre-tiered. Tier is encoded in
@@ -391,7 +456,32 @@ def compose(
     if registration is not None:
         return _compose_from_registration(registration, home=home)
 
-    cores = _anchor_pass(capability_name, claude_dir)
+    cores = _anchor_pass(
+        capability_name, claude_dir,
+        anchor_mode=anchor_mode, bin_dirs=bin_dirs,
+    )
+
+    # Smart fallback: when anchor_mode="name" finds nothing (capability is
+    # conceptual, no concrete artifact stem-matches), automatically widen
+    # to "both" so users on legacy capabilities (e.g. "cascade-memory" with
+    # no matching file stem) keep working. The fallback emits a stderr
+    # WARN so the user knows scope might be wider than expected and can
+    # opt-in to a registry file at ~/.claude/capabilities/<name>.yaml for
+    # deterministic results.
+    if not cores and anchor_mode == "name":
+        import sys as _sys
+        print(
+            f"WARN: anchor-mode=name found no concrete artifact for "
+            f"{capability_name!r}; falling back to anchor-mode=both. "
+            f"For deterministic scoping, register at "
+            f"~/.claude/capabilities/{capability_name}.yaml or pass "
+            f"--anchor-mode both explicitly.",
+            file=_sys.stderr,
+        )
+        cores = _anchor_pass(
+            capability_name, claude_dir,
+            anchor_mode="both", bin_dirs=bin_dirs,
+        )
 
     if not cores:
         raise ValueError(
