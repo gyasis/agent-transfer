@@ -48,6 +48,94 @@ _MAX_HOPS = 2
 
 _SLUG_REF_RE = re.compile(r"/([a-z][a-z0-9_\-]+)\b")
 
+# v1.1 — frontmatter delimiter at the start of a markdown file. Used by
+# _extract_behavior_md to skip YAML frontmatter (skills + rules) before
+# pulling the first paragraph as a behavior summary.
+_FRONTMATTER_RE = re.compile(r"^---\s*\n.*?\n---\s*\n", re.DOTALL)
+_BEHAVIOR_MD_MAX_CHARS = 200
+
+
+# v1.1 — map _Candidate.asset_kind (internal, free-form) to the AssetKind
+# Literal that AssetEntry now requires. Keep the internal taxonomy looser
+# than the schema so the composer can still describe things like CLAUDE.md
+# fragments without losing information; the manifest just records the
+# best-fit cross-harness category. claude_md_section → "capability" because
+# a CLAUDE.md fragment is a capability-level glue artifact, not file-level.
+_KIND_MAP = {
+    "skill": "skill",
+    "rule": "rule",
+    "hook": "hook",
+    "bin": "bin",
+    "claude_md_section": "capability",
+}
+
+
+def _normalize_kind(internal_kind: str) -> str:
+    return _KIND_MAP.get(internal_kind, "skill")
+
+
+def _extract_behavior_md(path: Path, kind: str) -> Optional[str]:
+    """v1.1 — return a short behavioral hint for the asset, or None.
+
+    Per user-approved defaults (PRD Q2):
+      • skill / rule: first non-frontmatter paragraph (~200 chars).
+      • hook / bin: leading `#`-comment block after any shebang.
+      • other kinds (capability): None — CLAUDE.md fragments wear their
+        markers and don't have a tidy summary.
+
+    Never executes --help; this is a static read so it stays safe + fast
+    and works inside `compose` even when the script imports fail.
+    """
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    if not text:
+        return None
+
+    if kind in ("skill", "rule"):
+        stripped = _FRONTMATTER_RE.sub("", text, count=1).lstrip()
+        # First paragraph = up to first blank line.
+        para = stripped.split("\n\n", 1)[0].strip()
+        # Drop leading markdown heading hashes for readability.
+        para = re.sub(r"^#+\s*", "", para)
+        if not para:
+            return None
+        if len(para) > _BEHAVIOR_MD_MAX_CHARS:
+            para = para[: _BEHAVIOR_MD_MAX_CHARS - 1].rstrip() + "…"
+        return para
+
+    if kind in ("hook", "bin"):
+        lines = text.splitlines()
+        out: List[str] = []
+        started = False
+        for ln in lines:
+            stripped = ln.strip()
+            # Skip shebang.
+            if not started and stripped.startswith("#!"):
+                continue
+            # Skip blank lines before comment block starts.
+            if not started and not stripped:
+                continue
+            if stripped.startswith("#"):
+                started = True
+                cleaned = stripped.lstrip("#").strip()
+                if cleaned:
+                    out.append(cleaned)
+                continue
+            if started:
+                break
+            # First non-comment, non-shebang line and no comment started → no hint.
+            break
+        if not out:
+            return None
+        text_out = " ".join(out)
+        if len(text_out) > _BEHAVIOR_MD_MAX_CHARS:
+            text_out = text_out[: _BEHAVIOR_MD_MAX_CHARS - 1].rstrip() + "…"
+        return text_out
+
+    return None
+
 
 @dataclass
 class _Candidate:

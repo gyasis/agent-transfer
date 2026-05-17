@@ -609,6 +609,8 @@ def emit_asset_entries(
     risk_for: _Optional[_Dict[str, str]] = None,
     conflict_for: _Optional[_Dict[str, str]] = None,
     home: _Optional[Path] = None,
+    kind_for: _Optional[_Dict[str, str]] = None,
+    behavior_for: _Optional[_Dict[str, str]] = None,
 ) -> _List[_Dict]:
     """Convert a list of filesystem paths to dicts shaped like AssetEntry.
 
@@ -629,6 +631,8 @@ def emit_asset_entries(
     home = home or Path.home()
     risk_for = risk_for or {}
     conflict_for = conflict_for or {}
+    kind_for = kind_for or {}
+    behavior_for = behavior_for or {}
     home_str = str(home)
     bin_dirs = (str(home / "bin"), str(home / ".local" / "bin"))
 
@@ -690,7 +694,14 @@ def emit_asset_entries(
         else:
             dest_path = abs_str
 
-        out.append({
+        # v1.1 — default kind inference from dest_path when caller omits.
+        # Receivers also use this same inference for back-compat with 1.0.x.
+        if abs_str in kind_for:
+            default_kind = kind_for[abs_str]
+        else:
+            default_kind = _infer_kind_from_dest(dest_path)
+
+        entry = {
             "path": _os.path.relpath(abs_str, home_str) if abs_str.startswith(home_str + "/") else _os.path.basename(abs_str),
             "dest_path": dest_path,
             "risk": risk_for.get(abs_str, default_risk),
@@ -698,5 +709,35 @@ def emit_asset_entries(
             "sha256": _sha256_of(p),
             "mode_bits": _file_mode(p),
             "notes": None,
-        })
+            "kind": default_kind,
+        }
+        if abs_str in behavior_for:
+            entry["behavior_md"] = behavior_for[abs_str]
+        out.append(entry)
     return out
+
+
+def _infer_kind_from_dest(dest_path: str) -> str:
+    """v1.1 — best-effort kind classification from dest_path.
+
+    Used as a fallback when the caller does not supply an explicit kind
+    (e.g. legacy 1.0.x bundles re-ingested under 1.1, or callers of
+    emit_asset_entries() that pre-date the kind plumbing). Returns one
+    of: skill | rule | hook | bin | capability. Never returns 'other'
+    — the AssetEntry validator would refuse it at seal time.
+    """
+    s = dest_path
+    if "/.claude/hooks/" in s or s.endswith(".hook"):
+        return "hook"
+    if "/.claude/rules/" in s:
+        return "rule"
+    if "/.claude/skills/" in s:
+        return "skill"
+    if "/.claude/capabilities/" in s:
+        return "capability"
+    if "/bin/" in s or "/.local/bin/" in s:
+        return "bin"
+    if s.endswith("/CLAUDE.md") or s == "~/.claude/CLAUDE.md":
+        return "capability"
+    # Markdown under ~/.claude/ — treat as skill-like (matches _classify_kind).
+    return "skill"

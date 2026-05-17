@@ -146,11 +146,12 @@ def test_h10_full_rewrite_handles_nested_through_public_api():
 def test_h9_duplicate_dest_path_rejected():
     a = AssetEntry(
         path="x", dest_path="~/x", risk="green", conflict="overwrite",
-        sha256="a" * 64, mode_bits=0o644,
+        sha256="a" * 64, mode_bits=0o644, kind="skill",
     )
     b = AssetEntry(
         path="y", dest_path="~/x",  # SAME dest as a
         risk="yellow", conflict="overwrite", sha256="b" * 64, mode_bits=0o644,
+        kind="skill",
     )
     with pytest.raises(Exception, match="duplicate dest_path"):
         Capability(name="t", description="d", intent="i", assets=[a, b])
@@ -308,6 +309,7 @@ def test_h_ingest_result_signals_rollback_reuse(tmp_path):
                 conflict="overwrite",
                 sha256=sha,
                 mode_bits=0o644,
+                kind="skill",
             )],
         ),
     )

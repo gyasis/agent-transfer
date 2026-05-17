@@ -56,6 +56,7 @@ def _example_manifest() -> ManifestModel:
                     sha256="a" * 64,
                     mode_bits=0o755,
                     notes="executable bit must survive round-trip",
+                    kind="bin",
                 ),
             ],
             dependencies=["ripgrep"],
@@ -91,6 +92,7 @@ def test_invalid_risk_tag_rejected(bad_risk):
             conflict="ask",
             sha256="a" * 64,
             mode_bits=0o644,
+            kind="skill",
         )
 
 
@@ -104,6 +106,7 @@ def test_invalid_conflict_rejected(bad_conflict):
             conflict=bad_conflict,  # type: ignore[arg-type]
             sha256="a" * 64,
             mode_bits=0o644,
+            kind="skill",
         )
 
 
@@ -116,4 +119,5 @@ def test_negative_mode_bits_rejected():
             conflict="skip",
             sha256="a" * 64,
             mode_bits=-1,
+            kind="skill",
         )

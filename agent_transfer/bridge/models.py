@@ -13,6 +13,20 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+# v1.1 bundle schema (additive: adds AssetEntry.kind + AssetEntry.behavior_md).
+# Receivers that only understand 1.0.x still parse 1.1.x bundles (pydantic
+# ignores unknown fields by default in BaseModel); 1.0.x bundles are accepted
+# by 1.1 ingest with a DeprecationWarning (see bridge/ingest.py).
+SCHEMA_VERSION = "1.1.0"
+MIN_SUPPORTED_SCHEMA = "1.0.0"
+
+# Cross-harness asset kind. v1.1 makes this required on AssetEntry so
+# non-Claude harnesses (OpenClaw / ZeroClaw / PromptChain) can map an asset
+# onto their own primitive — instead of guessing from dest_path. "other" is
+# explicitly refused at seal time; the composer must classify every shipped
+# asset into one of the five concrete categories.
+AssetKind = Literal["skill", "rule", "hook", "bin", "capability", "other"]
+
 # Risk tag for an individual asset. Drives whether user confirmation is required
 # at preview / ingest time. Green = personas/tone/text-only rules. Yellow = tool
 # defs, parameter types, settings.json fragments. Red = auth hooks, circuit
@@ -56,6 +70,33 @@ class AssetEntry(BaseModel):
         default=None,
         description="Optional human-readable note shown in Briefing Preview",
     )
+    kind: AssetKind = Field(
+        ...,
+        description=(
+            "v1.1 — concrete asset category for cross-harness mapping. One of "
+            "'skill' | 'rule' | 'hook' | 'bin' | 'capability'. 'other' is "
+            "reserved as a parser-side sentinel and is REJECTED at seal time."
+        ),
+    )
+    behavior_md: Optional[str] = Field(
+        default=None,
+        description=(
+            "v1.1 — short behavioral hint (~200 chars) extracted from the "
+            "asset source at compose time. Helps non-Claude receivers and "
+            "human readers see what each asset does without opening the file."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _refuse_kind_other(self) -> "AssetEntry":
+        """Refuse kind='other' at seal time — composer must classify."""
+        if self.kind == "other":
+            raise ValueError(
+                f"AssetEntry.kind='other' is not permitted at seal time "
+                f"(dest_path={self.dest_path!r}). Classify the asset as "
+                "one of: skill, rule, hook, bin, capability."
+            )
+        return self
 
 
 class BriefingSection(BaseModel):
@@ -154,7 +195,7 @@ class ManifestModel(BaseModel):
     `agentbridge-ingest` skill alongside BRIEFING.md.
     """
 
-    schema_version: str = Field(default="1.0.0")
+    schema_version: str = Field(default=SCHEMA_VERSION)
     generated_at: datetime
     source_machine_hint: str = Field(
         ...,

@@ -95,6 +95,7 @@ def _build_prd_bundle(tmp_path: Path) -> Path:
             conflict="ask",
             sha256=_sha(prd_bin_bytes),
             mode_bits=0o755,
+            kind="bin",
         ),
         AssetEntry(
             path=".claude/skills/prd.md",
@@ -103,6 +104,7 @@ def _build_prd_bundle(tmp_path: Path) -> Path:
             conflict="overwrite",
             sha256=_sha(prd_skill_bytes),
             mode_bits=0o644,
+            kind="skill",
         ),
         AssetEntry(
             path=".claude/rules/domains/plan-persistence.md",
@@ -111,6 +113,7 @@ def _build_prd_bundle(tmp_path: Path) -> Path:
             conflict="overwrite",
             sha256=_sha(rule_bytes),
             mode_bits=0o644,
+            kind="rule",
         ),
         AssetEntry(
             path=".claude/hooks/prd-guard/pre-tool-use.sh",
@@ -119,6 +122,7 @@ def _build_prd_bundle(tmp_path: Path) -> Path:
             conflict="ask",
             sha256=_sha(hook_bytes),
             mode_bits=0o755,
+            kind="hook",
         ),
         AssetEntry(
             path=".claude/settings.json",
@@ -127,6 +131,7 @@ def _build_prd_bundle(tmp_path: Path) -> Path:
             conflict="merge",
             sha256=_sha(settings_fragment_bytes),
             mode_bits=0o644,
+            kind="capability",
         ),
     ]
     cap = Capability(

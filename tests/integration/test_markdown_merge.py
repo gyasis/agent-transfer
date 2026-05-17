@@ -273,6 +273,7 @@ def test_j_post_merge_scan_runs_on_json_merge(tmp_path):
                 conflict="merge",
                 sha256=sha,
                 mode_bits=0o644,
+                kind="capability",
             )],
         ),
     )
@@ -322,6 +323,7 @@ def test_j_post_merge_scan_runs_on_overwrite(tmp_path):
                 conflict="overwrite",
                 sha256=sha,
                 mode_bits=0o644,
+                kind="skill",
             )],
         ),
     )

@@ -57,6 +57,32 @@
           "default": null,
           "description": "Optional human-readable note shown in Briefing Preview",
           "title": "Notes"
+        },
+        "kind": {
+          "description": "v1.1 \u2014 concrete asset category for cross-harness mapping. One of 'skill' | 'rule' | 'hook' | 'bin' | 'capability'. 'other' is reserved as a parser-side sentinel and is REJECTED at seal time.",
+          "enum": [
+            "skill",
+            "rule",
+            "hook",
+            "bin",
+            "capability",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "behavior_md": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "v1.1 \u2014 short behavioral hint (~200 chars) extracted from the asset source at compose time. Helps non-Claude receivers and human readers see what each asset does without opening the file.",
+          "title": "Behavior Md"
         }
       },
       "required": [
@@ -65,7 +91,8 @@
         "risk",
         "conflict",
         "sha256",
-        "mode_bits"
+        "mode_bits",
+        "kind"
       ],
       "title": "AssetEntry",
       "type": "object"
@@ -243,7 +270,7 @@
   ],
   "properties": {
     "schema_version": {
-      "default": "1.0.0",
+      "default": "1.1.0",
       "title": "Schema Version",
       "type": "string"
     },

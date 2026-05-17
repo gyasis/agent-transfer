@@ -20,6 +20,7 @@ def _asset(dest: str, tier: str, risk: str = "yellow") -> AssetEntry:
         sha256="a" * 64,
         mode_bits=0o644,
         notes=f"tier={tier}",
+        kind="skill",
     )
 
 
@@ -74,7 +75,7 @@ def test_drop_does_not_remove_core():
 def test_tier_of_default_context_when_no_marker():
     a = AssetEntry(
         path="x", dest_path="~/x", risk="green", conflict="skip",
-        sha256="b" * 64, mode_bits=0o644, notes=None,
+        sha256="b" * 64, mode_bits=0o644, notes=None, kind="skill",
     )
     assert tier_of(a) == "CONTEXT"
 
@@ -82,6 +83,6 @@ def test_tier_of_default_context_when_no_marker():
 def test_tier_of_reads_notes_marker():
     a = AssetEntry(
         path="x", dest_path="~/x", risk="green", conflict="skip",
-        sha256="b" * 64, mode_bits=0o644, notes="tier=CORE extra",
+        sha256="b" * 64, mode_bits=0o644, notes="tier=CORE extra", kind="skill",
     )
     assert tier_of(a) == "CORE"

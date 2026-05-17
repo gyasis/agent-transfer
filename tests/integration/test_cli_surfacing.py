@@ -120,6 +120,7 @@ def _build_minimal_bundle(tmp_path: Path) -> Path:
                 conflict="overwrite",
                 sha256=sha,
                 mode_bits=0o644,
+                kind="skill",
             )],
         ),
     )

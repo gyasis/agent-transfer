@@ -42,6 +42,7 @@ def _seal_one_asset_bundle(tmp_path: Path, asset_relpath: str, asset_bytes: byte
         conflict="overwrite",
         sha256=sha,
         mode_bits=0o644,
+        kind="skill",
     )
     cap = Capability(
         name="test", description="t", intent="t",
