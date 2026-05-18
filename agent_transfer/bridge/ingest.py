@@ -499,18 +499,59 @@ def ingest(
     if not manifest_path.exists():
         result.errors.append(f"Bundle missing manifest.json at {manifest_path}")
         return result
+
+    # v1.1 — pre-parse the manifest JSON so we can:
+    #   • reject schema_version 2.x BEFORE pydantic sees it (clearer error)
+    #   • back-compat 1.0.x bundles whose AssetEntry rows have no `kind`
+    #     field — infer it from dest_path via _infer_kind_from_dest so the
+    #     v1.1 ManifestModel can validate.
+    import json
+    import warnings as _warnings
+
     try:
-        manifest = ManifestModel.model_validate_json(manifest_path.read_text())
-    except Exception as e:  # pragma: no cover — pydantic raises ValidationError
-        result.errors.append(f"manifest.json failed validation: {e}")
+        raw_manifest = json.loads(manifest_path.read_text())
+    except json.JSONDecodeError as e:
+        result.errors.append(f"manifest.json is not valid JSON: {e}")
         return result
 
-    # Refuse incompatible major version
-    major = manifest.schema_version.split(".", 1)[0]
+    raw_schema_version = str(raw_manifest.get("schema_version", "1.0.0"))
+    major = raw_schema_version.split(".", 1)[0]
     if major != "1":
         result.errors.append(
-            f"Bundle schema_version {manifest.schema_version} is not 1.x — refusing."
+            f"Bundle schema_version {raw_schema_version} is not 1.x — refusing. "
+            f"This ingest expects 1.0.x (back-compat) or 1.1.x. Major version "
+            f"bumps (2.x+) indicate breaking schema changes; upgrade "
+            f"agent-transfer or downgrade the producer."
         )
+        return result
+
+    minor = raw_schema_version.split(".")[1] if "." in raw_schema_version else "0"
+    if minor == "0":
+        from agent_transfer.utils.config_manager import _infer_kind_from_dest
+
+        _warnings.warn(
+            (
+                f"Ingesting legacy schema_version={raw_schema_version} bundle. "
+                "AssetEntry.kind will be inferred from dest_path. Upgrade the "
+                "producer to v1.1+ for explicit kind classification."
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        try:
+            assets = raw_manifest.get("capability", {}).get("assets", []) or []
+            for a in assets:
+                if "kind" not in a:
+                    a["kind"] = _infer_kind_from_dest(a.get("dest_path", ""))
+        except Exception:
+            # Defensive — if the shape is unexpected pydantic will error
+            # below with a clearer message than we'd produce ad-hoc.
+            pass
+
+    try:
+        manifest = ManifestModel.model_validate(raw_manifest)
+    except Exception as e:  # pragma: no cover — pydantic raises ValidationError
+        result.errors.append(f"manifest.json failed validation: {e}")
         return result
 
     # Generate rollback snapshot BEFORE any write (FR-016).

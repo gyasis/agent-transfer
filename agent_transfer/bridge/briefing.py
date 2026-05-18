@@ -142,6 +142,8 @@ def render_sections(manifest: ManifestModel) -> List[BriefingSection]:
         "Ingest Instructions": "ingest_instructions",
         "Verification": "verification",
         "Rollback": "rollback",
+        # v1.1 — cross-harness risk mapping appendix.
+        "Risk Mapping": "risk_mapping",
     }
     parts = re.split(r"^## \d+\.\s+(.+)$", text, flags=re.MULTILINE)
     # parts: [pre, name1, body1, name2, body2, ...]

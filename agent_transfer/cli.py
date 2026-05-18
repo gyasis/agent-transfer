@@ -1025,7 +1025,23 @@ def preflight(archive, json_output, self_audit, force):
         "spec-006); use sparingly."
     ),
 )
-def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle, anchor_mode):
+@click.option(
+    "--behavior",
+    "behavior_overrides",
+    multiple=True,
+    metavar="DEST_PATH=TEXT",
+    help=(
+        "v1.1 — override the auto-extracted behavior hint for an asset. "
+        "Repeat once per override. Example: "
+        "--behavior '~/.claude/skills/foo.md=Indexes embeddings nightly'. "
+        "Overrides win over compose's automatic extraction; useful when the "
+        "asset's first paragraph or header comment is not a great summary."
+    ),
+)
+def compose(
+    capability, out, description, intent, drop, add, auto_yes, no_bundle,
+    anchor_mode, behavior_overrides,
+):
     """Bundle a named capability for transfer to another machine.
 
     Pipeline: graph walk -> 3-tier selection matrix -> briefing render ->
@@ -1049,10 +1065,30 @@ def compose(capability, out, description, intent, drop, add, auto_yes, no_bundle
     )
     bundle_root.mkdir(parents=True, exist_ok=True)
 
+    # Parse --behavior DEST_PATH=TEXT entries. We deliberately accept '=' in
+    # the value (so descriptions can include them) — split only on the first.
+    behavior_map: dict[str, str] = {}
+    for entry in behavior_overrides:
+        if "=" not in entry:
+            console.print(
+                f"[red]--behavior must be DEST_PATH=TEXT, got:[/red] {entry!r}"
+            )
+            sys.exit(2)
+        k, v = entry.split("=", 1)
+        k = k.strip()
+        v = v.strip()
+        if not k or not v:
+            console.print(
+                f"[red]--behavior empty key or value:[/red] {entry!r}"
+            )
+            sys.exit(2)
+        behavior_map[k] = v
+
     try:
         cap = _compose(
             capability, description=description, intent=intent,
             anchor_mode=anchor_mode,
+            behavior_overrides=behavior_map,
         )
     except ValueError as e:
         console.print(f"[red]compose failed:[/red] {e}")

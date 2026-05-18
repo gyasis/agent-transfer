@@ -47,6 +47,8 @@ BriefingSectionName = Literal[
     "ingest_instructions",
     "verification",
     "rollback",
+    # v1.1 — cross-harness risk mapping appendix
+    "risk_mapping",
 ]
 
 

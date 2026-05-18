@@ -108,7 +108,8 @@
             "build_instructions",
             "ingest_instructions",
             "verification",
-            "rollback"
+            "rollback",
+            "risk_mapping"
           ],
           "title": "Name",
           "type": "string"

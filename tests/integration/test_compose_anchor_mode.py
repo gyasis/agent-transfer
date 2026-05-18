@@ -27,7 +27,11 @@ def _seed_bin(home: Path, name: str) -> Path:
     bd = home / "bin"
     bd.mkdir(parents=True, exist_ok=True)
     p = bd / name
-    p.write_text("#!/usr/bin/env bash\necho hi\n")
+    # Realistic shape: shebang + leading comment block so the
+    # vacuous-description gate (v1.1) has a fallback to extract.
+    p.write_text(
+        f"#!/usr/bin/env bash\n# {name} — a tool for the {name} workflow.\necho hi\n"
+    )
     p.chmod(p.stat().st_mode | stat.S_IXUSR)
     return p
 

@@ -54,6 +54,26 @@ _SLUG_REF_RE = re.compile(r"/([a-z][a-z0-9_\-]+)\b")
 _FRONTMATTER_RE = re.compile(r"^---\s*\n.*?\n---\s*\n", re.DOTALL)
 _BEHAVIOR_MD_MAX_CHARS = 200
 
+# v1.1 — frontmatter `description:` field extractor. Used by the
+# vacuous-description-refusal logic to suggest a real description when
+# the user omits --description. Matches `description: <one-line text>`
+# OR `description: >`/`|` block scalar (first non-blank line only).
+_FRONTMATTER_DESC_RE = re.compile(
+    r"^description\s*:\s*(.+?)\s*$", re.MULTILINE,
+)
+
+# v1.1 — exit code emitted when compose cannot determine a non-vacuous
+# description AND the user did not pass --description "(unset)" to opt
+# out. Bundles without a real description are useless to non-Claude
+# receivers because they have no other signal for what the capability
+# does. PRD §5 Q3.
+EXIT_VACUOUS_DESCRIPTION = 7
+
+# v1.1 — sentinel that the user can pass to --description to explicitly
+# accept a placeholder. Useful in CI / smoke tests where the bundle is
+# discarded immediately.
+DESCRIPTION_UNSET_SENTINEL = "(unset)"
+
 
 # v1.1 — map _Candidate.asset_kind (internal, free-form) to the AssetKind
 # Literal that AssetEntry now requires. Keep the internal taxonomy looser
@@ -72,6 +92,96 @@ _KIND_MAP = {
 
 def _normalize_kind(internal_kind: str) -> str:
     return _KIND_MAP.get(internal_kind, "skill")
+
+
+def _extract_frontmatter_description(path: Path) -> Optional[str]:
+    """v1.1 — return the YAML `description:` field of a skill/rule, or None.
+
+    Skills frequently carry a one-line description in their frontmatter
+    (per the Claude Code skill convention). Used as the SECOND-priority
+    fallback when compose() needs a non-vacuous Capability.description.
+    """
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    fm_match = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
+    if not fm_match:
+        return None
+    fm_body = fm_match.group(1)
+    desc_match = _FRONTMATTER_DESC_RE.search(fm_body)
+    if not desc_match:
+        return None
+    desc = desc_match.group(1).strip()
+    # Strip surrounding quotes if present
+    if (desc.startswith('"') and desc.endswith('"')) or (
+        desc.startswith("'") and desc.endswith("'")
+    ):
+        desc = desc[1:-1]
+    desc = desc.strip()
+    return desc or None
+
+
+def _resolve_description(
+    user_description: Optional[str],
+    cores: "List[_Candidate]",
+    capability_name: str,
+) -> str:
+    """v1.1 — produce a non-vacuous description or raise SystemExit(7).
+
+    Priority chain:
+      1. user_description (unless it's None) → return as-is
+      2. user_description == DESCRIPTION_UNSET_SENTINEL → return placeholder
+         (explicit opt-out for CI/tests)
+      3. frontmatter `description:` of the first CORE skill
+      4. first paragraph (via _extract_behavior_md) of the first CORE skill
+      5. SystemExit(EXIT_VACUOUS_DESCRIPTION) with a clear remediation hint
+
+    Why exit instead of returning a placeholder by default: bundles
+    without real descriptions are functionally useless to non-Claude
+    receivers, who have no other signal for what the capability does.
+    Hard refusal at compose time is the only forcing function that gets
+    a meaningful description into every shipped bundle.
+    """
+    import sys as _sys
+
+    if user_description is None:
+        pass
+    elif user_description == DESCRIPTION_UNSET_SENTINEL:
+        return f"(unset — bundle for the {capability_name} capability)"
+    else:
+        return user_description
+
+    # Try frontmatter (skills/rules only — bins/hooks have no frontmatter).
+    for c in cores:
+        if c.asset_kind in ("skill", "rule"):
+            fm = _extract_frontmatter_description(c.path)
+            if fm:
+                return fm
+    # Then try first-paragraph (skills/rules) or leading comment-block
+    # (bins/hooks). For CLI-anchored capabilities like `session-search`,
+    # this is the primary source — the bin's header comments often DO
+    # describe the tool.
+    for c in cores:
+        hint = _extract_behavior_md(c.path, _normalize_kind(c.asset_kind))
+        if hint:
+            return hint
+
+    # Nothing usable — refuse.
+    print(
+        f"ERROR: compose: cannot determine a description for capability "
+        f"{capability_name!r}. None of its CORE assets carry a frontmatter "
+        f"`description:` field or a usable first paragraph.\n"
+        f"\n"
+        f"Fix:\n"
+        f"  • Pass --description '<one-sentence what-this-does>'\n"
+        f"  • Or add a `description:` field to the frontmatter of the\n"
+        f"    primary CORE skill\n"
+        f"  • Or pass --description '{DESCRIPTION_UNSET_SENTINEL}' to bypass\n"
+        f"    (for CI / smoke tests where the bundle is discarded)\n",
+        file=_sys.stderr,
+    )
+    raise SystemExit(EXIT_VACUOUS_DESCRIPTION)
 
 
 def _extract_behavior_md(path: Path, kind: str) -> Optional[str]:
@@ -509,6 +619,7 @@ def compose(
     description: Optional[str] = None,
     intent: Optional[str] = None,
     anchor_mode: str = "name",
+    behavior_overrides: Optional[Dict[str, str]] = None,
 ) -> Capability:
     """Compose a Capability bundle from a free-text capability name.
 
@@ -586,7 +697,53 @@ def compose(
     all_candidates = cores + companions + contexts
 
     paths = [c.path for c in all_candidates]
-    asset_dicts = emit_asset_entries(paths, home=home)
+
+    # v1.1 — thread the composer's own classification + behavior summary
+    # into emit_asset_entries. _normalize_kind maps the internal taxonomy
+    # ("claude_md_section" → "capability") to the AssetKind Literal that
+    # AssetEntry now requires. behavior_for is sparse — extract only for
+    # CORE candidates (cheap, and the COMPANIONS/CONTEXT tiers are noisier
+    # signals where the hint is more often than not unhelpful).
+    kind_for: Dict[str, str] = {}
+    behavior_for: Dict[str, str] = {}
+    for c in all_candidates:
+        abs_str = str(c.path if c.path.is_absolute() else c.path.absolute())
+        mapped_kind = _normalize_kind(c.asset_kind)
+        kind_for[abs_str] = mapped_kind
+        if c.tier == "CORE":
+            hint = _extract_behavior_md(c.path, mapped_kind)
+            if hint:
+                behavior_for[abs_str] = hint
+
+    # v1.1 — apply user --behavior overrides. Keys are dest_path (the form
+    # the user sees in BRIEFING.md), so we resolve them back to absolute
+    # paths via the candidate list before merging into behavior_for. Unknown
+    # dest_paths are still recorded as a soft-warn rather than a hard error
+    # — the user may pre-write overrides for assets that didn't get picked
+    # up in this run.
+    if behavior_overrides:
+        dest_to_abs: Dict[str, str] = {}
+        for c in all_candidates:
+            abs_str = str(c.path if c.path.is_absolute() else c.path.absolute())
+            if abs_str.startswith(str(home) + "/"):
+                dest_to_abs[f"~/{abs_str[len(str(home))+1:]}"] = abs_str
+            else:
+                dest_to_abs[abs_str] = abs_str
+        import sys as _sys
+        for dest, txt in behavior_overrides.items():
+            abs_path = dest_to_abs.get(dest)
+            if abs_path is None:
+                print(
+                    f"WARN: --behavior dest_path {dest!r} not found in this "
+                    f"bundle's asset list; override ignored.",
+                    file=_sys.stderr,
+                )
+                continue
+            behavior_for[abs_path] = txt
+
+    asset_dicts = emit_asset_entries(
+        paths, home=home, kind_for=kind_for, behavior_for=behavior_for,
+    )
 
     # Decorate notes with tier so selection_matrix can group.
     tier_for: Dict[str, str] = {str(c.path.resolve()): c.tier for c in all_candidates}
@@ -601,9 +758,11 @@ def compose(
         d["notes"] = f"tier={tier}"
         assets.append(AssetEntry(**d))
 
+    resolved_description = _resolve_description(description, cores, capability_name)
+
     return Capability(
         name=capability_name,
-        description=description or f"Bundle for the {capability_name} capability.",
+        description=resolved_description,
         intent=intent or "User-defined capability bundle generated by ab compose.",
         assets=assets,
         dependencies=[],

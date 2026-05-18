@@ -40,9 +40,12 @@ this letter is hand-rendered prose.
 
 **Why it exists (in the user's words):** {{capability.intent}}
 
-This bundle assumes the destination is **Claude Code** running on **Linux
-or WSL** (constitution R3). It is NOT designed for Goose / Letta /
-OpenCode / PromptChain — those are post-MVP targets.
+The bundle is **harness-aware**: every asset declares its `kind`
+(skill | rule | hook | bin | capability) so a non-Claude harness
+(OpenClaude / OpenClaw / ZeroClaw / PromptChain) can map it onto its
+own primitive instead of guessing from the path. The reference
+target is still Claude Code on Linux / WSL, but the schema is now
+cross-harness portable — see §8 "Risk Mapping" below.
 
 ---
 
@@ -55,10 +58,20 @@ must treat each one:**
 - **Yellow** — show to user before write (tool defs, parameter types, settings.json fragments)
 - **Red** — explicit user Y/N confirmation required (auth hooks, circuit breakers, state-writing hooks)
 
-| Path in bundle | Destination | Risk | Conflict policy | Notes |
-|---|---|---|---|---|
+| Path in bundle | Destination | Kind | Risk | Conflict | Notes |
+|---|---|---|---|---|---|
 {{#each capability.assets}}
-| `{{path}}` | `{{dest_path}}` | {{risk}} | {{conflict}} | {{notes}} |
+| `{{path}}` | `{{dest_path}}` | {{kind}} | {{risk}} | {{conflict}} | {{notes}} |
+{{/each}}
+
+### Per-asset behavior
+
+Short behavioral summaries extracted from each CORE asset (skill/rule
+first paragraph; bin/hook leading comment block). Use these to map
+the asset onto your harness's primitive without opening the file.
+
+{{#each capability.assets}}
+- **`{{dest_path}}`** ({{kind}}) — {{behavior_md}}
 {{/each}}
 
 ---
@@ -146,6 +159,26 @@ with zero leftover artifacts (SC-002).
 You are explicitly authorized to invoke rollback without further
 user confirmation if the smoke test fails or any destination-side
 write throws. Tell the user afterward.
+
+---
+
+## 8. Risk Mapping
+
+How each asset `kind` lands on common agent harnesses. This table is a
+STUB — concrete mappings live in `specs/agentbridge_v1.1/cross_harness_kind_mapping.md`
+and are expected to be filled in as each harness adopts the v1.1 schema.
+
+| `kind`     | Claude Code                | OpenClaude  | OpenClaw     | ZeroClaw     | PromptChain |
+|------------|----------------------------|-------------|--------------|--------------|-------------|
+| skill      | `~/.claude/skills/<x>.md`  | TBD         | TBD          | TBD          | TBD         |
+| rule       | `~/.claude/rules/<...>.md` | TBD         | TBD          | TBD          | TBD         |
+| hook       | `~/.claude/hooks/<x>/...`  | TBD         | TBD          | TBD          | TBD         |
+| bin        | `~/bin/<x>` (executable)   | TBD         | TBD          | TBD          | TBD         |
+| capability | composite — see manifest    | TBD         | TBD          | TBD          | TBD         |
+
+If your harness is not listed, treat the asset as **inert** (no auto-
+wire) and surface it to the user with the `behavior_md` summary so
+they can decide whether/how to install.
 
 ---
 
