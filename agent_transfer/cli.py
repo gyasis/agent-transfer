@@ -1,5 +1,6 @@
 """Command-line interface for agent-transfer."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -1370,6 +1371,79 @@ def init(bundle, auto_yes, accept_risks, tokens_file, dry_run):
 
     if result.exit_code != 0:
         sys.exit(result.exit_code)
+
+
+@cli.group()
+def doctor():
+    """Health checks + bootstrap playbook for a destination machine.
+
+    Two subcommands:
+      doctor inspect — Post-init validator. Runs the full check suite
+                       including <REDACTED>-token scans and MCP source
+                       extraction state. Exits non-zero on any `fail`.
+      doctor playbook — Pre-init bootstrap generator. Inspects the host
+                        and emits a markdown playbook (+ JSON sidecar)
+                        another agent can ingest to bring the host up
+                        to spec for `agent-transfer init`. Never writes
+                        to the host.
+    """
+    pass
+
+
+@doctor.command("inspect")
+@click.option(
+    "--out", type=click.Path(path_type=Path), default=None,
+    help="Write markdown report to PATH (and PATH.json). Stdout if omitted.",
+)
+@click.option(
+    "--json", "json_only", is_flag=True,
+    help="Print the JSON report to stdout (no markdown).",
+)
+def doctor_inspect(out, json_only):
+    """Post-init validator: are we ready for AgentBridge to operate?"""
+    from agent_transfer.doctor.inspect import run_inspect
+
+    report = run_inspect()
+    if json_only:
+        click.echo(json.dumps(report.to_dict(), indent=2))
+    elif out is None:
+        click.echo(report.to_markdown())
+    else:
+        md = report.to_markdown()
+        out.write_text(md, encoding="utf-8")
+        sidecar = out.with_suffix(out.suffix + ".json") if out.suffix else out.with_suffix(".json")
+        sidecar.write_text(json.dumps(report.to_dict(), indent=2), encoding="utf-8")
+        console.print(f"[green]Wrote inspect report → {out}[/green]")
+        console.print(f"[dim]JSON sidecar → {sidecar}[/dim]")
+    if report.exit_code != 0:
+        sys.exit(report.exit_code)
+
+
+@doctor.command("playbook")
+@click.option(
+    "--out", type=click.Path(path_type=Path), default=None,
+    help="Write markdown playbook to PATH (and PATH.json). Stdout if omitted.",
+)
+@click.option(
+    "--json", "json_only", is_flag=True,
+    help="Print the JSON playbook to stdout (no markdown).",
+)
+def doctor_playbook(out, json_only):
+    """Pre-init bootstrap: emit a playbook another agent can follow."""
+    from agent_transfer.doctor.playbook import run_playbook
+
+    pb = run_playbook()
+    if json_only:
+        click.echo(json.dumps(pb.to_dict(), indent=2))
+    elif out is None:
+        click.echo(pb.to_markdown())
+    else:
+        md = pb.to_markdown()
+        out.write_text(md, encoding="utf-8")
+        sidecar = out.with_suffix(out.suffix + ".json") if out.suffix else out.with_suffix(".json")
+        sidecar.write_text(json.dumps(pb.to_dict(), indent=2), encoding="utf-8")
+        console.print(f"[green]Wrote playbook → {out}[/green]")
+        console.print(f"[dim]JSON sidecar → {sidecar}[/dim]")
 
 
 def main():
