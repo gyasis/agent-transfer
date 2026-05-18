@@ -1265,6 +1265,106 @@ def ingest_cmd(bundle, auto_yes, no_smoke):
         sys.exit(6)
 
 
+@cli.command()
+@click.argument(
+    "bundle",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+)
+@click.option(
+    "--yes", "auto_yes", is_flag=True,
+    help="Skip per-step confirmation. Requires --i-accept-risks.",
+)
+@click.option(
+    "--i-accept-risks", "accept_risks", is_flag=True,
+    help=(
+        "Acknowledge that each MCP install_step runs an arbitrary shell "
+        "command (uv sync / npm install / docker pull / git clone) in a "
+        "subprocess. Required with --yes."
+    ),
+)
+@click.option(
+    "--tokens-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help=(
+        "KEY=VALUE file supplying HTTP-transport auth tokens. Keys may "
+        "be `SERVER__HEADER` or bare `HEADER` for a shared token."
+    ),
+)
+@click.option(
+    "--dry-run", is_flag=True,
+    help="Plan only; do not run install_steps or write ~/.claude.json.",
+)
+def init(bundle, auto_yes, accept_risks, tokens_file, dry_run):
+    """Finish bundle import: run install_steps, rewrite paths, merge MCPs.
+
+    Operates on an already-extracted bundle directory (use
+    `agent-transfer import` first). Reads the bundle's
+    `claude-config-export*.json` for per-server classifications, validates
+    runtime versions against the destination, runs each server's
+    `install_steps` inside its extracted source dir, fills HTTP-transport
+    auth tokens (interactive or `--tokens-file`), then merges rewritten
+    `mcpServers` into `~/.claude.json` with backup.
+
+    CLAUDE.md is never auto-merged; if the bundle's differs from yours
+    it is placed at `~/.claude/CLAUDE.md.incoming` for manual review.
+    """
+    from agent_transfer.bootstrap.init import init as _init
+
+    result = _init(
+        bundle,
+        auto_yes=auto_yes,
+        accept_risks=accept_risks,
+        tokens_file=tokens_file,
+        dry_run=dry_run,
+    )
+
+    if result.classification_path:
+        console.print(
+            f"[dim]Read classification from {result.classification_path}[/dim]"
+        )
+    if result.backup_path:
+        console.print(
+            f"[green]Backed up ~/.claude.json → {result.backup_path}[/green]"
+        )
+    if result.version_aborts:
+        console.print("[red]Runtime version mismatch:[/red]")
+        for line in result.version_aborts:
+            console.print(f"  • {line}")
+    if result.servers_installed:
+        console.print(
+            f"[green]Install steps OK for {len(result.servers_installed)} server(s):[/green] "
+            f"{', '.join(result.servers_installed)}"
+        )
+    if result.servers_skipped:
+        console.print(
+            f"[yellow]Skipped (no source / dry-run):[/yellow] {', '.join(result.servers_skipped)}"
+        )
+    if result.install_step_failures:
+        console.print("[red]Install step failures:[/red]")
+        for name, why in result.install_step_failures.items():
+            console.print(f"  • {name}: {why}")
+    if result.http_tokens_filled:
+        console.print(
+            f"[green]HTTP tokens filled for:[/green] {', '.join(result.http_tokens_filled)}"
+        )
+    if result.http_tokens_missing:
+        console.print(
+            f"[yellow]HTTP tokens missing for:[/yellow] {', '.join(result.http_tokens_missing)}"
+        )
+    if result.claude_md_incoming_path:
+        console.print(
+            f"[yellow]CLAUDE.md differed — wrote {result.claude_md_incoming_path} for review.[/yellow]"
+        )
+    for w in result.warnings:
+        console.print(f"[yellow]WARN: {w}[/yellow]")
+    for e in result.errors:
+        console.print(f"[red]ERROR: {e}[/red]")
+
+    if result.exit_code != 0:
+        sys.exit(result.exit_code)
+
+
 def main():
     """Main entry point."""
     cli()

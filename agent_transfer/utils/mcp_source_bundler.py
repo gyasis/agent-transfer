@@ -54,6 +54,12 @@ class BundledSource:
     file_count: int                    # files included
     warnings: list[str] = field(default_factory=list)
     git_remote: str | None = None      # if source dir is a git repo
+    # v0.2.0 — runtime version captured from the source dir at bundle time.
+    # Used by `agent-transfer init` to validate the destination has a
+    # compatible interpreter BEFORE running install_steps. See
+    # _detect_runtime_version().
+    python_version: str | None = None
+    node_engines: str | None = None
 
 
 @dataclass
@@ -96,6 +102,87 @@ def _extract_source_dir(server_name: str, classification: dict[str, Any]) -> Pat
         return None
 
     return None
+
+
+def _detect_runtime_version(
+    source_dir: Path, server_class: str
+) -> tuple[str | None, str | None]:
+    """v0.2.0 — read python/node version requirements from a source dir.
+
+    Returns (python_version, node_engines) as strings, both optional.
+    Precedence for python:
+        1. `.python-version` file (uv / pyenv standard)
+        2. `pyproject.toml` [project.requires-python]
+        3. `pyproject.toml` [tool.poetry.dependencies.python]
+    Precedence for node:
+        1. `package.json` engines.node
+        2. `.nvmrc` file
+
+    Best-effort and read-only. Failures return None for that runtime.
+    `agent-transfer init` consumes these to validate the target before
+    running install_steps; mismatches abort with a clear hint instead
+    of silently failing on `uv sync` / `npm install`.
+    """
+    py_ver: str | None = None
+    node_ver: str | None = None
+
+    if server_class in ("local-uv", "local-python"):
+        py_file = source_dir / ".python-version"
+        if py_file.is_file():
+            try:
+                txt = py_file.read_text(encoding="utf-8").strip().splitlines()
+                if txt:
+                    py_ver = txt[0].strip()
+            except OSError:
+                pass
+        if py_ver is None:
+            ppy = source_dir / "pyproject.toml"
+            if ppy.is_file():
+                try:
+                    import tomllib  # py3.11+
+                except ImportError:
+                    tomllib = None  # type: ignore[assignment]
+                if tomllib is not None:
+                    try:
+                        with open(ppy, "rb") as f:
+                            data = tomllib.load(f)
+                        proj = data.get("project") or {}
+                        rp = proj.get("requires-python")
+                        if isinstance(rp, str):
+                            py_ver = rp.strip()
+                        if py_ver is None:
+                            tool = (data.get("tool") or {}).get("poetry") or {}
+                            deps = tool.get("dependencies") or {}
+                            poetry_py = deps.get("python")
+                            if isinstance(poetry_py, str):
+                                py_ver = poetry_py.strip()
+                    except Exception:
+                        pass
+
+    if server_class == "local-node":
+        pkg = source_dir / "package.json"
+        if pkg.is_file():
+            try:
+                import json as _json
+                with open(pkg) as f:
+                    data = _json.load(f)
+                engines = data.get("engines") or {}
+                ne = engines.get("node")
+                if isinstance(ne, str):
+                    node_ver = ne.strip()
+            except Exception:
+                pass
+        if node_ver is None:
+            nvmrc = source_dir / ".nvmrc"
+            if nvmrc.is_file():
+                try:
+                    txt = nvmrc.read_text(encoding="utf-8").strip().splitlines()
+                    if txt:
+                        node_ver = txt[0].strip()
+                except OSError:
+                    pass
+
+    return py_ver, node_ver
 
 
 def _redact_git_url(url: str) -> str:
@@ -254,6 +341,10 @@ def bundle_mcp_sources(
                     pass
             continue
 
+        py_ver, node_ver = _detect_runtime_version(
+            source_dir, cls_entry.get("server_class", "?")
+        )
+
         bundled.append(asdict(BundledSource(
             name=name,
             server_class=cls_entry.get("server_class", "?"),
@@ -263,6 +354,8 @@ def bundle_mcp_sources(
             file_count=file_count,
             warnings=warnings,
             git_remote=git_remote,
+            python_version=py_ver,
+            node_engines=node_ver,
         )))
 
     total_bytes = sum(b["bundle_size_bytes"] for b in bundled)
