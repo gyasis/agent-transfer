@@ -15,8 +15,8 @@ Claude Code -> Claude Code transfers MUST remain byte-identical. No IR involved.
 ### R2: IR Only for Cross-Platform
 The Intermediate Representation (AI Intent Manifest) is ONLY used when source and target are different platforms. Never inject IR into same-platform workflows.
 
-### R3: Linux Only (For Now)
-Target Linux + WSL only. No Windows native paths. No macOS paths. macOS is a future phase — do not add macOS-specific code yet.
+### R3: Linux + WSL + macOS
+Target Linux + WSL + macOS Intel + macOS Apple Silicon. Windows native is still out of scope. Mac additions land via segment-anchored path classifiers, Homebrew-aware default bin dirs, and an optional `manifest.source_machine_home` field that lets the receiver re-stamp paths into ITS own home. See `specs/004-mac-compat/spec.md`.
 
 ### R4: Wrap, Don't Rewrite
 Existing parser.py, skill_parser.py, discovery.py, skill_discovery.py become internal implementation details of the Claude Code platform/ingestor. They are imported and delegated to, NOT replaced or rewritten.

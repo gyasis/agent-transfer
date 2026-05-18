@@ -459,13 +459,50 @@ def _safe_mode_bits(dest_path: str, mode_bits: int) -> int:
     break ingestion. Clamp to 0o400 minimum, and force 0o755 for any path
     under ~/.claude/hooks/ or ~/bin/ or ~/.local/bin/ that would otherwise
     lack the executable bit.
+
+    FR-001 (v1.1 mac-compat) — classify via path SEGMENTS, not substrings.
+    The pre-1.1 implementation tested `"/bin/" in dest_path`, which
+    incorrectly fired on macOS-typical destinations like
+    `~/Library/Application Support/foo/bin/data.json` (JSON marked exec).
+    `Path(dest_path).parts` walks `/`-separated segments so a directory
+    component named exactly `bin` is required to trigger the exec bit.
     """
     m = int(mode_bits) if mode_bits and mode_bits > 0 else 0o644
     # Always at least owner-readable.
     m |= 0o400
-    is_hook = "/.claude/hooks/" in dest_path
-    is_bin = "/bin/" in dest_path
-    if is_hook or is_bin:
+
+    # Expand ~ for segment walking, but only use the expanded form for
+    # the classification check — the dest_path string itself is
+    # unchanged. We avoid Path.expanduser() here because we don't want
+    # an actual filesystem lookup; just split on `/`.
+    norm = dest_path.lstrip("~/").lstrip("~")
+    parts = tuple(p for p in norm.split("/") if p)
+
+    # Bin classifier: any path whose FINAL directory segment is `bin`
+    # or `sbin` AND whose lineage contains a recognized bin root. Be
+    # strict so `Library/.../bin/file.json` does NOT match.
+    BIN_ROOTS = {".local", "homebrew", "usr"}  # at any depth before "bin"
+    is_bin_path = False
+    for i, part in enumerate(parts[:-1]):  # exclude basename
+        if part in ("bin", "sbin"):
+            # Either at top (`~/bin/...`) or after one of the recognized
+            # roots (`~/.local/bin/...`, `/opt/homebrew/bin/...`,
+            # `/usr/local/bin/...`).
+            if i == 0:
+                is_bin_path = True
+                break
+            if any(r in parts[:i] for r in BIN_ROOTS):
+                is_bin_path = True
+                break
+
+    # Hook classifier: exact ".claude" / "hooks" segments adjacent.
+    is_hook_path = False
+    for i in range(len(parts) - 1):
+        if parts[i] == ".claude" and parts[i + 1] == "hooks":
+            is_hook_path = True
+            break
+
+    if is_bin_path or is_hook_path:
         m |= 0o100  # owner exec; preserve any group/other bits already set
     return m & 0o7777
 
@@ -560,7 +597,20 @@ def ingest(
     target_dest_paths = [a.dest_path for a in manifest.capability.assets]
     rollback_tar_path = bundle_dir / "rollback.tar.gz"
     result.rollback_reused = rollback_tar_path.exists()
-    _rollback_snapshot(target_dest_paths, bundle_dir, home=home)
+
+    # FR-002 / FR-003 (v1.1 mac-compat) — when the bundle's source_machine_home
+    # differs from this receiver's home (cross-platform Linux↔macOS round-
+    # trip), the bundled rollback's manifest carries source-machine paths
+    # that won't match our $HOME. Force preserve_existing=False so the
+    # rollback is re-stamped with OUR home before any write happens.
+    source_home = getattr(manifest, "source_machine_home", None)
+    cross_home = bool(source_home) and source_home != str(home)
+    if cross_home:
+        _rollback_snapshot(
+            target_dest_paths, bundle_dir, home=home, preserve_existing=False,
+        )
+    else:
+        _rollback_snapshot(target_dest_paths, bundle_dir, home=home)
 
     # Apply each asset
     for asset in manifest.capability.assets:

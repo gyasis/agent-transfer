@@ -1109,9 +1109,16 @@ def compose(
         console.print(f"[red]Sealing aborted:[/red] {e}")
         sys.exit(3)
 
+    import sys as _sys
+    # FR-002 — record this machine's home + OS hint so cross-platform
+    # (Linux↔macOS) ingest can re-stamp paths. source_machine_hint is
+    # the platform-precise OS identity; source_machine_home is the
+    # absolute home so the receiver knows what to rewrite from.
+    _platform = "darwin" if _sys.platform == "darwin" else "linux-wsl2"
     manifest = ManifestModel(
         generated_at=_dt.utcnow(),
-        source_machine_hint="linux-wsl2",
+        source_machine_hint=_platform,
+        source_machine_home=str(Path.home()),
         capability=cap,
         briefing_sections=[],
         confirmations=cap.confirmations,

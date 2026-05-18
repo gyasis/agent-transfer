@@ -285,6 +285,19 @@
       "title": "Source Machine Hint",
       "type": "string"
     },
+    "source_machine_home": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "FR-002 (v1.1 mac-compat) \u2014 absolute path of `Path.home()` on the source machine at seal time (e.g. '/home/user' on Linux, '/Users/user' on macOS). Separate from any per-asset `home` fields so the receiver can re-stamp paths into ITS own home without losing provenance. Optional for backward compat: v1.0 bundles do not carry this and ingest falls back to the old behavior (same-OS receiver only).",
+      "title": "Source Machine Home"
+    },
     "capability": {
       "$ref": "#/$defs/Capability"
     },

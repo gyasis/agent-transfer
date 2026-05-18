@@ -57,6 +57,22 @@ The pre-AgentBridge bulk export/import path is still present and supported. It t
 
 ## Installation
 
+### Platform support
+
+- **Linux + WSL** — fully supported.
+- **macOS (Intel + Apple Silicon)** — supported as of v1.1. Notes:
+  - `rollback.sh` shells to `python3` for JSON parsing — install it from
+    Homebrew if your Mac doesn't already have it (`brew install python`).
+  - Apple Silicon Macs use Homebrew at `/opt/homebrew/`; the composer's
+    default bin-dir search picks this up automatically (`script_discovery.DEFAULT_BIN_DIRS`).
+  - Linux→macOS bundles auto-rewrite `~/.nvm/.../bin/<cmd>` paths to a
+    bare command so the Mac receiver resolves via PATH (where Homebrew
+    has placed `node`/`npx`).
+  - APFS is case-preserving but case-insensitive by default — the
+    composer rejects bundles where two assets differ only in `dest_path`
+    casing, preventing silent overwrite.
+- **Windows native** — out of scope; use WSL.
+
 ### Automatic Installation (Recommended - Uses uv for Isolation)
 
 ```bash

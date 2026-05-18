@@ -168,8 +168,16 @@ class Capability(BaseModel):
         either skip the second install (conflict=skip) or clobber the first
         (conflict=overwrite) with no warning. The duplicate is almost always
         a composer bug; surface it loudly at construction time.
+
+        FR-005 (v1.1 mac-compat) — compare paths case-INSENSITIVELY. macOS
+        APFS is case-preserving but case-insensitive by default; two
+        AssetEntry rows differing only in case both write to the same
+        underlying file on Mac, producing silent data loss. The case-fold
+        check costs nothing on Linux ext4 (where the paths really are
+        distinct files) and prevents the silent failure on Mac.
         """
         seen: dict[str, int] = {}
+        case_seen: dict[str, int] = {}
         for i, a in enumerate(self.assets):
             if a.dest_path in seen:
                 raise ValueError(
@@ -177,7 +185,19 @@ class Capability(BaseModel):
                     f"and assets[{i}]); each capability may only land one asset per "
                     "destination path"
                 )
+            folded = a.dest_path.casefold()
+            if folded in case_seen and case_seen[folded] != i:
+                # Distinct strings, same case-folded form — Mac APFS hazard.
+                first_idx = case_seen[folded]
+                raise ValueError(
+                    f"duplicate dest_path (case-insensitive): assets[{first_idx}] "
+                    f"= {self.assets[first_idx].dest_path!r} and assets[{i}] = "
+                    f"{a.dest_path!r}. These resolve to the same file on macOS "
+                    "APFS (case-preserving, case-insensitive by default); rename "
+                    "one before bundling to avoid silent overwrite."
+                )
             seen[a.dest_path] = i
+            case_seen[folded] = i
         return self
 
 
@@ -202,6 +222,18 @@ class ManifestModel(BaseModel):
     source_machine_hint: str = Field(
         ...,
         description="Non-identifying hint, e.g. 'linux-wsl2-claude-code-v2.x'",
+    )
+    source_machine_home: Optional[str] = Field(
+        default=None,
+        description=(
+            "FR-002 (v1.1 mac-compat) — absolute path of `Path.home()` on "
+            "the source machine at seal time (e.g. '/home/user' on Linux, "
+            "'/Users/user' on macOS). Separate from any per-asset `home` "
+            "fields so the receiver can re-stamp paths into ITS own home "
+            "without losing provenance. Optional for backward compat: "
+            "v1.0 bundles do not carry this and ingest falls back to the "
+            "old behavior (same-OS receiver only)."
+        ),
     )
     capability: Capability
     briefing_sections: List[BriefingSection] = Field(default_factory=list)

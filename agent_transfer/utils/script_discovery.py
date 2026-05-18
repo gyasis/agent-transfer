@@ -31,10 +31,28 @@ from typing import Iterable
 
 
 # Default directories where user scripts live and are searched for.
-DEFAULT_BIN_DIRS = (
-    Path.home() / "bin",
-    Path.home() / ".local" / "bin",
-)
+# FR-006 — on macOS, Homebrew binaries live at /opt/homebrew (Apple
+# Silicon) or /usr/local (Intel). _iter_scannable_files skips non-
+# existent roots, so listing both is harmless on machines without
+# Homebrew. Linux must NOT include these (no Homebrew there in practice
+# and we want to avoid stat-overhead on dirs that don't exist).
+import sys as _sys
+
+
+def _default_bin_dirs() -> "tuple[Path, ...]":
+    base: tuple[Path, ...] = (
+        Path.home() / "bin",
+        Path.home() / ".local" / "bin",
+    )
+    if _sys.platform == "darwin":
+        return base + (
+            Path("/opt/homebrew/bin"),
+            Path("/opt/homebrew/sbin"),
+        )
+    return base
+
+
+DEFAULT_BIN_DIRS = _default_bin_dirs()
 
 # Default config roots to grep for references.
 DEFAULT_CONFIG_ROOTS = (

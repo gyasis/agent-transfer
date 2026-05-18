@@ -1307,6 +1307,7 @@ def rewrite_mcp_servers_for_target_home(
     classifications: Mapping[str, dict],
     target_home: str,
     source_home: str | None = None,
+    target_platform: str | None = None,
 ) -> dict[str, dict]:
     """Return a new mcpServers dict with paths rewritten for the destination.
 
@@ -1317,13 +1318,18 @@ def rewrite_mcp_servers_for_target_home(
             a dict (must include `config_after_install`).
         target_home: Destination home directory (typically str(Path.home())).
         source_home: Source home for fallback string substitution. Optional.
+        target_platform: One of "linux" | "darwin". When "darwin" and a
+            value contains a Linux `~/.nvm/.../bin/<cmd>` path, the
+            command is reduced to its basename so the Mac receiver
+            resolves it via PATH (where Homebrew node lives). FR-004.
 
     Returns:
         New dict; input is not mutated.
 
     Behavior:
         1. If a classification entry has `config_after_install`, use it
-           verbatim (already in destination-relative form).
+           verbatim (already in destination-relative form). Then apply
+           the nvm→bare-cmd rewrite if target_platform="darwin".
         2. Else if source_home is provided, do best-effort string substitution
            on string values.
         3. Else copy the entry unchanged.
@@ -1333,22 +1339,54 @@ def rewrite_mcp_servers_for_target_home(
         cls = classifications.get(name) or {}
         post = cls.get("config_after_install")
         if post:
-            # Trust the classifier's post-install shape verbatim.
-            out[name] = dict(post)
-            continue
-
-        # Fallback: anchored-regex path substitution that recurses into
-        # nested dicts/lists. Per R12 adversarial findings:
-        #   H#8 — substring corruption (/home/u becoming a prefix of
-        #         /home/users/u or mutating /home/u-old/...) is fixed
-        #         by the `(?=/|$)` lookahead boundary.
-        #   H#10 — nested env values (dict-in-dict, list-of-dicts) were
-        #          not rewritten; now we recurse to any depth.
-        if source_home and source_home != target_home:
-            out[name] = _rewrite_paths_recursive(src_cfg, source_home, target_home)
+            cfg = dict(post)
+        elif source_home and source_home != target_home:
+            # Fallback: anchored-regex path substitution that recurses
+            # into nested dicts/lists. Per R12 adversarial findings:
+            #   H#8 — substring corruption fixed by `(?=/|$)` boundary.
+            #   H#10 — nested env values (dict-in-dict, list-of-dicts)
+            #          are now rewritten recursively.
+            cfg = _rewrite_paths_recursive(src_cfg, source_home, target_home)
         else:
-            out[name] = dict(src_cfg)
+            cfg = dict(src_cfg)
+
+        # FR-004 — nvm→bare-cmd rewrite for darwin destinations. Apple
+        # Silicon Macs put node at /opt/homebrew/bin/node, not under
+        # ~/.nvm/. Linux nvm-style absolute paths would resolve to a
+        # non-existent location on Mac. We detect a value matching
+        # `<home>/.nvm/.../bin/<cmd>` and replace with just `<cmd>` so
+        # the receiver's PATH resolution wins.
+        if target_platform == "darwin":
+            cfg = _bare_cmd_for_nvm(cfg)
+        out[name] = cfg
     return out
+
+
+_NVM_RE = None
+
+
+def _bare_cmd_for_nvm(value):
+    """Recursively replace `[/<home>]/.nvm/.../bin/<cmd>` with just `<cmd>`.
+
+    Used only for target_platform="darwin". The Linux nvm directory
+    structure does not exist on Mac (Homebrew is the canonical node
+    install on Apple Silicon).
+    """
+    import re as _re
+    global _NVM_RE
+    if _NVM_RE is None:
+        _NVM_RE = _re.compile(r".*?/\.nvm/versions/node/[^/]+/bin/([^/\s]+)$")
+
+    if isinstance(value, str):
+        m = _NVM_RE.match(value)
+        if m:
+            return m.group(1)
+        return value
+    if isinstance(value, dict):
+        return {k: _bare_cmd_for_nvm(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_bare_cmd_for_nvm(v) for v in value]
+    return value
 
 
 def _rewrite_paths_recursive(value, source_home: str, target_home: str):
