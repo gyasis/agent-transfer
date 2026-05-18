@@ -6,6 +6,56 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 
+def find_flat_skill_files(home: Path | None = None) -> List[Tuple[Path, str]]:
+    """Q2 (v1.2 skill format drift) — return flat `name.md` skills.
+
+    A flat skill is a single Markdown file directly under
+    `~/.claude/skills/` (or `./.claude/skills/`), with no companion
+    scripts or sibling assets. The contract for these is identical
+    to a folder-shape `name/SKILL.md` except there's no script-bundle
+    surface. Bundle them by copying the single .md verbatim.
+
+    Returns a list of (skill_md_path, type) where type is 'user'|'project'.
+    Folder-shape skills are NOT included here — call
+    `find_skill_directories()` for those.
+    """
+    from .pathfinder import get_pathfinder
+
+    pf = get_pathfinder()
+    out: List[Tuple[Path, str]] = []
+    seen: set[Path] = set()
+
+    home = home or Path.home()
+    user_base = pf.skills_dir("claude-code")
+    if user_base is not None and user_base.is_dir():
+        for p in user_base.iterdir():
+            # Flat: .md file directly under skills/, NOT inside a subdir.
+            if p.is_file() and p.suffix == ".md" and p.name != "SKILL.md":
+                rp = p.resolve()
+                if rp not in seen:
+                    seen.add(rp)
+                    out.append((p, "user"))
+
+    # Project-level walk (same depth bound as find_skill_directories).
+    user_resolved = user_base.resolve() if user_base and user_base.exists() else None
+    cur = Path.cwd()
+    for _ in range(5):
+        proj_base = cur / ".claude" / "skills"
+        if proj_base.exists() and proj_base.is_dir():
+            if proj_base.resolve() != user_resolved:
+                for p in proj_base.iterdir():
+                    if p.is_file() and p.suffix == ".md" and p.name != "SKILL.md":
+                        rp = p.resolve()
+                        if rp not in seen:
+                            seen.add(rp)
+                            out.append((p, "project"))
+        if cur == cur.parent:
+            break
+        cur = cur.parent
+
+    return out
+
+
 def find_skill_directories() -> List[Tuple[Path, str]]:
     """
     Find all skill directories with their types.
@@ -14,6 +64,9 @@ def find_skill_directories() -> List[Tuple[Path, str]]:
     Searches:
     - User-level: ~/.claude/skills/<skill-name>/ (if SKILL.md exists)
     - Project-level: ./.claude/skills/<skill-name>/ (up to 5 levels up from cwd)
+
+    NOTE: This only returns FOLDER-shape skills. For flat single-file
+    skills (`~/.claude/skills/name.md`) see `find_flat_skill_files()`.
 
     Returns:
         List of (skill_dir_path, type) where type is 'user' or 'project'

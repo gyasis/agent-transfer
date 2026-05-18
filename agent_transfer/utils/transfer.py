@@ -195,25 +195,45 @@ def export_agents_and_skills(
 
         for skill in selected_skills or []:
             skill_path = Path(skill.skill_path)
-            if not skill_path.exists() or not skill_path.is_dir():
+            if not skill_path.exists():
                 continue
 
+            # Q2 — handle both folder-shape (skill_path is a dir with
+            # SKILL.md inside) and flat single-file (skill_path is a .md).
+            is_flat = skill_path.is_file()
+            is_dir = skill_path.is_dir()
+            if not (is_flat or is_dir):
+                continue
+
+            def _copy_skill(target_root: Path) -> None:
+                if is_flat:
+                    target_root.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(skill_path, target_root / skill_path.name)
+                else:
+                    shutil.copytree(
+                        skill_path, target_root / skill_path.name,
+                        ignore=ignore_patterns,
+                    )
+
             if skill.skill_type == "user":
-                target_dir = user_skills_dir / skill_path.name
-                shutil.copytree(skill_path, target_dir, ignore=ignore_patterns)
+                _copy_skill(user_skills_dir)
                 user_skill_count += 1
             else:
                 # Preserve relative path structure for project skills
                 try:
                     rel_path = skill_path.relative_to(Path.cwd())
-                    target_dir = project_skills_dir / rel_path
-                    target_dir.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copytree(skill_path, target_dir, ignore=ignore_patterns)
+                    if is_flat:
+                        target_dir = project_skills_dir / rel_path.parent
+                        target_dir.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(skill_path, target_dir / skill_path.name)
+                    else:
+                        target_dir = project_skills_dir / rel_path
+                        target_dir.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copytree(skill_path, target_dir, ignore=ignore_patterns)
                     project_skill_count += 1
                 except ValueError:
                     # Skill not under cwd, copy to root of project-skills
-                    target_dir = project_skills_dir / skill_path.name
-                    shutil.copytree(skill_path, target_dir, ignore=ignore_patterns)
+                    _copy_skill(project_skills_dir)
                     project_skill_count += 1
 
         # ── Export config artifacts (rules, hooks, CLAUDE.md, configs) ──
@@ -300,6 +320,33 @@ def export_agents_and_skills(
                 console.print(
                     f"[dim]Config files: {config_counts['config_files']} collected[/dim]"
                 )
+
+            # 5a. Plugin metadata (Q4 — PRD §5)
+            # Bundle the 3 small JSONs (installed_plugins.json,
+            # known_marketplaces.json, blocklist.json) but NOT
+            # ~/.claude/plugins/marketplaces/ — the cache is ~36 MB
+            # and reproducible from upstream registry URLs. The
+            # receiver runs `claude` once to re-populate.
+            plugins_root = pf.config_dir(slug) / "plugins"
+            if plugins_root.is_dir():
+                plugins_dst = temp_path / "plugins-meta"
+                plugins_dst.mkdir(parents=True, exist_ok=True)
+                bundled_plugin_files = 0
+                for jf in (
+                    "installed_plugins.json",
+                    "known_marketplaces.json",
+                    "blocklist.json",
+                ):
+                    src = plugins_root / jf
+                    if src.is_file():
+                        shutil.copy2(src, plugins_dst / jf)
+                        bundled_plugin_files += 1
+                if bundled_plugin_files:
+                    config_counts["plugin_meta"] = bundled_plugin_files
+                    console.print(
+                        f"[dim]Plugin metadata: {bundled_plugin_files} file(s) "
+                        "bundled (marketplaces/ cache skipped — reproducible)[/dim]"
+                    )
 
             # 6. Referenced user scripts (~/bin, ~/.local/bin)
             # Skills/rules/recipes shell out to user scripts (session-search, prd,
@@ -681,6 +728,31 @@ def import_agents_and_skills(
             # Import user-level skills
             user_skills_source = temp_path / "user-skills"
             if user_skills_source.exists():
+                # Q2 — flat skills (single .md files at the top of the
+                # source dir) are imported alongside folder-shape skills.
+                flat_skill_files = [
+                    f for f in user_skills_source.iterdir()
+                    if f.is_file() and f.suffix == ".md"
+                ]
+                if flat_skill_files:
+                    from .pathfinder import get_pathfinder as _gpf
+                    _pf = _gpf()
+                    _base = _pf.skills_dir("claude-code") or (
+                        _pf.config_dir("claude-code") / "skills"
+                    )
+                    _base.mkdir(parents=True, exist_ok=True)
+                    for f in flat_skill_files:
+                        dest = _base / f.name
+                        if dest.exists():
+                            console.print(
+                                f"[yellow]Skill exists, skipped: {f.name}[/yellow]"
+                            )
+                            skills_skipped += 1
+                        else:
+                            shutil.copy2(f, dest)
+                            console.print(f"[green]Imported flat skill: {f.name}[/green]")
+                            skills_imported += 1
+
                 skill_dirs = [d for d in user_skills_source.iterdir() if d.is_dir()]
                 if skill_dirs:
                     console.print(
@@ -815,6 +887,7 @@ def import_agents_and_skills(
         hooks_source = temp_path / "hooks"
         config_source = temp_path / "config" / "global"
         project_config_source = temp_path / "config" / "project"
+        plugins_meta_source = temp_path / "plugins-meta"
 
         from .pathfinder import get_pathfinder
         pf = get_pathfinder()
@@ -827,7 +900,41 @@ def import_agents_and_skills(
 
         config_imported: Dict[str, int] = {
             "rules": 0, "hooks": 0, "instruction_files": 0, "config_files": 0,
+            "plugin_meta": 0,
         }
+
+        # Plugin metadata (Q4 — bundle the 3 small JSONs; marketplaces/
+        # cache is reproducible by the receiver running `claude` once).
+        # We DO NOT auto-overwrite installed_plugins.json — drop as
+        # `.incoming` if the receiver already has one, matching the
+        # CLAUDE.md convention.
+        if plugins_meta_source.is_dir():
+            plugins_target_root = pf.config_dir(slug) / "plugins"
+            plugins_target_root.mkdir(parents=True, exist_ok=True)
+            for incoming in plugins_meta_source.iterdir():
+                if not incoming.is_file():
+                    continue
+                target = plugins_target_root / incoming.name
+                if target.exists():
+                    # Receiver has their own plugin state. Don't clobber.
+                    inc = plugins_target_root / (incoming.name + ".incoming")
+                    shutil.copy2(incoming, inc)
+                    console.print(
+                        f"[yellow]Plugin {incoming.name} already present — "
+                        f"wrote {inc} for manual reconciliation.[/yellow]"
+                    )
+                else:
+                    shutil.copy2(incoming, target)
+                    config_imported["plugin_meta"] += 1
+                    console.print(
+                        f"[green]Imported plugin metadata: {incoming.name}[/green]"
+                    )
+            if config_imported["plugin_meta"]:
+                console.print(
+                    "[yellow]⚠️  Plugin metadata installed. Run `claude` once "
+                    "to re-populate ~/.claude/plugins/marketplaces/ from "
+                    "upstream registries before the listed plugins can be used.[/yellow]"
+                )
 
         # 1. Rules
         if rules_source.is_dir():

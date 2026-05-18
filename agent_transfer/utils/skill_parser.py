@@ -168,24 +168,75 @@ def parse_skill_directory(skill_dir: Path) -> Optional[Skill]:
     )
 
 
+def parse_flat_skill_file(skill_md_path):
+    """Q2 — parse a flat single-file skill (`~/.claude/skills/name.md`).
+
+    Differs from `parse_skill_directory` in that there's no sibling
+    `scripts/`, `requirements.txt`, etc. — file_count=1, total_size is
+    the .md's size, has_scripts=False.
+    """
+    from pathlib import Path
+
+    skill_md_path = Path(skill_md_path)
+    if not skill_md_path.exists() or not skill_md_path.is_file():
+        return None
+    metadata = parse_skill_md(skill_md_path)
+    if not metadata:
+        return None
+    return Skill(
+        name=metadata["name"] or skill_md_path.stem,
+        description=metadata["description"],
+        skill_path=str(skill_md_path),
+        skill_type="unknown",
+        allowed_tools=metadata["allowed_tools"],
+        model=metadata["model"],
+        context=metadata["context"],
+        agent=metadata["agent"],
+        file_count=1,
+        total_size_bytes=skill_md_path.stat().st_size,
+        has_scripts=False,
+        script_files=[],
+        skill_md_content=metadata["full_content"],
+        has_requirements_txt=False,
+        has_pyproject_toml=False,
+        has_uv_lock=False,
+    )
+
+
 def find_all_skills() -> List[Skill]:
     """
     Find all skills using deep discovery of Claude Code installation.
 
+    Returns BOTH folder-shape skills (`name/SKILL.md`) AND flat single-
+    file skills (`name.md`). Q2 from the PRD §5 list — historically only
+    folder-shape skills were enumerated, silently dropping any flat
+    skill at export time.
+
     Returns:
-        List of Skill objects
+        List of Skill objects.
     """
-    skills = []
+    from .skill_discovery import find_flat_skill_files
 
-    # Use discovery to find all skill directories
-    skill_dirs = find_skill_directories()
+    skills: List[Skill] = []
+    seen_names: set[str] = set()
 
-    for skill_dir_path, skill_type in skill_dirs:
+    # Folder-shape skills first (richer metadata wins on conflict).
+    for skill_dir_path, skill_type in find_skill_directories():
         if skill_dir_path.exists() and skill_dir_path.is_dir():
             skill = parse_skill_directory(skill_dir_path)
             if skill:
-                # Set skill_type based on discovery result
                 skill.skill_type = skill_type
                 skills.append(skill)
+                seen_names.add(skill.name)
+
+    # Flat skills: only add if no folder-shape skill with the same name
+    # already won. This handles the rare case of dual-shape co-existence
+    # (e.g. both `name.md` AND `name/SKILL.md` — folder wins).
+    for skill_md_path, skill_type in find_flat_skill_files():
+        skill = parse_flat_skill_file(skill_md_path)
+        if skill and skill.name not in seen_names:
+            skill.skill_type = skill_type
+            skills.append(skill)
+            seen_names.add(skill.name)
 
     return skills
