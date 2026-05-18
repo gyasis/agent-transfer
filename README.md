@@ -41,10 +41,29 @@ See [`specs/003-agentbridge-mvp/`](specs/003-agentbridge-mvp/) for the full spec
 Both `agent-transfer` and `ab` resolve to the same Click app. Existing scripts using `agent-transfer` keep working unchanged (constitution R5).
 
 ```bash
-ab compose --capability NAME [OPTIONS]   # source-side
-ab ingest BUNDLE [OPTIONS]               # destination-side
-agent-transfer export ...                # legacy wholesale export (still works)
-agent-transfer import ...                # legacy import (still works)
+# AgentBridge v1.1 — capability-scoped transfer
+ab compose --capability NAME [OPTIONS]      # source-side: bundle one capability
+ab ingest BUNDLE [OPTIONS]                  # destination-side: install one capability
+
+# v0.2.0+ — full-config capture + cross-platform bootstrap
+agent-transfer export ...                   # wholesale export (rules + hooks + MCPs + bin)
+agent-transfer import BUNDLE.tar.gz         # wholesale import (everything except final wire-up)
+agent-transfer init  BUNDLE-DIR             # finish wire-up: install_steps, path-rewrite,
+                                            #   ~/.claude.json merge, CLAUDE.md as .incoming.
+                                            #   --yes requires --i-accept-risks.
+                                            #   --tokens-file for HTTP-transport auth.
+agent-transfer doctor inspect               # post-init validator (exits 1 on any fail)
+agent-transfer doctor playbook              # pre-init bootstrap guide for another agent
+                                            #   (markdown + JSON sidecar via --out)
+```
+
+The typical flow on a fresh destination:
+
+```bash
+agent-transfer doctor playbook --out ready-this-mac.md   # fix anything the playbook lists
+agent-transfer import bundle.tar.gz                       # places assets in ~/.claude/, ~/bin/, ~/.claude-imported/
+agent-transfer init   bundle-dir/ --tokens-file tokens.env  # runs install_steps, rewrites paths, merges MCPs
+agent-transfer doctor inspect                             # confirm everything is wired up
 ```
 
 ---
