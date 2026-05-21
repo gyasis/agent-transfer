@@ -316,7 +316,15 @@ def _post_merge_secret_scan(target_path: Path) -> List[str]:
 
 
 def _open_bundle(bundle_path: Path) -> Path:
-    """Bundle can be a directory or a .tar.gz. Returns path to the dir."""
+    """Bundle can be a directory or a .tar.gz. Returns path to the dir.
+
+    Tarballs produced by ``ab compose`` wrap their contents in a single
+    ``bundle-<capability>/`` directory at the archive root. After extraction
+    we look for ``manifest.json`` at the extraction root; if it's missing
+    but exactly one immediate subdirectory contains it, treat that
+    subdirectory as the bundle root. This keeps round-trip
+    compose → ingest working on the layout ``ab compose`` actually emits.
+    """
     if bundle_path.is_dir():
         return bundle_path
     if bundle_path.suffix in {".gz", ".tgz"} or str(bundle_path).endswith(".tar.gz"):
@@ -324,6 +332,10 @@ def _open_bundle(bundle_path: Path) -> Path:
         target.mkdir(exist_ok=True)
         with tarfile.open(bundle_path, "r:gz") as tar:
             _safe_extract(tar, target)
+        if not (target / "manifest.json").exists():
+            subdirs = [d for d in target.iterdir() if d.is_dir()]
+            if len(subdirs) == 1 and (subdirs[0] / "manifest.json").exists():
+                return subdirs[0]
         return target
     raise ValueError(f"Bundle must be a directory or .tar.gz: {bundle_path}")
 
