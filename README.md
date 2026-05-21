@@ -140,6 +140,47 @@ pip install -e .
 uv pip install -e .
 ```
 
+## Making it discoverable to your Claude Code agent (recommended)
+
+A Claude Code session at first run knows nothing about `agent-transfer` — it isn't a built-in Anthropic feature, and a `find` for "agent transfer" lands on `AGENT_TRANSFER_README.md` (intentionally a stale-pointer redirect). If your agent searches for it cold, it will mis-state the tool ("agent-transfer only handles agents" — the v1.0 readme, no longer true). Do these three small wire-ups after install so future sessions find it:
+
+### A. Register it as a skill (`~/.claude/skills/agent-transfer.md`)
+
+Drop a skill file with frontmatter so it appears in the session-start skill list. Triggers should include the phrases your future-self will actually type:
+
+```markdown
+---
+name: agent-transfer
+description: Bundle and transfer Claude Code agents, skills, hooks, rules, MCP config, and bin scripts between machines or sessions. Two CLIs — `ab` (capability-scoped via `ab compose --capability NAME`) and `agent-transfer` (wholesale `export`/`import`/`init`/`doctor`). Use when the user says "transfer skills/agents", "bundle [capability]", "share with another machine", "export my [X] skills", "agent transfer", or "ab compose".
+---
+
+# /agent-transfer — Capability bundling and Claude Code config transfer
+...
+```
+
+(See `~/.claude/skills/agent-transfer.md` in this repo's author setup for the full body — it documents both entry points, what gets exported, the conflict-handling flags, and the typical wholesale + capability flows.)
+
+### B. Add a tools rule (`~/.claude/rules/tools/agent-transfer.md`)
+
+Rules in `~/.claude/rules/tools/` are auto-injected by the harness on relevant tool use. Add one that pins the coverage table (agents AND skills AND rules AND hooks AND MCP AND CLAUDE.md AND bin) so a session can't fall back to the v1.0 misread. The rule should explicitly forbid the failure mode: "NEVER tell the user agent-transfer only handles agents — that was the v1.0.0 readme."
+
+### C. Symlink the executables into `~/bin/`
+
+The pip / uv install places shims in the venv `bin/`, but most users' `~/bin/` is what's on `PATH`. Without this step, `which ab` returns nothing and the agent can't even discover the tool reflexively:
+
+```bash
+ln -sf "$(realpath ~/dev/agent-transfer/.venv/bin/agent-transfer)" ~/bin/agent-transfer
+ln -sf "$(realpath ~/dev/agent-transfer/.venv/bin/agent-transfer)" ~/bin/ab
+# Verify:
+ab --version    # → ab, version 1.1.0
+```
+
+(Both names resolve to the same Click entry point — `[project.scripts]` in `pyproject.toml` declares `ab = "agent_transfer.cli:main"`.)
+
+### Why all three
+
+Any one of these alone is brittle: the skill file is invisible if `~/.claude/skills/` isn't scanned that session; the rule only fires on tool use; the symlink alone gives you `which ab` but no agent-readable description. Together they cover session-start awareness (A), in-task reinforcement (B), and shell-level discoverability (C). All three live outside this repo (in `~/.claude/` and `~/bin/`) — they are *consumer-side* wire-ups, not artifacts of this codebase, which is why they're documented here as a post-install step rather than shipped as files.
+
 ## Usage
 
 Once installed, use the `agent-transfer` command:
