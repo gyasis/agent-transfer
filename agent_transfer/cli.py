@@ -1131,6 +1131,23 @@ def compose(
     findings = []
     for blob in payload_blobs:
         findings.extend(_secret_scan(blob))
+
+    # Filter generic_high_entropy false positives where the "secret" is a
+    # substring of one of our own asset dest_paths or the source-machine
+    # home directory. These are not secrets — they are the manifest's own
+    # self-referential metadata. Targeted patterns (Bearer / sk- / ghp_ /
+    # xox / ATBB / AKIA) are NEVER whitelisted; only the noisy generic
+    # fallback. See spec-006 + 2026-05-21 SIO-bundle regression.
+    _safe_path_strings = {a.dest_path for a in cap.assets}
+    _safe_path_strings.add(str(Path.home()))
+    findings = [
+        f for f in findings
+        if not (
+            f.pattern == "generic_high_entropy"
+            and any(f.match in p for p in _safe_path_strings)
+        )
+    ]
+
     if findings:
         for f in findings[:5]:
             console.print(f"[red]secret detected:[/red] {f.pattern} {f.match[:24]}...")

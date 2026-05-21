@@ -38,7 +38,19 @@ _TARGETED: List[tuple[str, Pattern[str]]] = [
 # Generic fallback — long alphanumeric strings with high Shannon entropy.
 # Conservative threshold to limit false positives. Used when targeted patterns
 # don't fire but content is suspicious (e.g., env var values).
-_GENERIC = re.compile(r"\b[A-Za-z0-9_\-+/=]{32,}\b")
+#
+# Note: `/` is intentionally excluded from the character class. Real-world
+# secret formats (Bearer, sk-, ghp_, xox*, ATBB, AKIA, sk-ant-) never use
+# forward slash inside token bodies — they are all word-class characters.
+# Including `/` previously caused false positives on filesystem paths in
+# documentation (`claude/skills/sio-velocity/SKILL`, MCP tool identifiers
+# like `mcp__playwright__browser_take_screenshot`, etc.) — see 2026-05-21
+# SIO-bundle regression. Standard-alphabet base64 secrets that happen to
+# contain `/` will now match as multiple sub-segments; in practice the
+# 32-char minimum already misses short base64 anyway, and any production
+# secret long enough to matter will still have ≥32 contiguous slash-free
+# chars somewhere.
+_GENERIC = re.compile(r"\b[A-Za-z0-9_\-+=]{32,}\b")
 _ENTROPY_THRESHOLD = 4.0  # bits per character — typical password material is 4.5+
 
 
@@ -85,6 +97,27 @@ def scan(text: str) -> List[SecretFinding]:
             continue
         candidate = m.group(0)
         if _shannon_entropy(candidate) < _ENTROPY_THRESHOLD:
+            continue
+        # Skip MCP-style tool identifiers (`mcp__playwright__browser_take_screenshot`,
+        # `mcp__atlassian-remote__searchJiraIssuesUsingJql`, etc.). The double-
+        # underscore convention is distinctive — no real-world secret format
+        # (Bearer / sk- / sk-ant- / ghp_ / xox* / ATBB / AKIA) ever uses `__`
+        # inside the token body. Skipping these prevents false positives in
+        # skill / agent documentation that references MCP tools.
+        if "__" in candidate:
+            continue
+        # Skip kebab/snake-case identifiers composed of English-word segments
+        # (recipe filenames like `hh-zombie-stack-diagnosis-and-cleanup`, PRD
+        # IDs like `L010_sio_render_artifact_capture_2026-05-08`, etc.). Real
+        # secrets are atomic random tokens — they don't contain multiple 4+
+        # letter pure-ASCII segments separated by `-` or `_`. This heuristic
+        # requires AT LEAST 2 such segments before skipping, so single-word
+        # high-entropy tokens like `abcdefghijklmnopqrstuvwxyz123456` still
+        # match (no separators) and short letter segments (like `abc-def-...`)
+        # don't trigger it either.
+        _segments = re.split(r"[-_]+", candidate)
+        _word_segments = [s for s in _segments if s.isalpha() and len(s) >= 4]
+        if len(_word_segments) >= 2:
             continue
         findings.append(
             SecretFinding(pattern="generic_high_entropy", match=candidate, start=m.start(), end=m.end())
