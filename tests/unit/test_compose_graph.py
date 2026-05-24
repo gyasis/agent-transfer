@@ -93,3 +93,83 @@ def test_compose_assets_have_sha_and_mode(tmp_path):
     for a in cap.assets:
         assert len(a.sha256) == 64, f"Bad sha256 on {a.dest_path}: {a.sha256!r}"
         assert a.mode_bits >= 0
+
+
+def _fixture_home_with_hook_dir(tmp_path: Path) -> Path:
+    """Fixture where the critical hook lives in a dir whose name matches the
+    capability stem, but the hook BODY does NOT name-drop any CORE seed.
+
+    Origin 2026-05-24: regression test for the hook-walker gap that silently
+    omitted ~/.claude/hooks/unified-memory/pre-compact.sh from
+    `ab compose --capability memory` because the bash body doesn't say
+    "memory.md". The fix added directory-name matching to _expand_one_hop.
+    """
+    home = tmp_path / "fixture-home-hookdir"
+    claude = home / ".claude"
+    skills = claude / "skills"
+    rules_domains = claude / "rules" / "domains"
+    hooks_um = claude / "hooks" / "unified-memory"
+    hooks_unrelated = claude / "hooks" / "playwright-guard"
+    bin_dir = home / "bin"
+
+    for d in (skills, rules_domains, hooks_um, hooks_unrelated, bin_dir):
+        d.mkdir(parents=True)
+
+    # CORE anchor — matches file-stem on "memory"
+    (skills / "memory-search.md").write_text(
+        "---\nname: memory-search\ndescription: Cascade search.\n---\n# memory-search\n"
+        "Anchors the cascade-memory stack.\n"
+    )
+    (rules_domains / "memory.md").write_text(
+        "# memory\nRouting rules for cascade-memory.\n"
+    )
+
+    # CRITICAL hook in matching dir, body does NOT mention memory.md / memory-search.md
+    (hooks_um / "pre-compact.sh").write_text(
+        "#!/usr/bin/env bash\n"
+        "# Backup transcript before /compact\n"
+        "set -e\n"
+        "BACKUP=~/.claude/backups/$(date +%Y%m%d)\n"
+        "mkdir -p \"$BACKUP\"\n"
+        "cp \"$1\" \"$BACKUP/\"\n"
+    )
+    (hooks_um / "extract-discoveries.py").write_text(
+        "#!/usr/bin/env python3\n"
+        "# Extract errors->fixes from session transcripts\n"
+        "import json, sys\n"
+        "print(json.dumps({'ok': True}))\n"
+    )
+
+    # UNRELATED hook in non-matching dir, also no body mention
+    (hooks_unrelated / "playwright-guard.sh").write_text(
+        "#!/usr/bin/env bash\n# Block expensive Playwright calls\nexit 0\n"
+    )
+
+    return home
+
+
+def test_compose_pulls_hook_by_dirname_match(tmp_path):
+    """REGRESSION (2026-05-24): hook in dir whose name contains the capability
+    stem MUST be included even when the body has no CORE-seed mentions."""
+    home = _fixture_home_with_hook_dir(tmp_path)
+    cap = compose("memory", home=home)
+    hook_paths = [a.dest_path for a in cap.assets if "/hooks/" in a.dest_path]
+    assert any("unified-memory/pre-compact.sh" in p for p in hook_paths), (
+        f"unified-memory/pre-compact.sh must be included via dir-name match; "
+        f"got hooks={hook_paths}"
+    )
+    assert any("unified-memory/extract-discoveries.py" in p for p in hook_paths), (
+        f"unified-memory/extract-discoveries.py must be included via dir-name match; "
+        f"got hooks={hook_paths}"
+    )
+
+
+def test_compose_skips_unrelated_hooks(tmp_path):
+    """Companion to the dir-match test: unrelated hook dirs MUST NOT be pulled."""
+    home = _fixture_home_with_hook_dir(tmp_path)
+    cap = compose("memory", home=home)
+    hook_paths = [a.dest_path for a in cap.assets if "/hooks/" in a.dest_path]
+    assert not any("playwright-guard" in p for p in hook_paths), (
+        f"playwright-guard hook must NOT be pulled into a `memory` capability bundle; "
+        f"got hooks={hook_paths}"
+    )

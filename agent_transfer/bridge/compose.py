@@ -515,10 +515,21 @@ def _expand_one_hop(
     seeds: List[_Candidate],
     claude_dir: Path,
     bin_dirs: List[Path],
+    capability_name: str = "",
 ) -> List[_Candidate]:
-    """Add 1-hop neighbors as COMPANIONS candidates."""
+    """Add 1-hop neighbors as COMPANIONS candidates.
+
+    capability_name (added 2026-05-24): the free-text capability name. Used to
+    do directory-name matching against hook dirs — when ~/.claude/hooks/<dir>/
+    has <dir> containing the capability stem, all files in that hook dir get
+    pulled in as COMPANIONS even if their body text doesn't name-drop a CORE
+    seed. Mirrors `_is_skill_package_anchor` for skill packages. Without this,
+    `ab compose --capability memory` silently skips ~/.claude/hooks/unified-memory/
+    because the bash bodies don't mention memory.md.
+    """
     seen_paths: Set[Path] = {c.path for c in seeds}
     new: List[_Candidate] = []
+    cap_stem = capability_name.lower().replace("-", "_") if capability_name else ""
 
     # Discover ~/bin scripts referenced by ANY seed file (strict-mode only
     # at this hop — bare-word lenient matches are pushed to CONTEXT later).
@@ -570,11 +581,33 @@ def _expand_one_hop(
                             ))
                             seen_paths.add(sibling)
 
-    # Hooks that mention a CORE rule / skill path → pull in the hook.
+    # Hooks: pull in either by (a) directory-name match against capability
+    # stem OR (b) body text mentions a CORE rule / skill path.
+    # Path (a) added 2026-05-24 — hook scripts rarely name-drop the rule files
+    # they support, so the body-text-only signal silently skips critical hooks
+    # like unified-memory/pre-compact.sh when bundling --capability memory.
     hooks_root = claude_dir / "hooks"
     if hooks_root.exists():
-        hook_files = _walk_dir(hooks_root, (".sh", ".py", ".js"))
+        hook_files = _walk_dir(hooks_root, (".sh", ".py", ".js", ".md"))
         for h in hook_files:
+            # Path (a): directory-name match
+            if cap_stem:
+                try:
+                    rel = h.relative_to(hooks_root)
+                    if len(rel.parts) > 1:
+                        top_dir = rel.parts[0].lower().replace("-", "_")
+                        if cap_stem in top_dir or top_dir in cap_stem:
+                            if h not in seen_paths:
+                                new.append(_Candidate(h, "COMPANIONS", "hook"))
+                                seen_paths.add(h)
+                            continue
+                except ValueError:
+                    pass
+
+            # Path (b): body-text match against CORE seeds (.md hooks skip
+            # this — body match is meaningless for READMEs).
+            if h.suffix == ".md":
+                continue
             text = _safe_read_head(h)
             for c in seeds:
                 if c.path.name in text:
@@ -689,7 +722,7 @@ def compose(
             f"or register one at ~/.claude/capabilities/{capability_name}.yaml."
         )
 
-    companions = _expand_one_hop(cores, claude_dir, bin_dirs)
+    companions = _expand_one_hop(cores, claude_dir, bin_dirs, capability_name)
     contexts: List[_Candidate] = []
     if _MAX_HOPS >= 2:
         contexts = _expand_two_hop(cores, companions, claude_dir, bin_dirs)
