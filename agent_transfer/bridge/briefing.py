@@ -1,8 +1,8 @@
 """Render the 'Dear Receiving Claude' briefing markdown.
 
 Reads the contract template at
-specs/003-agentbridge-mvp/contracts/briefing.template.md and substitutes
-manifest fields. The template uses `{{...}}` placeholders with optional
+agent_transfer/templates/briefing.template.md (shipped as package data) and
+substitutes manifest fields. The template uses `{{...}}` placeholders with optional
 `{{#each ...}}{{/each}}` block iteration.
 
 This is a tiny templater, not a full Mustache/Handlebars implementation:
@@ -21,11 +21,13 @@ from typing import Any, Iterable, List
 from agent_transfer.bridge.models import BriefingSection, ManifestModel
 
 
+# Resolve the template relative to THIS package (agent_transfer/templates/)
+# so it ships with the wheel. The previous parents[2]/specs/... path only
+# existed in a source checkout — it was absent from installed wheels, so
+# `ab compose` crashed with FileNotFoundError on any uv-tool / pip install.
 _TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "specs"
-    / "003-agentbridge-mvp"
-    / "contracts"
+    Path(__file__).resolve().parent.parent
+    / "templates"
     / "briefing.template.md"
 )
 

@@ -6,17 +6,12 @@ Build Instructions, Ingest Instructions, Verification, Rollback.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
-TEMPLATE_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "specs"
-    / "003-agentbridge-mvp"
-    / "contracts"
-    / "briefing.template.md"
-)
+# Import the canonical template path the production code actually uses, so this
+# test can never drift from briefing.py again (it did when the template moved
+# from specs/ into the package).
+from agent_transfer.bridge.briefing import _TEMPLATE_PATH as TEMPLATE_PATH
 
 REQUIRED_SECTIONS = (
     "Identity",

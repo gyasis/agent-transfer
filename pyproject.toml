@@ -60,5 +60,5 @@ where = ["."]
 include = ["agent_transfer*"]
 
 [tool.setuptools.package-data]
-agent_transfer = ["*.md", "templates/*.html"]
+agent_transfer = ["*.md", "templates/**/*"]
 

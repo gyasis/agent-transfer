@@ -118,6 +118,6 @@ when present, else best-effort string substitution (FR-015).
 - CLI wiring: `agent_transfer/cli.py::ingest_cmd`
 - Composer counterpart: `agentbridge-compose` skill on the source
 - Manifest schema: `specs/003-agentbridge-mvp/contracts/manifest.schema.json`
-- Briefing template: `specs/003-agentbridge-mvp/contracts/briefing.template.md`
+- Briefing template: `agent_transfer/templates/briefing.template.md`
 - Rollback details: `agent_transfer/bridge/rollback.py`,
   research.md §5 "Rollback snapshot scope"

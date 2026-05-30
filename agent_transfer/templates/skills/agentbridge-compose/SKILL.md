@@ -99,4 +99,4 @@ ab compose --capability NAME [OPTIONS]
 - CLI wiring: `agent_transfer/cli.py::compose`
 - Receiving counterpart: `agentbridge-ingest` skill on the destination
 - Manifest schema: `specs/003-agentbridge-mvp/contracts/manifest.schema.json`
-- Briefing template: `specs/003-agentbridge-mvp/contracts/briefing.template.md`
+- Briefing template: `agent_transfer/templates/briefing.template.md`
